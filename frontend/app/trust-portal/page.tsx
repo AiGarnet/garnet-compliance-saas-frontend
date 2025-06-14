@@ -176,128 +176,100 @@ const TrustPortalPage = () => {
       </label>
       
       {isLoadingVendors ? (
-        <div className="w-full max-w-2xl">
-          <div className="h-16 bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse rounded-2xl shadow-sm mb-4"></div>
-          <div className="space-y-3">
+        <div className="w-full">
+          <div className="flex gap-3">
+            <div className="h-12 w-48 bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse rounded-xl shadow-sm"></div>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-gradient-to-r from-gray-50 to-gray-100 animate-pulse rounded-xl"></div>
+              <div key={i} className="h-12 w-32 bg-gradient-to-r from-gray-50 to-gray-100 animate-pulse rounded-xl"></div>
             ))}
           </div>
         </div>
       ) : vendors.length > 0 ? (
-        <div className="w-full max-w-2xl">
-          {/* Selected Vendor Display */}
-          <div className="mb-6">
-            <div className="bg-white border-2 border-primary/20 rounded-2xl shadow-lg p-6 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5"></div>
-              <div className="relative flex items-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-gray-900 text-lg">
-                    {selectedVendor ? (selectedVendor.name || selectedVendor.companyName) : 'No vendor selected'}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {selectedVendor ? 'Currently viewing compliance data' : 'Choose a vendor below to get started'}
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse mr-2"></div>
-                  <span className="text-sm text-green-600 font-medium">Active</span>
+        <div className="w-full">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Toggle Button */}
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="h-12 px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-xl shadow-lg hover:shadow-xl focus:outline-none focus:ring-3 focus:ring-primary/30 transition-all duration-300 flex items-center gap-3 group transform hover:scale-105"
+            >
+              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <Building2 className="h-4 w-4 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">
+                  {isDropdownOpen ? 'Hide' : 'Choose'}
                 </div>
               </div>
+              <ChevronDown className={`h-4 w-4 text-white transition-all duration-500 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Selected Vendor Card */}
+            {selectedVendor && (
+              <div className="h-12 px-4 py-2 bg-white border-2 border-primary/20 rounded-xl shadow-md flex items-center gap-3 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5"></div>
+                <div className="relative w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center shadow-sm">
+                  <Building2 className="h-4 w-4 text-white" />
+                </div>
+                <div className="relative">
+                  <div className="font-semibold text-gray-900 text-sm truncate max-w-32">
+                    {selectedVendor.name || selectedVendor.companyName}
+                  </div>
+                </div>
+                <div className="relative w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+            )}
+            
+            {/* Animated Vendor Cards - Horizontal */}
+            <div className={`flex gap-2 overflow-hidden transition-all duration-500 ease-in-out ${
+              isDropdownOpen ? 'max-w-full opacity-100' : 'max-w-0 opacity-0'
+            }`}>
+              {vendors
+                .filter(vendor => vendor.id !== selectedVendorId)
+                .map((vendor, index) => (
+                <button
+                  key={vendor.id}
+                  onClick={() => {
+                    setSelectedVendorId(vendor.id);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="h-12 px-3 py-2 bg-white border-2 border-gray-200 hover:border-primary/30 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2 group transform hover:scale-105 flex-shrink-0"
+                  style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    animation: isDropdownOpen ? 'slideInRight 0.6s ease-out forwards' : 'none'
+                  }}
+                >
+                  <div className="w-8 h-8 bg-gray-100 group-hover:bg-primary/10 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110">
+                    <Building2 className="h-4 w-4 text-gray-600 group-hover:text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-gray-900 text-sm truncate max-w-24">
+                      {vendor.name || vendor.companyName}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Toggle Button */}
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full h-16 px-6 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-primary/30 transition-all duration-300 flex items-center justify-between group transform hover:scale-[1.02]"
-          >
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-200">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-lg">
-                  {isDropdownOpen ? 'Hide Vendors' : 'Choose Vendor'}
-                </div>
-                <div className="text-sm text-white/80">
-                  {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} available
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <ChevronDown className={`h-6 w-6 text-white transition-all duration-500 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </div>
-          </button>
-          
-          {/* Animated Vendor List */}
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
-            isDropdownOpen ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
-          }`}>
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-              <div className="p-2">
-                {vendors.map((vendor, index) => (
-                  <button
-                    key={vendor.id}
-                    onClick={() => {
-                      setSelectedVendorId(vendor.id);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`w-full px-4 py-4 text-left hover:bg-blue-50 transition-all duration-300 flex items-center group rounded-xl mb-2 last:mb-0 transform hover:scale-[1.02] ${
-                      selectedVendorId === vendor.id 
-                        ? 'bg-blue-50 border-2 border-primary shadow-md' 
-                        : 'border-2 border-transparent hover:border-primary/20'
-                    }`}
-                    style={{ 
-                      animationDelay: `${index * 100}ms`,
-                      animation: isDropdownOpen ? 'slideInUp 0.6s ease-out forwards' : 'none'
-                    }}
-                  >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 transition-all duration-300 flex-shrink-0 ${
-                      selectedVendorId === vendor.id 
-                        ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-lg scale-110' 
-                        : 'bg-gray-100 text-gray-600 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-105'
-                    }`}>
-                      <Building2 className="h-6 w-6" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-gray-900 truncate text-lg">
-                        {vendor.name || vendor.companyName}
-                      </div>
-                      {vendor.companyName && vendor.name !== vendor.companyName && (
-                        <div className="text-sm text-gray-500 truncate">
-                          {vendor.companyName}
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-400 mt-1">
-                        Click to view compliance data
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 ml-4">
-                      {selectedVendorId === vendor.id && (
-                        <div className="flex items-center text-primary">
-                          <CheckCircle2 className="w-6 h-6 mr-2" />
-                          <span className="text-sm font-medium">Selected</span>
-                        </div>
-                      )}
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Vendor Count Info */}
+          <div className="mt-3 text-xs text-gray-500 flex items-center gap-2">
+            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+            <span>{vendors.length} vendor{vendors.length !== 1 ? 's' : ''} available</span>
+            {selectedVendor && (
+              <>
+                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                <span>Currently viewing: {selectedVendor.name || selectedVendor.companyName}</span>
+              </>
+            )}
           </div>
         </div>
       ) : (
-        <div className="w-full max-w-2xl p-6 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl">
+        <div className="w-full p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl">
           <div className="flex items-center text-red-700">
-            <AlertCircle className="h-6 w-6 mr-3 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 mr-3 flex-shrink-0" />
             <div>
-              <div className="font-semibold">No vendors found</div>
-              <div className="text-sm text-red-600">Please add vendors to the system first.</div>
+              <div className="font-semibold text-sm">No vendors found</div>
+              <div className="text-xs text-red-600">Please add vendors to the system first.</div>
             </div>
           </div>
         </div>
@@ -675,6 +647,17 @@ const TrustPortalPage = () => {
           to { 
             opacity: 1; 
             transform: translateY(0) scale(1); 
+          }
+        }
+        
+        @keyframes slideInRight {
+          from { 
+            opacity: 0; 
+            transform: translateX(-20px) scale(0.9); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateX(0) scale(1); 
           }
         }
         
