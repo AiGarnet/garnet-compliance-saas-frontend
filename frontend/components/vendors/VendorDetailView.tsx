@@ -94,7 +94,7 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 dark:bg-body-bg">
+      <div className="min-h-screen bg-gray-50">
         <VendorDetailHeader vendor={vendor} onEdit={() => setIsEditModalOpen(true)} />
         
         <div className="container mx-auto max-w-7xl py-8 px-4">
