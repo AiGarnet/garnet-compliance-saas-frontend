@@ -7,9 +7,12 @@ import Header from "@/components/Header";
 
 const TrustPortalPage = () => {
   const [reports, setReports] = useState<ComplianceReport[]>([]);
+  const [evidenceFiles, setEvidenceFiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingVendors, setIsLoadingVendors] = useState<boolean>(true);
+  const [isLoadingEvidence, setIsLoadingEvidence] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [evidenceError, setEvidenceError] = useState<string>('');
   const [vendors, setVendors] = useState<{ id: string; name: string; companyName?: string }[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -24,6 +27,7 @@ const TrustPortalPage = () => {
   useEffect(() => {
     if (selectedVendorId) {
       fetchReports();
+      fetchEvidenceFiles();
     }
   }, [selectedVendorId]);
 
@@ -114,6 +118,34 @@ const TrustPortalPage = () => {
     }
   };
 
+  const fetchEvidenceFiles = async () => {
+    if (!selectedVendorId) return;
+    
+    setIsLoadingEvidence(true);
+    setEvidenceError('');
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/vendors/${selectedVendorId}/evidence-files`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No evidence files found - this is expected for many vendors
+          setEvidenceFiles([]);
+          return;
+        }
+        throw new Error('Failed to fetch evidence files');
+      }
+      
+      const data = await response.json();
+      setEvidenceFiles(data.evidenceFiles || data || []);
+    } catch (err) {
+      console.log('Evidence files endpoint not available yet or no files found');
+      setEvidenceFiles([]);
+      // Don't set error for missing evidence files - it's expected
+    } finally {
+      setIsLoadingEvidence(false);
+    }
+  };
+
   const selectedVendor = vendors.find(v => v.id === selectedVendorId);
 
   const EmptyState = () => (
@@ -137,7 +169,7 @@ const TrustPortalPage = () => {
   );
 
   const CustomDropdown = () => (
-    <div className="relative z-50 mb-8">
+    <div className="relative mb-8" style={{ zIndex: 1000 }}>
       <label className="block text-sm font-semibold text-gray-800 mb-4">
         <Building2 className="inline h-5 w-5 mr-2 text-primary" />
         Select Vendor to View Compliance Data
@@ -180,10 +212,10 @@ const TrustPortalPage = () => {
                 aria-hidden="true"
               ></div>
               <div 
-                className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto animate-slide-down"
+                className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-200 rounded-2xl shadow-2xl max-h-80 overflow-y-auto animate-slide-down"
                 role="listbox"
                 aria-label="Vendor selection"
-                style={{ zIndex: 9999 }}
+                style={{ zIndex: 10000 }}
               >
                 <div className="p-2">
                   {vendors.map((vendor, index) => (
@@ -302,7 +334,7 @@ const TrustPortalPage = () => {
         )}
         
         {/* Enhanced Compliance Reports Section */}
-        <section id="compliance" className="pt-8 animate-fade-in relative z-10" style={{ animationDelay: '500ms' }}>
+        <section id="compliance" className="pt-8 animate-fade-in relative" style={{ animationDelay: '500ms', zIndex: 1 }}>
           {selectedVendorId ? (
             <div className="transition-all duration-300 ease-in-out">
               {reports.length > 0 || isLoading ? (
@@ -331,6 +363,93 @@ const TrustPortalPage = () => {
             </div>
           )}
         </section>
+        
+        {/* Evidence Files Section */}
+        {selectedVendorId && (
+          <section id="evidence" className="pt-8 animate-fade-in relative" style={{ animationDelay: '550ms', zIndex: 1 }}>
+            <div className="flex items-center mb-8">
+              <div className="p-2 bg-primary/10 rounded-xl mr-3">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Evidence Files</h2>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-200">
+              {isLoadingEvidence ? (
+                <div className="p-8">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-3 text-gray-600">Loading evidence files...</span>
+                  </div>
+                </div>
+              ) : evidenceFiles.length > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {evidenceFiles.map((file, index) => (
+                    <div key={file.id || index} className="p-6 hover:bg-blue-50/30 transition-colors duration-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">{file.name || file.filename}</h3>
+                          <p className="text-gray-600 text-sm mb-3">{file.description || 'Evidence file submitted by vendor'}</p>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <span className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {new Date(file.uploadedAt || file.createdAt || Date.now()).toLocaleDateString()}
+                            </span>
+                            {file.fileSize && (
+                              <span className="flex items-center">
+                                <FileText className="h-4 w-4 mr-1" />
+                                {file.fileSize}
+                              </span>
+                            )}
+                            {file.fileType && (
+                              <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                                {file.fileType}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          {file.downloadUrl && (
+                            <a
+                              href={file.downloadUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors duration-200"
+                              title="Download file"
+                            >
+                              <Download className="h-5 w-5" />
+                            </a>
+                          )}
+                          {file.viewUrl && (
+                            <a
+                              href={file.viewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors duration-200"
+                              title="View file"
+                            >
+                              <ExternalLink className="h-5 w-5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Evidence Files</h3>
+                  <p className="text-gray-600">
+                    No evidence files submitted by {selectedVendor?.name || selectedVendor?.companyName || 'this vendor'} yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
         
         {/* Enhanced Security Practices Section */}
         <section id="security" className="pt-12 pb-8 animate-fade-in" style={{ animationDelay: '600ms' }}>
