@@ -86,12 +86,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const data = await auth.login({ email, password });
 
-      // Store auth data in both localStorage and cookies
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
-      setCookie('authToken', data.token);
+      // The backend returns 'access_token', not 'token'
+      const token = data.access_token || data.token; // Support both for compatibility
       
-      setToken(data.token);
+      // Store auth data in both localStorage and cookies
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      setCookie('authToken', token);
+      
+      setToken(token);
       setUser(data.user);
 
       // Check for redirect parameter

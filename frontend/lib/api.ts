@@ -33,15 +33,30 @@ export function getApiEndpoint(path: string): string {
   return `${BACKEND_URL}${path}`;
 }
 
+// Helper function to get auth token
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('authToken');
+}
+
 // API helper functions
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const url = getApiEndpoint(endpoint);
   
+  // Get auth token and add to headers if available
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  
+  // Add Authorization header if token exists and this isn't a public auth endpoint
+  if (token && !endpoint.includes('/api/auth/')) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
 
@@ -65,8 +80,17 @@ export async function uploadFile(endpoint: string, file: File, additionalData: R
     formData.append(key, additionalData[key]);
   });
 
+  // Get auth token for file uploads
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
+    headers,
     body: formData,
     // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
   });

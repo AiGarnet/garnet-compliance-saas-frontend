@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json',
   };
@@ -47,8 +47,21 @@ exports.handler = async (event, context) => {
       backendUrl: BACKEND_URL,
       env: process.env.NODE_ENV,
       headers: event.headers,
-      userAgent: event.headers['user-agent']
+      userAgent: event.headers['user-agent'],
+      hasAuth: !!event.headers.authorization
     });
+
+    // Prepare headers for backend request
+    const backendHeaders = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Netlify-Function/vendors'
+    };
+
+    // Forward Authorization header if present
+    if (event.headers.authorization) {
+      backendHeaders['Authorization'] = event.headers.authorization;
+      console.log('Forwarding Authorization header to backend');
+    }
 
     // First, let's test if we can reach the backend at all
     console.log('Testing backend connectivity...');
@@ -59,10 +72,7 @@ exports.handler = async (event, context) => {
       
       const response = await fetch(`${BACKEND_URL}/api/vendors`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Netlify-Function/vendors'
-        },
+        headers: backendHeaders,
         timeout: 30000, // 30 second timeout
       });
 
@@ -102,10 +112,7 @@ exports.handler = async (event, context) => {
       
       const response = await fetch(`${BACKEND_URL}/api/vendors`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Netlify-Function/vendors'
-        },
+        headers: backendHeaders,
         body: JSON.stringify(body),
         timeout: 30000, // 30 second timeout
       });
