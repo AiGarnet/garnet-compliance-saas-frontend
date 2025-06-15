@@ -2,24 +2,21 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Remove static export for Railway deployment - we want SSR
-  // output: 'export', // Commented out for Railway deployment
+  // Enable static export for Netlify deployment
+  output: 'export',
   trailingSlash: true,
   distDir: '.next',
   
-  // Image optimization can be enabled for Railway
+  // Static export requires unoptimized images
   images: {
-    // Enable image optimization for Railway deployment
-    unoptimized: false,
-    domains: [], // Add your image domains here if needed
+    unoptimized: true,
   },
   
   swcMinify: true,
   
-  // Environment variables
+  // Environment variables for static export
   env: {
-    // Remove static export flag for Railway
-    // NEXT_PUBLIC_STATIC_EXPORT: 'true',
+    NEXT_PUBLIC_STATIC_EXPORT: 'true',
   },
   
   // Optimize bundle size
@@ -43,7 +40,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Experimental features
+  // Experimental features for better Netlify compatibility
   experimental: {
     // Enable server components
     serverComponentsExternalPackages: ['lodash', 'uuid'],
@@ -62,29 +59,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-  
-  // Add headers for better performance and security
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-        ],
-      },
-    ];
   },
 }
 
