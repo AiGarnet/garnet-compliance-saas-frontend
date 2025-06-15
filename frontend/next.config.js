@@ -1,26 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Enable static export for Netlify deployment
-  output: 'export',
+  
+  // Remove static export for Railway deployment - we want SSR
+  // output: 'export', // Commented out for Railway deployment
   trailingSlash: true,
   distDir: '.next',
-  // Ensure proper static generation
-  generateBuildId: () => 'build',
-  // Static export output directory - Next.js 13+ with output: 'export' outputs to 'out' by default
+  
+  // Image optimization can be enabled for Railway
   images: {
-    // Static export requires unoptimized images
-    unoptimized: true,
+    // Enable image optimization for Railway deployment
+    unoptimized: false,
+    domains: [], // Add your image domains here if needed
   },
+  
   swcMinify: true,
   
-  // Environment variables for static export
+  // Environment variables
   env: {
-    NEXT_PUBLIC_STATIC_EXPORT: 'true',
+    // Remove static export flag for Railway
+    // NEXT_PUBLIC_STATIC_EXPORT: 'true',
   },
-  
-  // Skip static generation for dynamic routes
-  skipTrailingSlashRedirect: true,
   
   // Optimize bundle size
   compiler: {
@@ -43,7 +43,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Experimental features for better Netlify compatibility
+  // Experimental features
   experimental: {
     // Enable server components
     serverComponentsExternalPackages: ['lodash', 'uuid'],
@@ -51,9 +51,6 @@ const nextConfig = {
     missingSuspenseWithCSRBailout: false,
   },
 
-  // Note: When using 'output: export', rewrites and headers won't work
-  // They are removed since they're incompatible with static export
-  
   // Configure webpack to properly handle lodash
   webpack: (config, { isServer }) => {
     // This ensures lodash is properly bundled
@@ -65,6 +62,29 @@ const nextConfig = {
       };
     }
     return config;
+  },
+  
+  // Add headers for better performance and security
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
   },
 }
 
