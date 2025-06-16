@@ -904,7 +904,28 @@ const QuestionnairesPage = () => {
             <p className="text-gray-600 mt-1">Manage and track all your compliance questionnaires</p>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            {/* Vendor Dropdown */}
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-gray-600" />
+              <select
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary min-w-[200px]"
+                value={selectedVendorId}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
+              >
+                <option value="">All Vendors</option>
+                {isLoadingVendors ? (
+                  <option disabled>Loading vendors...</option>
+                ) : (
+                  vendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            
             <button 
               className="bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md flex items-center transition-colors"
               onClick={handleNewQuestionnaire}
@@ -1325,6 +1346,7 @@ const QuestionnairesPage = () => {
             onViewQuestionnaire={handleViewQuestionnaire}
             onEditQuestionnaire={handleEditQuestionnaire}
             onDeleteQuestionnaire={handleDeleteQuestionnaire}
+            selectedVendorId={selectedVendorId}
           />
         </main>
     </>

@@ -40,6 +40,7 @@ export interface QuestionnaireListProps {
   onViewQuestionnaire?: (questionnaire: Questionnaire) => void;
   onEditQuestionnaire?: (questionnaire: Questionnaire) => void;
   onDeleteQuestionnaire?: (questionnaire: Questionnaire) => void;
+  selectedVendorId?: string;
 }
 
 type SortField = 'name' | 'status' | 'dueDate' | 'progress';
@@ -54,15 +55,15 @@ export function QuestionnaireList({
   onAddQuestionnaire,
   onViewQuestionnaire,
   onEditQuestionnaire,
-  onDeleteQuestionnaire
+  onDeleteQuestionnaire,
+  selectedVendorId
 }: QuestionnaireListProps) {
   // State for sorting
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
-  // State for filtering
-  const [statusFilter, setStatusFilter] = useState<QuestionnaireStatus | 'All'>('All');
-  const [suggestionsFilter, setSuggestionsFilter] = useState<'All' | 'With Suggestions' | 'Without Suggestions'>('All');
+  // State for filtering - Combined filter
+  const [combinedFilter, setCombinedFilter] = useState<string>('All');
   
   // State for search
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,18 +118,20 @@ export function QuestionnaireList({
   const filteredAndSortedQuestionnaires = useMemo(() => {
     if (!initialQuestionnaires) return [];
     
-    // Apply status filter
+    // Apply combined filter
     let result = [...initialQuestionnaires];
     
-    if (statusFilter !== 'All') {
-      result = result.filter(q => q.status === statusFilter);
-    }
-    
-    // Apply suggestions filter
-    if (suggestionsFilter === 'With Suggestions') {
-      result = result.filter(q => q.hasSuggestions === true);
-    } else if (suggestionsFilter === 'Without Suggestions') {
-      result = result.filter(q => q.hasSuggestions !== true);
+    if (combinedFilter !== 'All') {
+      // Handle status filters
+      if (['Not Started', 'Draft', 'In Progress', 'In Review', 'Completed'].includes(combinedFilter)) {
+        result = result.filter(q => q.status === combinedFilter);
+      }
+      // Handle AI suggestion filters
+      else if (combinedFilter === 'With AI Suggestions') {
+        result = result.filter(q => q.hasSuggestions === true);
+      } else if (combinedFilter === 'Without AI Suggestions') {
+        result = result.filter(q => q.hasSuggestions !== true);
+      }
     }
     
     // Apply search filter
@@ -137,6 +140,11 @@ export function QuestionnaireList({
       result = result.filter(q => 
         q.name.toLowerCase().includes(lowercaseSearch)
       );
+    }
+    
+    // Apply vendor filter
+    if (selectedVendorId && selectedVendorId !== '') {
+      result = result.filter(q => q.vendorId === selectedVendorId);
     }
     
     // Apply sorting
@@ -164,7 +172,7 @@ export function QuestionnaireList({
       }
       return 0;
     });
-  }, [initialQuestionnaires, statusFilter, suggestionsFilter, searchTerm, sortField, sortDirection]);
+  }, [initialQuestionnaires, combinedFilter, searchTerm, selectedVendorId, sortField, sortDirection]);
   
   // Get status badge styling based on status
   const getStatusBadgeStyle = (status: QuestionnaireStatus) => {
@@ -331,37 +339,29 @@ export function QuestionnaireList({
   
   // Render filter pills
   const renderFilterPills = () => {
-    const statuses: (QuestionnaireStatus | 'All')[] = ['All', 'Not Started', 'Draft', 'In Progress', 'In Review', 'Completed'];
-    const suggestions: ('All' | 'With Suggestions' | 'Without Suggestions')[] = ['All', 'With Suggestions', 'Without Suggestions'];
+    const combinedOptions = [
+      'All',
+      'Not Started', 
+      'Draft', 
+      'In Progress', 
+      'In Review', 
+      'Completed',
+      'With AI Suggestions',
+      'Without AI Suggestions'
+    ];
     
     return (
       <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
-            <FilterPills
-              options={statuses}
-              selectedOption={statusFilter}
-              onChange={setStatusFilter}
-              label="Filter questionnaires by status"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by AI Suggestions
-              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI
-              </span>
-            </label>
-            <FilterPills
-              options={suggestions}
-              selectedOption={suggestionsFilter}
-              onChange={setSuggestionsFilter}
-              label="Filter questionnaires by AI suggestions"
-            />
-          </div>
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Filter Questionnaires
+          <span className="ml-1 text-xs text-gray-500">(by status or AI suggestions)</span>
+        </label>
+        <FilterPills
+          options={combinedOptions}
+          selectedOption={combinedFilter}
+          onChange={setCombinedFilter}
+          label="Filter questionnaires by status or AI suggestions"
+        />
       </div>
     );
   };
@@ -415,7 +415,7 @@ export function QuestionnaireList({
     // Empty state
     if (filteredAndSortedQuestionnaires.length === 0) {
       // If no questionnaires at all
-      if (initialQuestionnaires.length === 0 && !searchTerm && statusFilter === 'All') {
+      if (initialQuestionnaires.length === 0 && !searchTerm && combinedFilter === 'All') {
         return (
           <div 
             className="border-2 border-dashed border-gray-200 rounded-xl p-16 flex flex-col items-center justify-center animate-fade-in"
@@ -438,8 +438,7 @@ export function QuestionnaireList({
             className="mt-4 text-primary hover:text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md px-2 py-1"
             onClick={() => {
               setSearchTerm('');
-              setStatusFilter('All');
-              setSuggestionsFilter('All');
+              setCombinedFilter('All');
             }}
           >
             Clear all filters
