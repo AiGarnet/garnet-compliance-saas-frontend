@@ -13,16 +13,31 @@ export const TrustPortalVendorView: React.FC = () => {
   const [inviteLink, setInviteLink] = useState<string>('');
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
+  // Debug logging
+  console.log('TrustPortalVendorView Debug:', {
+    user,
+    userId: user?.id,
+    userRole: user?.role
+  });
+
   useEffect(() => {
     const fetchTrustPortalData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('No user ID available');
+        setError('User ID not available');
+        setIsLoading(false);
+        return;
+      }
 
       try {
         setIsLoading(true);
         setError('');
         
+        console.log('Fetching trust portal data for user:', user.id);
+        
         // Get trust portal data for the authenticated vendor
         const response = await vendors.trustPortal.getData(user.id);
+        console.log('Trust portal data response:', response);
         setData(response);
       } catch (err: any) {
         console.error('Failed to fetch trust portal data:', err);
@@ -36,11 +51,16 @@ export const TrustPortalVendorView: React.FC = () => {
   }, [user?.id]);
 
   const generateInviteLink = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setError('User ID not available for generating invite link');
+      return;
+    }
 
     try {
       setIsGeneratingLink(true);
+      console.log('Generating invite link for user:', user.id);
       const response = await vendors.trustPortal.generateInviteLink(user.id);
+      console.log('Generated invite link response:', response);
       setInviteLink(response.inviteLink);
     } catch (err: any) {
       console.error('Failed to generate invite link:', err);
@@ -81,11 +101,16 @@ export const TrustPortalVendorView: React.FC = () => {
           <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Trust Portal</h1>
           <p className="text-gray-600 mb-4">{error}</p>
+          <div className="text-sm text-gray-500 mb-4">
+            <p>Debug Info:</p>
+            <p>User ID: {user?.id || 'Not available'}</p>
+            <p>User Role: {user?.role || 'Not available'}</p>
+          </div>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            Retry
           </button>
         </div>
       </div>
@@ -157,133 +182,86 @@ export const TrustPortalVendorView: React.FC = () => {
           </div>
         )}
 
-        {data && (
-          <>
-            {/* Vendor Profile Section */}
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-              <div className="flex items-center mb-4">
-                <Building2 className="h-6 w-6 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-900">Your Company Profile</h2>
-              </div>
-              
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {data.vendor?.companyName || 'Your Company'}
-              </h3>
-              
-              {data.vendor?.description && (
-                <p className="text-sm text-gray-600 mb-4">{data.vendor.description}</p>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                {data.vendor?.region && (
-                  <div>
-                    <span className="font-medium text-gray-700">Region:</span>
-                    <span className="ml-2 text-gray-600">{data.vendor.region}</span>
-                  </div>
-                )}
-                {data.vendor?.industry && (
-                  <div>
-                    <span className="font-medium text-gray-700">Industry:</span>
-                    <span className="ml-2 text-gray-600">{data.vendor.industry}</span>
-                  </div>
-                )}
-                {data.vendor?.website && (
-                  <div>
-                    <span className="font-medium text-gray-700">Website:</span>
-                    <a 
-                      href={data.vendor.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="ml-2 text-blue-600 hover:text-blue-800"
-                    >
-                      {data.vendor.website}
-                    </a>
-                  </div>
-                )}
-              </div>
+        {/* Trust Portal Content */}
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {/* Vendor Information */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <Building2 className="h-6 w-6 text-blue-600 mr-2" />
+              <h2 className="text-lg font-semibold">Company Information</h2>
             </div>
-
-            {/* Work Portfolio Section */}
-            {data.works && data.works.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-                <div className="flex items-center mb-6">
-                  <FileText className="h-6 w-6 text-blue-600 mr-2" />
-                  <h2 className="text-xl font-semibold text-gray-900">Shared Work Portfolio</h2>
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {data.works.length} work{data.works.length !== 1 ? 's' : ''} shared
-                  </span>
-                </div>
-                
-                <div className="grid gap-6">
-                  {data.works.map((work: any) => (
-                    <div key={work.id} className="border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {work.projectName}
-                      </h3>
-                      
-                      {work.description && (
-                        <p className="text-gray-600 mb-4">{work.description}</p>
-                      )}
-                      
-                      {work.clientName && (
-                        <p className="text-sm text-gray-500 mb-2">
-                          <span className="font-medium">Client:</span> {work.clientName}
-                        </p>
-                      )}
-                      
-                      {work.technologies && work.technologies.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {work.technologies.map((tech: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
-                            >
-                              {tech}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            {data?.vendor ? (
+              <div className="space-y-2 text-sm">
+                <p><strong>Company:</strong> {data.vendor.companyName || 'Not specified'}</p>
+                <p><strong>Industry:</strong> {data.vendor.industry || 'Not specified'}</p>
+                <p><strong>Region:</strong> {data.vendor.region || 'Not specified'}</p>
+                {data.vendor.website && (
+                  <p><strong>Website:</strong> <a href={data.vendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{data.vendor.website}</a></p>
+                )}
+                {data.vendor.description && (
+                  <p><strong>Description:</strong> {data.vendor.description}</p>
+                )}
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Shared Work Yet</h3>
-                  <p className="text-gray-600 mb-4">
-                    You haven't shared any work to your trust portal yet. 
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Go to your dashboard to create and share work submissions.
-                  </p>
-                </div>
-              </div>
+              <p className="text-gray-500 text-sm">Company information not available</p>
             )}
+          </div>
 
-            {/* Questionnaire Answers Section */}
-            {data.questionnaireAnswers && data.questionnaireAnswers.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <div className="flex items-center mb-6">
-                  <Shield className="h-6 w-6 text-blue-600 mr-2" />
-                  <h2 className="text-xl font-semibold text-gray-900">Shared Compliance Responses</h2>
-                  <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                    {data.questionnaireAnswers.length} response{data.questionnaireAnswers.length !== 1 ? 's' : ''} shared
-                  </span>
-                </div>
-                
-                <div className="space-y-4">
-                  {data.questionnaireAnswers.map((answer: any) => (
-                    <div key={answer.id} className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">{answer.question}</h4>
-                      <p className="text-gray-600 text-sm">{answer.answer}</p>
-                    </div>
-                  ))}
-                </div>
+          {/* Works */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <FileText className="h-6 w-6 text-green-600 mr-2" />
+              <h2 className="text-lg font-semibold">Shared Works</h2>
+            </div>
+            {data?.works && data.works.length > 0 ? (
+              <div className="space-y-3">
+                {data.works.slice(0, 3).map((work: any, index: number) => (
+                  <div key={index} className="border-l-4 border-green-500 pl-3">
+                    <h3 className="font-medium text-sm">{work.projectName}</h3>
+                    <p className="text-xs text-gray-600">{work.status}</p>
+                  </div>
+                ))}
+                {data.works.length > 3 && (
+                  <p className="text-xs text-gray-500">+{data.works.length - 3} more works</p>
+                )}
               </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No works shared yet</p>
             )}
-          </>
+          </div>
+
+          {/* Questionnaire Answers */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <Shield className="h-6 w-6 text-purple-600 mr-2" />
+              <h2 className="text-lg font-semibold">Compliance Answers</h2>
+            </div>
+            {data?.questionnaireAnswers && data.questionnaireAnswers.length > 0 ? (
+              <div className="space-y-3">
+                {data.questionnaireAnswers.slice(0, 3).map((answer: any, index: number) => (
+                  <div key={index} className="border-l-4 border-purple-500 pl-3">
+                    <h3 className="font-medium text-sm">{answer.question}</h3>
+                    <p className="text-xs text-gray-600">{answer.answer?.substring(0, 50)}...</p>
+                  </div>
+                ))}
+                {data.questionnaireAnswers.length > 3 && (
+                  <p className="text-xs text-gray-500">+{data.questionnaireAnswers.length - 3} more answers</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No compliance answers shared yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Debug Information (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 bg-gray-100 rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-4">Debug Information</h3>
+            <pre className="text-xs overflow-auto">
+              {JSON.stringify({ user, data, inviteLink }, null, 2)}
+            </pre>
+          </div>
         )}
       </main>
     </div>
