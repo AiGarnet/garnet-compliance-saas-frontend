@@ -1,10 +1,11 @@
 "use client";
 
 import React from 'react';
-import { ArrowLeft, Edit, Download, FileDown } from 'lucide-react';
+import { ArrowLeft, Edit, Download, FileDown, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { VendorDetail } from '@/hooks/useVendor';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { useRouter } from 'next/navigation';
 
 interface VendorDetailHeaderProps {
   vendor: VendorDetail;
@@ -12,6 +13,12 @@ interface VendorDetailHeaderProps {
 }
 
 export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) {
+  const router = useRouter();
+
+  const handleManageWorks = () => {
+    router.push(`/vendors/${vendor.id}/works`);
+  };
+
   return (
     <div className="bg-white border-b border-gray-200 shadow-sm py-6 px-4 md:px-6">
       <div className="container mx-auto max-w-7xl">
@@ -55,6 +62,15 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
           </div>
           
           <div className="flex items-center gap-3">
+            {/* Manage Works Button */}
+            <button
+              onClick={handleManageWorks}
+              className="px-4 py-2 rounded-md bg-blue-600 text-white flex items-center gap-2 hover:bg-blue-700 transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Manage Works</span>
+            </button>
+
             {onEdit ? (
               <button
                 onClick={onEdit}

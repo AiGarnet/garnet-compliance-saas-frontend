@@ -140,6 +140,56 @@ export const vendors = {
   
   // Get vendor statistics
   getStats: () => apiCall('/api/vendors/stats'),
+
+  // Vendor Work Management
+  works: {
+    // Get all works for a vendor
+    getAll: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/works`),
+    
+    // Get specific work by ID
+    getById: (vendorId: string, workId: string) => apiCall(`/api/vendors/${vendorId}/works/${workId}`),
+    
+    // Create new work submission
+    create: (vendorId: string, data: any) => apiCall(`/api/vendors/${vendorId}/works`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    
+    // Update work submission
+    update: (vendorId: string, workId: string, data: any) => apiCall(`/api/vendors/${vendorId}/works/${workId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    
+    // Delete work submission
+    delete: (vendorId: string, workId: string) => apiCall(`/api/vendors/${vendorId}/works/${workId}`, {
+      method: 'DELETE',
+    }),
+  },
+
+  // Trust Portal Management
+  trustPortal: {
+    // Generate invite link for a vendor
+    generateInviteLink: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/trust-portal/invite`, {
+      method: 'POST',
+    }),
+    
+    // Get trust portal data for a vendor (public)
+    getData: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/trust-portal`),
+    
+    // Get trust portal data via invite token (public)
+    getByInviteToken: (token: string) => apiCall(`/api/trust-portal/invite/${token}`),
+  },
+
+  // Questionnaire Answer Share Management
+  answers: {
+    // Update share status for questionnaire answer
+    updateShareStatus: (vendorId: string, answerId: string, shareToTrustPortal: boolean) => 
+      apiCall(`/api/vendors/${vendorId}/answers/${answerId}/share`, {
+        method: 'PATCH',
+        body: JSON.stringify({ shareToTrustPortal }),
+      }),
+  },
 };
 
 // Evidence file API functions
