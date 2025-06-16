@@ -16,12 +16,16 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { vendors as vendorAPI } from '@/lib/api';
 import { VendorFormData } from '@/types/vendor';
+import { useAuthGuard } from '@/lib/auth/useAuthGuard';
 
 interface VendorDetailViewProps {
   vendorId: string;
 }
 
 export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
+  // Protect this page - redirect to login if not authenticated
+  const { isLoading: authLoading } = useAuthGuard();
+  
   const { vendor, isLoading, error, fetchVendor } = useVendor(vendorId);
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -53,6 +57,18 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
       throw new Error(err.message || 'Failed to update vendor');
     }
   };
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show skeleton while loading
   if (isLoading) {
