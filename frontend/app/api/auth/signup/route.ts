@@ -12,7 +12,7 @@ const pool = new Pool({
 });
 
 // JWT secret (in production, this should be in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'garnet-ai-super-secret-jwt-key-2025-production';
 
 export async function POST(request: NextRequest) {
   try {
