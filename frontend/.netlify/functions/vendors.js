@@ -11,12 +11,12 @@ try {
   fetch = require('node-fetch');
 }
 
-// Determine backend URL - prioritize explicit env var, then check for production environment
+// Railway Backend API URL
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL 
   || (process.env.NODE_ENV === 'production' ? 'https://garnet-compliance-saas-production.up.railway.app' : null)
-  || 'https://garnet-compliance-saas-production.up.railway.app'; // Default to production backend
+  || 'https://garnet-compliance-saas-production.up.railway.app';
 
-console.log('Environment check:', {
+console.log('Vendors function - Environment check:', {
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   BACKEND_URL: BACKEND_URL
@@ -42,12 +42,12 @@ exports.handler = async (event, context) => {
 
   try {
     const method = event.httpMethod;
-    console.log('Vendor function called:', {
+    const { path } = event;
+    
+    console.log('Vendors function called:', {
       method,
+      path,
       backendUrl: BACKEND_URL,
-      env: process.env.NODE_ENV,
-      headers: event.headers,
-      userAgent: event.headers['user-agent'],
       hasAuth: !!event.headers.authorization
     });
 
@@ -63,21 +63,28 @@ exports.handler = async (event, context) => {
       console.log('Forwarding Authorization header to backend');
     }
 
-    // First, let's test if we can reach the backend at all
-    console.log('Testing backend connectivity...');
-    
-    if (method === 'GET') {
-      // Get all vendors
-      console.log(`Making GET request to: ${BACKEND_URL}/api/vendors`);
-      
-      const response = await fetch(`${BACKEND_URL}/api/vendors`, {
-        method: 'GET',
-        headers: backendHeaders,
-        timeout: 30000, // 30 second timeout
-      });
+    let backendUrl = `${BACKEND_URL}/api/vendors`;
+    let fetchOptions = {
+      method: method,
+      headers: backendHeaders,
+      timeout: 30000, // 30 second timeout
+    };
 
+    if (method === 'GET') {
+      // Check for specific endpoints in the path
+      if (path.includes('/stats')) {
+        backendUrl = `${BACKEND_URL}/api/vendors/stats`;
+      } else if (path.includes('/status/')) {
+        const status = path.split('/status/')[1];
+        backendUrl = `${BACKEND_URL}/api/vendors/status/${status}`;
+      } else if (path.includes('/with-suggestions')) {
+        backendUrl = `${BACKEND_URL}/api/vendors/with-suggestions`;
+      }
+      
+      console.log(`Making GET request to: ${backendUrl}`);
+      
+      const response = await fetch(backendUrl, fetchOptions);
       console.log('Backend response status:', response.status);
-      console.log('Backend response headers:', response.headers.raw());
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -90,7 +97,7 @@ exports.handler = async (event, context) => {
             error: 'Failed to fetch vendors',
             backendStatus: response.status,
             backendResponse: errorText,
-            backendUrl: BACKEND_URL
+            backendUrl: backendUrl
           }),
         };
       }
@@ -103,20 +110,45 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify(data),
       };
+      
     } else if (method === 'POST') {
       // Create new vendor
-      const body = JSON.parse(event.body || '{}');
-      console.log('Creating vendor with data:', body);
+      const requestBody = JSON.parse(event.body || '{}');
+      console.log('Creating vendor with data:', requestBody);
 
-      console.log(`Making POST request to: ${BACKEND_URL}/api/vendors`);
-      
-      const response = await fetch(`${BACKEND_URL}/api/vendors`, {
-        method: 'POST',
-        headers: backendHeaders,
-        body: JSON.stringify(body),
-        timeout: 30000, // 30 second timeout
+      // Transform frontend data to match backend DTO
+      const backendData = {
+        companyName: requestBody.name || requestBody.companyName,
+        region: requestBody.region || 'Not Specified',
+        contactEmail: requestBody.contactEmail || '',
+        contactName: requestBody.contactName,
+        website: requestBody.website,
+        industry: requestBody.industry,
+        description: requestBody.description,
+        status: requestBody.status,
+        riskScore: requestBody.riskScore,
+        riskLevel: requestBody.riskLevel
+      };
+
+      // Remove undefined values
+      Object.keys(backendData).forEach(key => {
+        if (backendData[key] === undefined) {
+          delete backendData[key];
+        }
       });
 
+      // Check if it's a create with answers request
+      if (requestBody.answers && Array.isArray(requestBody.answers)) {
+        backendUrl = `${BACKEND_URL}/api/vendors/with-answers`;
+        backendData.answers = requestBody.answers;
+      }
+
+      fetchOptions.body = JSON.stringify(backendData);
+      
+      console.log(`Making POST request to: ${backendUrl}`);
+      console.log('Transformed backend data:', backendData);
+      
+      const response = await fetch(backendUrl, fetchOptions);
       console.log('Backend POST response status:', response.status);
 
       if (!response.ok) {
@@ -130,8 +162,8 @@ exports.handler = async (event, context) => {
             error: 'Failed to create vendor',
             backendStatus: response.status,
             backendResponse: errorText,
-            backendUrl: BACKEND_URL,
-            requestBody: body
+            backendUrl: backendUrl,
+            requestBody: backendData
           }),
         };
       }
@@ -144,6 +176,7 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify(data),
       };
+      
     } else {
       return {
         statusCode: 405,
@@ -152,7 +185,7 @@ exports.handler = async (event, context) => {
       };
     }
   } catch (error) {
-    console.error('Vendor function error:', error);
+    console.error('Vendors function error:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,

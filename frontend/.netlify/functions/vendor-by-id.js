@@ -11,10 +11,10 @@ try {
   fetch = require('node-fetch');
 }
 
-// Determine backend URL - prioritize explicit env var, then check for production environment
+// Railway Backend API URL
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL 
   || (process.env.NODE_ENV === 'production' ? 'https://garnet-compliance-saas-production.up.railway.app' : null)
-  || 'https://garnet-compliance-saas-production.up.railway.app'; // Default to production backend
+  || 'https://garnet-compliance-saas-production.up.railway.app';
 
 console.log('Vendor-by-id function - Environment check:', {
   NODE_ENV: process.env.NODE_ENV,
@@ -26,8 +26,8 @@ exports.handler = async (event, context) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, POST, OPTIONS',
     'Content-Type': 'application/json',
   };
 
@@ -42,18 +42,22 @@ exports.handler = async (event, context) => {
 
   try {
     const method = event.httpMethod;
+    const { path, queryStringParameters } = event;
     
-    // Extract vendor ID from query string
-    const vendorId = event.queryStringParameters?.id;
+    // Extract vendor ID from path or query parameters
+    const pathSegments = path.split('/');
+    const vendorId = pathSegments[pathSegments.length - 1] || queryStringParameters?.id;
     
     console.log('Vendor-by-id function called:', {
       method,
       vendorId,
+      path,
       backendUrl: BACKEND_URL,
-      queryParams: event.queryStringParameters
+      queryParams: queryStringParameters,
+      hasAuth: !!event.headers.authorization
     });
     
-    if (!vendorId) {
+    if (!vendorId || vendorId === 'vendor-by-id') {
       return {
         statusCode: 400,
         headers,
@@ -61,19 +65,34 @@ exports.handler = async (event, context) => {
       };
     }
 
-    if (method === 'GET') {
-      // Get vendor by ID
-      console.log(`Making GET request to: ${BACKEND_URL}/api/vendors/${vendorId}`);
-      
-      const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Netlify-Function/vendor-by-id'
-        },
-        timeout: 30000,
-      });
+    // Prepare headers for backend request
+    const backendHeaders = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Netlify-Function/vendor-by-id'
+    };
 
+    // Forward Authorization header if present
+    if (event.headers.authorization) {
+      backendHeaders['Authorization'] = event.headers.authorization;
+      console.log('Forwarding Authorization header to backend');
+    }
+
+    let backendUrl = `${BACKEND_URL}/api/vendors/${vendorId}`;
+    let fetchOptions = {
+      method: method,
+      headers: backendHeaders,
+      timeout: 30000,
+    };
+
+    if (method === 'GET') {
+      // Check for specific sub-endpoints
+      if (path.includes('/answers')) {
+        backendUrl = `${BACKEND_URL}/api/vendors/${vendorId}/answers`;
+      }
+      
+      console.log(`Making GET request to: ${backendUrl}`);
+      
+      const response = await fetch(backendUrl, fetchOptions);
       console.log('Backend response status:', response.status);
 
       if (!response.ok) {
@@ -100,57 +119,144 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify(data),
       };
+      
     } else if (method === 'PUT') {
       // Update vendor
-      const body = JSON.parse(event.body || '{}');
+      const requestBody = JSON.parse(event.body || '{}');
+      console.log('Updating vendor with data:', requestBody);
 
-      const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+      // Transform frontend data to match backend DTO
+      const backendData = {
+        companyName: requestBody.name || requestBody.companyName,
+        region: requestBody.region,
+        contactEmail: requestBody.contactEmail,
+        contactName: requestBody.contactName,
+        website: requestBody.website,
+        industry: requestBody.industry,
+        description: requestBody.description,
+        status: requestBody.status,
+        riskScore: requestBody.riskScore,
+        riskLevel: requestBody.riskLevel
+      };
+
+      // Remove undefined values
+      Object.keys(backendData).forEach(key => {
+        if (backendData[key] === undefined) {
+          delete backendData[key];
+        }
       });
 
+      fetchOptions.body = JSON.stringify(backendData);
+      
+      console.log(`Making PUT request to: ${backendUrl}`);
+      console.log('Transformed backend data:', backendData);
+
+      const response = await fetch(backendUrl, fetchOptions);
+      console.log('Backend PUT response status:', response.status);
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Failed to update vendor' }));
+        const errorText = await response.text();
+        console.error('Backend PUT error response:', errorText);
+        
         return {
           statusCode: response.status,
           headers,
-          body: JSON.stringify(error),
+          body: JSON.stringify({ 
+            error: 'Failed to update vendor',
+            backendStatus: response.status,
+            backendResponse: errorText,
+            vendorId: vendorId,
+            requestBody: backendData
+          }),
         };
       }
 
       const data = await response.json();
+      console.log('Successfully updated vendor:', data);
+      
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify(data),
       };
+      
+    } else if (method === 'POST') {
+      // Handle saving questionnaire answers
+      if (path.includes('/answers') && event.body) {
+        const requestData = JSON.parse(event.body);
+        backendUrl = `${BACKEND_URL}/api/vendors/${vendorId}/answers`;
+        fetchOptions.body = JSON.stringify(requestData.answers || requestData);
+        
+        console.log(`Making POST request to: ${backendUrl}`);
+        console.log('Saving questionnaire answers:', requestData);
+
+        const response = await fetch(backendUrl, fetchOptions);
+        console.log('Backend POST response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Backend POST error response:', errorText);
+          
+          return {
+            statusCode: response.status,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Failed to save questionnaire answers',
+              backendStatus: response.status,
+              backendResponse: errorText,
+              vendorId: vendorId
+            }),
+          };
+        }
+
+        const data = await response.json();
+        console.log('Successfully saved questionnaire answers:', data);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(data),
+        };
+      } else {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid POST request' }),
+        };
+      }
+      
     } else if (method === 'DELETE') {
       // Delete vendor
-      const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log(`Making DELETE request to: ${backendUrl}`);
+      
+      const response = await fetch(backendUrl, fetchOptions);
+      console.log('Backend DELETE response status:', response.status);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Failed to delete vendor' }));
+        const errorText = await response.text();
+        console.error('Backend DELETE error response:', errorText);
+        
         return {
           statusCode: response.status,
           headers,
-          body: JSON.stringify(error),
+          body: JSON.stringify({ 
+            error: 'Failed to delete vendor',
+            backendStatus: response.status,
+            backendResponse: errorText,
+            vendorId: vendorId
+          }),
         };
       }
 
       const data = await response.json();
+      console.log('Successfully deleted vendor:', data);
+      
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify(data),
       };
+      
     } else {
       return {
         statusCode: 405,
