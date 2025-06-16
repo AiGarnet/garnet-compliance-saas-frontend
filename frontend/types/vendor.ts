@@ -54,8 +54,9 @@ export interface Vendor {
  */
 export interface VendorFormData {
   name: string;
+  region?: string;
   contactName?: string;
-  contactEmail?: string;
+  contactEmail: string;
   website?: string;
   industry?: string;
   description?: string;

@@ -74,7 +74,21 @@ const VendorsPage = () => {
   // Handle adding a new vendor
   const handleAddVendor = async (vendorData: VendorFormData) => {
     try {
-      const response = await vendorAPI.create(vendorData);
+      // Transform frontend data to match backend DTO
+      const backendData = {
+        companyName: vendorData.name, // Map name to companyName
+        region: vendorData.region || 'Not Specified',
+        contactEmail: vendorData.contactEmail || '',
+        contactName: vendorData.contactName,
+        website: vendorData.website,
+        industry: vendorData.industry,
+        description: vendorData.description,
+        status: vendorData.status,
+        riskScore: vendorData.riskScore,
+        riskLevel: vendorData.riskLevel
+      };
+
+      const response = await vendorAPI.create(backendData);
       
       // Transform the new vendor to match our interface
       const newVendor = {

@@ -13,8 +13,9 @@ interface AddVendorModalProps {
 export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProps) {
   const [formData, setFormData] = useState<VendorFormData>({
     name: '',
+    region: '', // Add region field
     contactName: '',
-    contactEmail: '',
+    contactEmail: '', // Now required
     website: '',
     industry: '',
     description: '',
@@ -44,6 +45,16 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
       return;
     }
 
+    if (!formData.region?.trim()) {
+      setError('Region is required');
+      return;
+    }
+
+    if (!formData.contactEmail?.trim()) {
+      setError('Contact email is required');
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
@@ -52,6 +63,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
       // Reset form
       setFormData({
         name: '',
+        region: '',
         contactName: '',
         contactEmail: '',
         website: '',
@@ -126,6 +138,28 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
             </div>
           </div>
 
+          {/* Region */}
+          <div>
+            <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-2">
+              Region *
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Globe className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="region"
+                name="region"
+                type="text"
+                required
+                value={formData.region}
+                onChange={handleInputChange}
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="e.g., North America, Europe, Asia Pacific"
+              />
+            </div>
+          </div>
+
           {/* Contact Name */}
           <div>
             <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -150,7 +184,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
           {/* Contact Email */}
           <div>
             <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-2">
-              Contact Email
+              Contact Email *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -160,6 +194,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
                 id="contactEmail"
                 name="contactEmail"
                 type="email"
+                required
                 value={formData.contactEmail}
                 onChange={handleInputChange}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
