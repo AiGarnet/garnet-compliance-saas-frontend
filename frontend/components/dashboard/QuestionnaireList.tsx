@@ -335,30 +335,32 @@ export function QuestionnaireList({
     const suggestions: ('All' | 'With Suggestions' | 'Without Suggestions')[] = ['All', 'With Suggestions', 'Without Suggestions'];
     
     return (
-      <div className="mb-4 space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
-          <FilterPills
-            options={statuses}
-            selectedOption={statusFilter}
-            onChange={setStatusFilter}
-            label="Filter questionnaires by status"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by AI Suggestions
-            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI
-            </span>
-          </label>
-          <FilterPills
-            options={suggestions}
-            selectedOption={suggestionsFilter}
-            onChange={setSuggestionsFilter}
-            label="Filter questionnaires by AI suggestions"
-          />
+      <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+            <FilterPills
+              options={statuses}
+              selectedOption={statusFilter}
+              onChange={setStatusFilter}
+              label="Filter questionnaires by status"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by AI Suggestions
+              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                <Sparkles className="h-3 w-3 mr-1" />
+                AI
+              </span>
+            </label>
+            <FilterPills
+              options={suggestions}
+              selectedOption={suggestionsFilter}
+              onChange={setSuggestionsFilter}
+              label="Filter questionnaires by AI suggestions"
+            />
+          </div>
         </div>
       </div>
     );
@@ -773,16 +775,6 @@ export function QuestionnaireList({
         <h2 className="text-2xl font-bold text-gray-800 flex items-center">
           <span className="text-primary mr-2">Your</span> Questionnaires
         </h2>
-        
-        {onAddQuestionnaire && (
-          <button 
-            onClick={onAddQuestionnaire}
-            className="garnet-button garnet-button-gradient self-start sm:self-auto"
-          >
-            <PlusCircle className="h-5 w-5 mr-2" />
-            Add Questionnaire
-          </button>
-        )}
       </div>
 
       {renderSearchBar()}

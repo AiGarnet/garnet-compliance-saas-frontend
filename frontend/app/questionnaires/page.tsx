@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, ChangeEvent, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, Filter, Plus, Search, SlidersHorizontal, X, Upload, FileText, FileType, Files, RefreshCw, Trash2, Sparkles, MessageSquare, Loader2 } from "lucide-react";
+import { ClipboardList, Filter, Plus, Search, SlidersHorizontal, X, Upload, FileText, FileType, Files, RefreshCw, Trash2, Sparkles, MessageSquare, Loader2, Building2 } from "lucide-react";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import { QuestionnaireList, Questionnaire, QuestionnaireStatus } from "@/components/dashboard/QuestionnaireList";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { debounce } from 'lodash';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { QuestionnaireService } from '@/lib/services/questionnaireService';
 import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
+import { vendors as vendorAPI } from '@/lib/api';
 
 interface QuestionAnswer {
   question: string;
@@ -18,6 +19,12 @@ interface QuestionAnswer {
   isLoading?: boolean;
   hasError?: boolean;
   isGenerated?: boolean;
+}
+
+interface SimpleVendor {
+  id: string;
+  name: string;
+  status: string;
 }
 
 const MAX_QUESTIONS = 500;
@@ -33,6 +40,11 @@ const QuestionnairesPage = () => {
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  
+  // Vendor states
+  const [vendors, setVendors] = useState<SimpleVendor[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>('');
+  const [isLoadingVendors, setIsLoadingVendors] = useState<boolean>(false);
   
   // New state variables for the questionnaire input modal
   const [showQuestionnaireInput, setShowQuestionnaireInput] = useState(false);
@@ -233,9 +245,33 @@ const QuestionnairesPage = () => {
     }
   }, []);
 
+  // Fetch vendors from API
+  const fetchVendors = useCallback(async () => {
+    setIsLoadingVendors(true);
+    try {
+      const response = await vendorAPI.getAll();
+      if (response.vendors && Array.isArray(response.vendors)) {
+        const transformedVendors = response.vendors.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Questionnaire Pending'
+        }));
+        setVendors(transformedVendors);
+      } else {
+        setVendors([]);
+      }
+    } catch (err) {
+      console.error('Error fetching vendors:', err);
+      setVendors([]);
+    } finally {
+      setIsLoadingVendors(false);
+    }
+  }, []);
+
   // Initial fetch on component mount
   useEffect(() => {
     fetchQuestionnaires();
+    fetchVendors();
   }, []);
   
   // Focus the textarea when the modal is shown
@@ -366,6 +402,7 @@ const QuestionnairesPage = () => {
     setValidationError(null);
     setGeneratedAnswers([]);
     setShowAIAssistant(false);
+    setSelectedVendorId('');
   };
 
   // Generate AI answers for questions with enhanced progress tracking
@@ -508,6 +545,9 @@ const QuestionnairesPage = () => {
         console.log('📊 Created vendor:', databaseResult.vendor?.name);
         console.log('📝 Questionnaire ID:', databaseResult.questionnaire.id);
         
+        // Get selected vendor info
+        const selectedVendor = vendors.find(v => v.id === selectedVendorId);
+        
         newQuestionnaire = {
           id: databaseResult.questionnaire.id,
           name: databaseResult.questionnaire.name,
@@ -515,8 +555,8 @@ const QuestionnairesPage = () => {
           dueDate: databaseResult.questionnaire.dueDate,
           progress: 100, // 100% since we have all answers
           answers: databaseResult.questionnaire.answers,
-          vendorId: databaseResult.questionnaire.vendorId,
-          vendorName: databaseResult.questionnaire.vendorName,
+          vendorId: selectedVendorId || databaseResult.questionnaire.vendorId,
+          vendorName: selectedVendor?.name || databaseResult.questionnaire.vendorName,
         };
         
         // Show success message
@@ -534,6 +574,9 @@ const QuestionnairesPage = () => {
           finalAnswers = await handleGenerateAnswers();
         }
         
+        // Get selected vendor info
+        const selectedVendor = vendors.find(v => v.id === selectedVendorId);
+        
         newQuestionnaire = {
           id: `q${Date.now()}`,  
           name: questionnaireTitle,
@@ -541,6 +584,8 @@ const QuestionnairesPage = () => {
           dueDate: new Date().toLocaleDateString(),
           progress: finalAnswers.length > 0 ? 100 : 0,
           answers: finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' })),
+          vendorId: selectedVendorId,
+          vendorName: selectedVendor?.name,
         };
         
         // Show warning about fallback
@@ -604,6 +649,7 @@ const QuestionnairesPage = () => {
     setFindReplaceMode(false);
     setGeneratedAnswers([]);
     setShowAIAssistant(false);
+    setSelectedVendorId('');
   };
 
   // Process file regardless of upload method
@@ -908,6 +954,35 @@ const QuestionnairesPage = () => {
                       required
                       aria-label="Questionnaire title"
                     />
+                  </div>
+
+                  {/* Vendor Selection */}
+                  <div className="mb-4">
+                    <label htmlFor="vendor-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <Building2 className="inline h-4 w-4 mr-1" />
+                      Select Vendor (Optional)
+                    </label>
+                    <select
+                      id="vendor-select"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                      value={selectedVendorId}
+                      onChange={(e) => setSelectedVendorId(e.target.value)}
+                      aria-label="Select vendor for questionnaire"
+                    >
+                      <option value="">-- No vendor selected --</option>
+                      {isLoadingVendors ? (
+                        <option disabled>Loading vendors...</option>
+                      ) : (
+                        vendors.map((vendor) => (
+                          <option key={vendor.id} value={vendor.id}>
+                            {vendor.name} ({vendor.status})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Choose a vendor to associate this questionnaire with their compliance assessment.
+                    </p>
                   </div>
 
                   {!showPreview && !showAIAssistant && (
