@@ -16,7 +16,7 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
   const router = useRouter();
 
   const handleManageWorks = () => {
-    router.push(`/vendors/${vendor.id}/works`);
+    router.push(`/vendor-works?id=${vendor.id}`);
   };
 
   return (

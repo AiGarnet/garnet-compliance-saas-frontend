@@ -1,25 +1,25 @@
 'use client';
 
-import { TrustPortalPublicView } from '@/components/trust-portal/TrustPortalPublicView';
+import { VendorWorksView } from '@/components/vendors/VendorWorksView';
 import { useSearchParams } from 'next/navigation';
 
-export default function TrustPortalPage() {
+export default function VendorWorksPage() {
   const searchParams = useSearchParams();
-  const token = searchParams?.get('token');
+  const vendorId = searchParams?.get('id');
 
-  if (!token) {
+  if (!vendorId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Access</h1>
-          <p className="text-gray-600 mb-4">No invite token provided.</p>
+          <p className="text-gray-600 mb-4">No vendor ID provided.</p>
           <p className="text-sm text-gray-500">
-            Please use a valid invite link to access this trust portal.
+            Please access this page from a valid vendor profile.
           </p>
         </div>
       </div>
     );
   }
 
-  return <TrustPortalPublicView token={token} />;
+  return <VendorWorksView vendorId={vendorId} />;
 } 
