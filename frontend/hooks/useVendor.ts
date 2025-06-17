@@ -121,6 +121,24 @@ export function useVendor(id: string, mockMode = false): UseVendorResult {
           throw new Error('Vendor not found');
         }
         
+        // Fetch questionnaire answers separately
+        let questionnaireAnswers = [];
+        try {
+          const answersResponse = await vendors.answers.getAll(id);
+          console.log('useVendor: Questionnaire answers response:', answersResponse);
+          questionnaireAnswers = (answersResponse.answers || []).map((qa: any) => ({
+            question: qa.question,
+            answer: qa.answer
+          }));
+        } catch (answersError) {
+          console.log('useVendor: No questionnaire answers found or error fetching:', answersError);
+          // Fall back to questionnaire answers from vendor object if available
+          questionnaireAnswers = (response.vendor.questionnaireAnswers || []).map((qa: any) => ({
+            question: qa.question,
+            answer: qa.answer
+          }));
+        }
+        
         // Transform the API response to match our VendorDetail interface
         const apiVendor = response.vendor;
         const vendorDetail: VendorDetail = {
@@ -138,11 +156,8 @@ export function useVendor(id: string, mockMode = false): UseVendorResult {
           industry: apiVendor.industry || null,
           description: apiVendor.description || null,
           
-          // Map questionnaire answers from backend format
-          questionnaireAnswers: (apiVendor.questionnaireAnswers || []).map((qa: any) => ({
-            question: qa.question,
-            answer: qa.answer
-          })),
+          // Use the fetched questionnaire answers
+          questionnaireAnswers,
           
           // Generate mock activities for now
           activities: [
