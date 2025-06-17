@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Building2, ExternalLink, Filter, Plus, Search, SlidersHorizontal, Users } from "lucide-react";
+import { Building2, ExternalLink, Filter, Plus, Search, SlidersHorizontal, Users, Trash2 } from "lucide-react";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import { VendorFormData } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
 import Header from "@/components/Header";
 import { AddVendorModal } from "../../components/vendors/AddVendorModal";
+import { DeleteVendorModal } from "../../components/vendors/DeleteVendorModal";
 import { EvidenceCount } from "@/components/vendors/EvidenceCount";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,15 @@ const VendorsPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    vendorId: string;
+    vendorName: string;
+  }>({
+    isOpen: false,
+    vendorId: '',
+    vendorName: '',
+  });
   const router = useRouter();
 
   // Protect this page - redirect to login if not authenticated
@@ -135,6 +145,53 @@ const VendorsPage = () => {
     // For now, navigate to the vendor detail page
     // Later you can implement an edit modal or dedicated edit page
     router.push(`/vendors/${vendorId}?edit=true`);
+  };
+
+  // Handle opening delete modal
+  const handleDeleteVendor = (vendorId: string, vendorName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      vendorId,
+      vendorName,
+    });
+  };
+
+  // Handle confirming vendor deletion
+  const handleConfirmDelete = async (vendorId: string) => {
+    try {
+      console.log('Deleting vendor with ID:', vendorId);
+      await vendorAPI.delete(vendorId);
+      
+      // Remove vendor from the list
+      setVendors(prev => prev.filter(vendor => vendor.id !== vendorId));
+      console.log('Frontend: Successfully deleted vendor:', vendorId);
+    } catch (err: any) {
+      console.error("Error deleting vendor:", err);
+      
+      // Handle specific errors
+      if (err.message?.includes('404')) {
+        throw new Error('Vendor not found. It may have already been deleted.');
+      }
+      
+      if (err.message?.includes('401')) {
+        throw new Error('Authentication required. Please log in and try again.');
+      }
+      
+      if (err.message?.includes('403')) {
+        throw new Error('You don\'t have permission to delete vendors.');
+      }
+      
+      throw new Error(err.message || 'Failed to delete vendor. Please try again.');
+    }
+  };
+
+  // Handle closing delete modal
+  const handleCloseDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      vendorId: '',
+      vendorName: '',
+    });
   };
 
   // Initial fetch on component mount
@@ -271,9 +328,16 @@ const VendorsPage = () => {
                           </button>
                           <button
                             onClick={() => handleEditVendor(vendor.id)}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="text-gray-600 hover:text-gray-900 mr-4"
                           >
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVendor(vendor.id, vendor.name)}
+                            className="text-red-600 hover:text-red-800 inline-flex items-center"
+                            title="Delete vendor"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -293,6 +357,15 @@ const VendorsPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddVendor}
+      />
+
+      {/* Delete Vendor Modal */}
+      <DeleteVendorModal
+        isOpen={deleteModal.isOpen}
+        vendorName={deleteModal.vendorName}
+        vendorId={deleteModal.vendorId}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );
