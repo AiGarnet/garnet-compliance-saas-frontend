@@ -29,6 +29,7 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
   const { vendor, isLoading, error, fetchVendor } = useVendor(vendorId);
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportingAnswers, setIsImportingAnswers] = useState(false);
 
   // Check if edit mode is requested via URL parameter (client-side only)
   useEffect(() => {
@@ -44,6 +45,75 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
       }
     }
   }, [vendor]);
+
+  // Handle importing questionnaire answers from localStorage
+  const handleImportQuestionnaireAnswers = async () => {
+    if (typeof window === 'undefined' || !vendor) return;
+    
+    try {
+      setIsImportingAnswers(true);
+      
+      // Get questionnaires from localStorage
+      const storedQuestionnaires = localStorage.getItem('user_questionnaires');
+      if (!storedQuestionnaires) {
+        alert('No questionnaires found in localStorage');
+        return;
+      }
+      
+      const questionnaires = JSON.parse(storedQuestionnaires);
+      console.log('Found questionnaires in localStorage:', questionnaires);
+      
+      // Show questionnaires to user for selection
+      let selectedQuestionnaire = null;
+      if (questionnaires.length === 1) {
+        // Auto-select if only one questionnaire
+        selectedQuestionnaire = questionnaires[0];
+      } else if (questionnaires.length > 1) {
+        // Let user choose which questionnaire to import
+        const questionnaireOptions = questionnaires.map((q: any, index: number) => 
+          `${index + 1}. ${q.name} (${q.answers?.length || 0} answers)`
+        ).join('\n');
+        
+        const selection = prompt(`Select questionnaire to import:\n${questionnaireOptions}\n\nEnter number (1-${questionnaires.length}):`);
+        const selectedIndex = selection ? parseInt(selection) - 1 : -1;
+        
+        if (selectedIndex >= 0 && selectedIndex < questionnaires.length) {
+          selectedQuestionnaire = questionnaires[selectedIndex];
+        } else {
+          alert('Invalid selection');
+          return;
+        }
+      }
+      
+      if (!selectedQuestionnaire || !selectedQuestionnaire.answers || selectedQuestionnaire.answers.length === 0) {
+        alert('No answers found in selected questionnaire');
+        return;
+      }
+      
+      // Transform answers to the format expected by the API
+      const answersToSave = selectedQuestionnaire.answers.map((qa: any) => ({
+        questionId: qa.questionId || `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        question: qa.question,
+        answer: qa.answer
+      }));
+      
+      console.log('Saving answers to vendor:', answersToSave);
+      
+      // Save answers to the vendor via API
+      await vendorAPI.answers.save(vendorId, answersToSave);
+      
+      alert(`Successfully imported ${answersToSave.length} questionnaire answers to ${vendor.name}!`);
+      
+      // Refresh vendor data to show the new answers
+      fetchVendor();
+      
+    } catch (error: any) {
+      console.error('Error importing questionnaire answers:', error);
+      alert(`Failed to import questionnaire answers: ${error.message}`);
+    } finally {
+      setIsImportingAnswers(false);
+    }
+  };
 
   // Handle vendor update
   const handleUpdateVendor = async (vendorData: VendorFormData) => {
@@ -114,6 +184,27 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
         <VendorDetailHeader vendor={vendor} onEdit={() => setIsEditModalOpen(true)} />
         
         <div className="container mx-auto max-w-7xl py-8 px-4">
+          {/* Import Questionnaire Button */}
+          {vendor.questionnaireAnswers?.length === 0 && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">No Questionnaire Answers Found</h3>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Import questionnaire answers from localStorage if you have completed questionnaires for this vendor.
+                  </p>
+                </div>
+                <button
+                  onClick={handleImportQuestionnaireAnswers}
+                  disabled={isImportingAnswers}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isImportingAnswers ? 'Importing...' : 'Import Questionnaire Answers'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column */}
             <div className="lg:col-span-2 space-y-6">
