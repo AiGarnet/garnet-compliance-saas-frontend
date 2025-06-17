@@ -48,6 +48,21 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
   // Add Authorization header if token exists and this isn't a public auth endpoint
   if (token && !endpoint.includes('/api/auth/')) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('API Call Debug:', {
+      endpoint,
+      url,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+      headers: { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined }
+    });
+  } else {
+    console.log('API Call Debug:', {
+      endpoint,
+      url,
+      hasToken: !!token,
+      isAuthEndpoint: endpoint.includes('/api/auth/'),
+      headers
+    });
   }
   
   const response = await fetch(url, {
@@ -56,8 +71,24 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
+    console.error('API Error Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url,
+      endpoint
+    });
+    
     const error = await response.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    console.error('API Error Details:', error);
+    
+    // Provide more specific error messages for authentication issues
+    if (response.status === 401) {
+      const authError = new Error(error.message || error.error || 'Authentication failed. Please log in again.');
+      authError.name = 'AuthenticationError';
+      throw authError;
+    }
+    
+    throw new Error(error.message || error.error || `HTTP ${response.status}`);
   }
 
   return response.json();

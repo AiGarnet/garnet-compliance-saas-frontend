@@ -74,6 +74,8 @@ const VendorsPage = () => {
   // Handle adding a new vendor
   const handleAddVendor = async (vendorData: VendorFormData) => {
     try {
+      console.log('Creating vendor with data:', vendorData);
+      
       // Transform frontend data to match backend DTO
       const backendData = {
         companyName: vendorData.name, // Map name to companyName
@@ -88,7 +90,9 @@ const VendorsPage = () => {
         riskLevel: vendorData.riskLevel
       };
 
+      console.log('Sending backend data:', backendData);
       const response = await vendorAPI.create(backendData);
+      console.log('Vendor creation response:', response);
       
       // Transform the new vendor to match our interface
       const newVendor = {
@@ -102,7 +106,22 @@ const VendorsPage = () => {
       console.log('Frontend: Successfully created new vendor:', newVendor);
     } catch (err: any) {
       console.error("Error creating vendor:", err);
-      throw new Error(err.message || 'Failed to create vendor');
+      
+      // Handle specific authentication errors
+      if (err.name === 'AuthenticationError' || err.message?.includes('Authentication failed')) {
+        throw new Error('You need to be logged in to create vendors. Please log in and try again.');
+      }
+      
+      // Handle other specific errors
+      if (err.message?.includes('401')) {
+        throw new Error('Authentication required. Please log in and try again.');
+      }
+      
+      if (err.message?.includes('403')) {
+        throw new Error('You don\'t have permission to create vendors.');
+      }
+      
+      throw new Error(err.message || 'Failed to create vendor. Please try again.');
     }
   };
 
