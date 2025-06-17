@@ -5,7 +5,6 @@ import { VendorDetail } from '@/hooks/useVendor';
 import { FileText, MessageSquare, CheckCircle, Clock, PlayCircle, Share2 } from 'lucide-react';
 import { TrustPortalRepository } from '@/lib/repositories/trustPortalRepository';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { vendors as vendorAPI } from '@/lib/api';
 
 interface VendorQuestionnaireAnswersProps {
@@ -19,7 +18,10 @@ export function VendorQuestionnaireAnswers({ vendor }: VendorQuestionnaireAnswer
 
   // Update answer status (Pending/Completed/Reviewed)
   const updateAnswerStatus = async (answerId: string, status: 'Pending' | 'Completed' | 'Reviewed', shareToTrustPortal?: boolean) => {
-    if (!answerId) return;
+    if (!answerId) {
+      alert('Error: No answer ID provided');
+      return;
+    }
     
     try {
       setUpdatingAnswers(prev => new Set(prev).add(answerId));
@@ -29,13 +31,18 @@ export function VendorQuestionnaireAnswers({ vendor }: VendorQuestionnaireAnswer
         shareToTrustPortal
       });
       
-      toast.success(`Answer marked as ${status.toLowerCase()}`);
+      // Show success message
+      const message = `Answer marked as ${status.toLowerCase()} successfully!`;
+      if (typeof window !== 'undefined') {
+        // Use a simple notification or alert for now
+        alert(message);
+      }
       
       // Refresh the page to show updated status
       window.location.reload();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating answer status:', error);
-      toast.error('Failed to update answer status');
+      alert(`Failed to update answer status: ${error.message || error}`);
     } finally {
       setUpdatingAnswers(prev => {
         const newSet = new Set(prev);
@@ -63,10 +70,10 @@ export function VendorQuestionnaireAnswers({ vendor }: VendorQuestionnaireAnswer
         questionnaireId: vendor.id,
         content: answer
       });
-      toast.success('Added to Trust Portal');
+      alert('Successfully added to Trust Portal!');
     } catch (error) {
       console.error('Error adding to trust portal:', error);
-      toast.error('Failed to add to Trust Portal');
+      alert('Failed to add to Trust Portal');
     } finally {
       setIsAddingToTrustPortal(false);
     }
