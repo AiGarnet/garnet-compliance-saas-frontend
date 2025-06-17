@@ -230,6 +230,20 @@ export const vendors = {
         body: JSON.stringify({ shareToTrustPortal }),
       }),
   },
+
+  // Update questionnaire answer completion status
+  updateQuestionnaireAnswerStatus: (vendorId: string, answerId: string, data: { status: string; shareToTrustPortal?: boolean }) => 
+    apiCall(`/api/vendors/${vendorId}/answers/${answerId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  // Update questionnaire answer share status  
+  updateQuestionnaireAnswerShareStatus: (vendorId: string, answerId: string, shareToTrustPortal: boolean) => 
+    apiCall(`/api/vendors/${vendorId}/answers/${answerId}/share`, {
+      method: 'PATCH',
+      body: JSON.stringify({ shareToTrustPortal }),
+    }),
 };
 
 // Evidence file API functions

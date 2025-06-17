@@ -9,10 +9,11 @@ interface QuestionnaireStatusProps {
 }
 
 export function QuestionnaireStatus({ vendor }: QuestionnaireStatusProps) {
-  // Calculate the progress based on answers
-  const totalQuestions = 10; // This would typically come from your questionnaire schema
-  const answeredQuestions = vendor.questionnaireAnswers?.length || 0;
-  const progress = Math.round((answeredQuestions / totalQuestions) * 100);
+  // Calculate the progress based on actual answers - dynamic questionnaire
+  const questionnaireAnswers = vendor.questionnaireAnswers || [];
+  const totalQuestions = questionnaireAnswers.length;
+  const completedQuestions = questionnaireAnswers.filter(qa => qa.status === 'Completed').length;
+  const progress = totalQuestions > 0 ? Math.round((completedQuestions / totalQuestions) * 100) : 0;
   
   const getStatusInfo = () => {
     switch (vendor.status) {
@@ -94,37 +95,46 @@ export function QuestionnaireStatus({ vendor }: QuestionnaireStatusProps) {
           ></div>
         </div>
         <div className="mt-2 text-sm text-gray-500">
-          {answeredQuestions} of {totalQuestions} questions answered
+          {completedQuestions} of {totalQuestions} questions completed
         </div>
       </div>
       
-      {answeredQuestions > 0 && (
+      {totalQuestions > 0 && (
         <div className="mt-6">
-          <h3 className="font-medium mb-3 text-gray-800">Recent Answers</h3>
-          <ul className="space-y-3">
-            {vendor.questionnaireAnswers.slice(0, 3).map((qa, index) => (
-              <li key={index} className="border-b border-gray-100 pb-3">
-                <div className="text-sm font-medium text-gray-800">{qa.question}</div>
-                <div className="text-sm text-gray-600 mt-1">{qa.answer}</div>
-              </li>
-            ))}
-          </ul>
-          {vendor.questionnaireAnswers.length > 3 && (
-            <div className="mt-3 text-sm">
-              <a 
-                href="#questionnaire-answers" 
-                className="text-primary hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('questionnaire-answers')?.scrollIntoView({ 
-                    behavior: 'smooth' 
-                  });
-                }}
-              >
-                View all answers ({vendor.questionnaireAnswers.length} total)
-              </a>
+          <h3 className="font-medium mb-3 text-gray-800">Questionnaire Summary</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Pending Questions:</span>
+              <span className="font-medium text-yellow-600">{totalQuestions - completedQuestions}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Completed Questions:</span>
+              <span className="font-medium text-green-600">{completedQuestions}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Total Questions:</span>
+              <span className="font-medium">{totalQuestions}</span>
+            </div>
+          </div>
+          
+          {progress === 100 && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center">
+                <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                <span className="text-sm font-medium text-green-800">
+                  All questions completed! Ready for trust portal sharing.
+                </span>
+              </div>
             </div>
           )}
+        </div>
+      )}
+      
+      {totalQuestions === 0 && (
+        <div className="mt-6 text-center py-4">
+          <div className="text-gray-500 text-sm">
+            No questionnaire assigned yet. Create questions to get started.
+          </div>
         </div>
       )}
     </div>

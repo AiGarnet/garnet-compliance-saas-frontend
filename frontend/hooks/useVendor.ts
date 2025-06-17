@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react';
 
+export interface QuestionnaireAnswer {
+  id?: string;
+  question: string;
+  answer: string;
+  status?: 'Pending' | 'Completed' | 'Reviewed';
+  shareToTrustPortal?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Vendor {
   id: string;
   name: string;
   status: 'Questionnaire Pending' | 'In Review' | 'Approved' | 'Pending Review';
-  questionnaireAnswers: { question: string; answer: string }[];
+  questionnaireAnswers: QuestionnaireAnswer[];
   riskScore?: number;
   riskLevel?: 'Low' | 'Medium' | 'High';
 }
@@ -63,10 +73,10 @@ export function useVendor(id: string, mockMode = false): UseVendorResult {
           name: `Mock Vendor ${id.includes('-') ? id.split('-')[0] : id}`,
           status: 'In Review' as const,
           questionnaireAnswers: [
-            { question: "Do you store personal data?", answer: "Yes" },
-            { question: "Is data encrypted at rest?", answer: "Yes" },
-            { question: "Do you have a data retention policy?", answer: "Yes" },
-            { question: "Do you conduct regular security audits?", answer: "Partially" }
+            { question: "Do you store personal data?", answer: "Yes", status: "Completed" as const },
+            { question: "Is data encrypted at rest?", answer: "Yes", status: "Completed" as const },
+            { question: "Do you have a data retention policy?", answer: "Yes", status: "Pending" as const },
+            { question: "Do you conduct regular security audits?", answer: "Partially", status: "Pending" as const }
           ],
           riskScore: Math.floor(Math.random() * 60) + 20, // Random score between 20-80
           riskLevel: 'Medium' as const
@@ -127,15 +137,25 @@ export function useVendor(id: string, mockMode = false): UseVendorResult {
           const answersResponse = await vendors.answers.getAll(id);
           console.log('useVendor: Questionnaire answers response:', answersResponse);
           questionnaireAnswers = (answersResponse.answers || []).map((qa: any) => ({
+            id: qa.id,
             question: qa.question,
-            answer: qa.answer
+            answer: qa.answer,
+            status: qa.status || 'Pending',
+            shareToTrustPortal: qa.shareToTrustPortal || false,
+            createdAt: qa.createdAt,
+            updatedAt: qa.updatedAt
           }));
         } catch (answersError) {
           console.log('useVendor: No questionnaire answers found or error fetching:', answersError);
           // Fall back to questionnaire answers from vendor object if available
           questionnaireAnswers = (response.vendor.questionnaireAnswers || []).map((qa: any) => ({
+            id: qa.id,
             question: qa.question,
-            answer: qa.answer
+            answer: qa.answer,
+            status: qa.status || 'Pending',
+            shareToTrustPortal: qa.shareToTrustPortal || false,
+            createdAt: qa.createdAt,
+            updatedAt: qa.updatedAt
           }));
         }
         
