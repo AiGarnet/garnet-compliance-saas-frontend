@@ -269,6 +269,35 @@ export const evidence = {
   getByAnswer: (answerId: string) => apiCall(`/api/answers/${answerId}/evidence`),
 };
 
+// Questionnaires API
+export const questionnaires = {
+  // Get all questionnaires
+  getAll: () => apiCall('/api/questionnaires'),
+  
+  // Get questionnaires for a specific vendor
+  getByVendor: (vendorId: string) => apiCall(`/api/questionnaires/vendor/${vendorId}`),
+  
+  // Get a specific questionnaire by ID
+  getById: (id: string) => apiCall(`/api/questionnaires/${id}`),
+  
+  // Create a new questionnaire
+  create: (questionnaire: any) => apiCall('/api/questionnaires', {
+    method: 'POST',
+    body: JSON.stringify(questionnaire),
+  }),
+  
+  // Update a questionnaire
+  update: (id: string, questionnaire: any) => apiCall(`/api/questionnaires/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(questionnaire),
+  }),
+  
+  // Delete a questionnaire
+  delete: (id: string) => apiCall(`/api/questionnaires/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Test functions
 export const test = {
   // Test database connection

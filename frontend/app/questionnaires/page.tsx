@@ -217,33 +217,70 @@ const QuestionnairesPage = () => {
     setError('');
     
     try {
-      // Ensure we're on the client side before accessing localStorage
-      let userQuestionnaires: Questionnaire[] = [];
+      // Fetch questionnaires from database
+      const { questionnaires: questionnairesAPI } = await import('@/lib/api');
       
+      let apiQuestionnaires: Questionnaire[] = [];
+      
+      if (selectedVendorId) {
+        // Get questionnaires for specific vendor
+        const response = await questionnairesAPI.getByVendor(selectedVendorId);
+        apiQuestionnaires = response.questionnaires || [];
+      } else {
+        // Get all questionnaires
+        const response = await questionnairesAPI.getAll();
+        apiQuestionnaires = response.questionnaires || [];
+      }
+      
+      // Transform API response to match frontend interface
+      const transformedQuestionnaires = apiQuestionnaires.map((q: any) => ({
+        id: q.id.toString(),
+        name: q.title || 'Untitled Questionnaire',
+        status: q.status || 'Not Started',
+        dueDate: q.createdAt ? new Date(q.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+        progress: q.answerCount > 0 ? 100 : 0,
+        vendorId: q.vendorId?.toString() || '',
+        vendorName: q.vendorName || 'Unknown Vendor',
+        answers: [], // Will be loaded when needed
+      }));
+      
+      setQuestionnaires(transformedQuestionnaires);
+      
+      // Also keep localStorage as backup (but prioritize database)
       if (typeof window !== 'undefined') {
         const questionnairesData = localStorage.getItem('user_questionnaires');
         
-        if (questionnairesData) {
+        if (questionnairesData && transformedQuestionnaires.length === 0) {
           try {
-            userQuestionnaires = JSON.parse(questionnairesData);
+            const localQuestionnaires = JSON.parse(questionnairesData);
+            setQuestionnaires(localQuestionnaires);
           } catch (e) {
             console.error('Error parsing stored questionnaires:', e);
           }
         }
       }
       
-      // Only use user-created questionnaires
-      setQuestionnaires(userQuestionnaires);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
     } catch (err) {
       console.error('Error fetching questionnaires:', err);
       setError('Failed to load questionnaires. Please try again.');
+      
+      // Fallback to localStorage on API error
+      if (typeof window !== 'undefined') {
+        const questionnairesData = localStorage.getItem('user_questionnaires');
+        
+        if (questionnairesData) {
+          try {
+            const localQuestionnaires = JSON.parse(questionnairesData);
+            setQuestionnaires(localQuestionnaires);
+          } catch (e) {
+            console.error('Error parsing stored questionnaires:', e);
+          }
+        }
+      }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedVendorId]);
 
   // Fetch vendors from API
   const fetchVendors = useCallback(async () => {

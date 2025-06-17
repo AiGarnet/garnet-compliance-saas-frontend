@@ -337,11 +337,29 @@ export const QuestionnaireService = {
       // If vendorId is provided, save questionnaire to existing vendor
       if (vendorId) {
         try {
+          // First create the questionnaire record
+          const questionnaireData = {
+            vendor_id: parseInt(vendorId),
+            title: title,
+            status: 'Completed'
+          };
+
+          // Create questionnaire in database
+          const { questionnaires } = await import('@/lib/api');
+          const questionnaireResult = await questionnaires.create(questionnaireData);
+
+          if (!questionnaireResult.questionnaire) {
+            throw new Error('Failed to create questionnaire record');
+          }
+
+          const questionnaireId = questionnaireResult.questionnaire.id;
+
           // Save questionnaire answers to existing vendor
           const answersWithIds = answers.map(answer => ({
             questionId: uuidv4(),
             question: answer.question,
-            answer: answer.answer
+            answer: answer.answer,
+            questionnaire_id: questionnaireId
           }));
 
           // Call the backend API to save answers to existing vendor
@@ -352,7 +370,7 @@ export const QuestionnaireService = {
 
           // Create questionnaire object for frontend
           const questionnaire = {
-            id: `q${Date.now().toString(36)}${Math.random().toString(36).substr(2, 5)}`,
+            id: questionnaireId,
             name: title,
             vendorId: vendorId,
             status: 'Completed',
