@@ -212,8 +212,17 @@ export const vendors = {
     getByInviteToken: (token: string) => apiCall(`/api/trust-portal/invite/${token}`),
   },
 
-  // Questionnaire Answer Share Management
+  // Questionnaire Answer Management
   answers: {
+    // Get questionnaire answers for a vendor
+    getAll: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/answers`),
+    
+    // Save questionnaire answers for a vendor
+    save: (vendorId: string, answers: any[]) => apiCall(`/api/vendors/${vendorId}/answers`, {
+      method: 'POST',
+      body: JSON.stringify(answers),
+    }),
+    
     // Update share status for questionnaire answer
     updateShareStatus: (vendorId: string, answerId: string, shareToTrustPortal: boolean) => 
       apiCall(`/api/vendors/${vendorId}/answers/${answerId}/share`, {
