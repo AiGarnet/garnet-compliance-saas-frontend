@@ -534,7 +534,8 @@ const QuestionnairesPage = () => {
       const databaseResult = await QuestionnaireService.saveQuestionnaireToDatabase(
         questionnaireTitle,
         questions,
-        shouldGenerateAnswers
+        shouldGenerateAnswers,
+        selectedVendorId || undefined
       );
       
       let newQuestionnaire: Questionnaire & { answers?: QuestionAnswer[] };

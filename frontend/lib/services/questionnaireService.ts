@@ -312,12 +312,14 @@ export const QuestionnaireService = {
    * @param title - Questionnaire title
    * @param questions - Array of questions
    * @param generateAnswers - Whether to generate AI answers
+   * @param vendorId - Optional vendor ID to save questionnaire to existing vendor
    * @returns Promise with the saved questionnaire data
    */
   async saveQuestionnaireToDatabase(
     title: string,
     questions: string[],
-    generateAnswers: boolean = true
+    generateAnswers: boolean = true,
+    vendorId?: string
   ): Promise<{ success: boolean; questionnaire?: any; vendor?: any; error?: string }> {
     try {
       // Generate answers if requested
@@ -332,6 +334,49 @@ export const QuestionnaireService = {
         answers = questions.map(q => ({ question: q, answer: '' }));
       }
 
+      // If vendorId is provided, save questionnaire to existing vendor
+      if (vendorId) {
+        try {
+          // Save questionnaire answers to existing vendor
+          const answersWithIds = answers.map(answer => ({
+            questionId: uuidv4(),
+            question: answer.question,
+            answer: answer.answer
+          }));
+
+          // Call the backend API to save answers to existing vendor
+          const response = await apiClient.post<{ 
+            answers: any[], 
+            vendor?: any 
+          }>(`/api/vendors/${vendorId}/answers`, answersWithIds);
+
+          // Create questionnaire object for frontend
+          const questionnaire = {
+            id: `q${Date.now().toString(36)}${Math.random().toString(36).substr(2, 5)}`,
+            name: title,
+            vendorId: vendorId,
+            status: 'Completed',
+            progress: 100,
+            dueDate: new Date().toISOString().split('T')[0],
+            answers: answers,
+            createdAt: new Date().toISOString()
+          };
+
+          return {
+            success: true,
+            questionnaire: questionnaire,
+            vendor: response.vendor || { id: vendorId }
+          };
+        } catch (error: any) {
+          console.error('Error saving questionnaire to existing vendor:', error);
+          return {
+            success: false,
+            error: `Failed to save questionnaire to vendor: ${error.message}`
+          };
+        }
+      }
+
+      // If no vendorId provided, create new vendor (existing behavior)
       // Create a vendor name based on the questionnaire title
       const vendorName = title.includes('Questionnaire') ? 
         title.replace('Questionnaire', '').trim() || `Vendor for ${title}` :
