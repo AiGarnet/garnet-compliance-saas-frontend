@@ -211,7 +211,7 @@ const QuestionnairesPage = () => {
     };
   }, [showQuestionnaireInput]);
 
-  // Fetch questionnaires from vendor API (same as vendor detail page)
+  // Fetch questionnaires from questionnaire API (ultra-simple structure)
   const fetchQuestionnaires = useCallback(async () => {
     setIsLoading(true);
     setError('');
@@ -220,138 +220,58 @@ const QuestionnairesPage = () => {
       let transformedQuestionnaires: Questionnaire[] = [];
       
       if (selectedVendorId) {
-        // Get vendor questionnaire answers for specific vendor (same as vendor detail page)
-        const response = await vendorAPI.getById(selectedVendorId);
+        // Get questionnaires for specific vendor
+        console.log(`🔍 Fetching questionnaires for vendor ${selectedVendorId}`);
         
-        if (response.vendor && response.vendor.questionnaireAnswers) {
-          // Group questions by questionnaire_id to create questionnaire objects
-          const questionnaireGroups = new Map();
+        const response = await fetch(`/api/questionnaires/vendor/${selectedVendorId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
           
-          response.vendor.questionnaireAnswers.forEach((qa: any) => {
-            const questionnaireId = qa.questionnaireId || 'default';
-            
-            if (!questionnaireGroups.has(questionnaireId)) {
-              questionnaireGroups.set(questionnaireId, {
-                id: questionnaireId.toString(),
-                name: `${response.vendor.name} - Questionnaire ${questionnaireId}`,
-                vendorId: selectedVendorId,
-                vendorName: response.vendor.name || response.vendor.companyName,
-                answers: [],
-                status: 'Not Started',
-                progress: 0,
-                dueDate: new Date().toLocaleDateString()
-              });
-            }
-            
-            const questionnaire = questionnaireGroups.get(questionnaireId);
-            questionnaire.answers.push({
-              question: qa.question,
-              answer: qa.answer,
-              questionId: qa.questionId,
-              status: qa.status
-            });
-          });
-          
-          // Convert map to array and calculate status/progress
-          transformedQuestionnaires = Array.from(questionnaireGroups.values()).map((q: any) => {
-            const completedAnswers = q.answers.filter((a: any) => a.status === 'Completed').length;
-            const totalQuestions = q.answers.length;
-            const progress = totalQuestions > 0 ? Math.round((completedAnswers / totalQuestions) * 100) : 0;
-            
-            let status = 'Not Started';
-            if (progress === 100) {
-              status = 'Completed';
-            } else if (progress >= 75) {
-              status = 'In Review';
-            } else if (progress >= 25) {
-              status = 'In Progress';
-            } else if (progress > 0) {
-              status = 'Draft';
-            }
-            
-            return {
-              ...q,
-              status,
-              progress
-            };
-          });
+          if (data.questionnaires && Array.isArray(data.questionnaires)) {
+            transformedQuestionnaires = data.questionnaires.map((q: any) => ({
+              id: q.id.toString(),
+              name: q.title || `${q.vendorName} - Questions`,
+              vendorId: q.vendorId?.toString(),
+              vendorName: q.vendorName,
+              status: q.status,
+              progress: q.progress || 0,
+              dueDate: new Date().toLocaleDateString(),
+              createdAt: q.createdAt,
+              updatedAt: q.updatedAt
+            }));
+          }
+        } else {
+          console.error('Failed to fetch vendor questionnaires:', response.status);
         }
       } else {
-        // Get all vendors and their questionnaire answers
-        const response = await vendorAPI.getAll();
+        // Get all questionnaires
+        console.log('🔍 Fetching all questionnaires');
         
-        if (response.vendors && Array.isArray(response.vendors)) {
-          const allQuestionnaires: Questionnaire[] = [];
+        const response = await fetch('/api/questionnaires');
+        
+        if (response.ok) {
+          const data = await response.json();
           
-          // Get questionnaire answers for each vendor
-          for (const vendor of response.vendors) {
-            try {
-              const vendorResponse = await vendorAPI.getById(vendor.vendorId?.toString() || vendor.id);
-              
-              if (vendorResponse.vendor && vendorResponse.vendor.questionnaireAnswers) {
-                // Group questions by questionnaire_id
-                const questionnaireGroups = new Map();
-                
-                vendorResponse.vendor.questionnaireAnswers.forEach((qa: any) => {
-                  const questionnaireId = qa.questionnaireId || 'default';
-                  
-                  if (!questionnaireGroups.has(questionnaireId)) {
-                    questionnaireGroups.set(questionnaireId, {
-                      id: `${vendor.vendorId || vendor.id}-${questionnaireId}`,
-                      name: `${vendorResponse.vendor.name || vendorResponse.vendor.companyName} - Questionnaire ${questionnaireId}`,
-                      vendorId: (vendor.vendorId || vendor.id).toString(),
-                      vendorName: vendorResponse.vendor.name || vendorResponse.vendor.companyName,
-                      answers: [],
-                      status: 'Not Started',
-                      progress: 0,
-                      dueDate: new Date().toLocaleDateString()
-                    });
-                  }
-                  
-                  const questionnaire = questionnaireGroups.get(questionnaireId);
-                  questionnaire.answers.push({
-                    question: qa.question,
-                    answer: qa.answer,
-                    questionId: qa.questionId,
-                    status: qa.status
-                  });
-                });
-                
-                // Convert map to array and calculate status/progress
-                const vendorQuestionnaires = Array.from(questionnaireGroups.values()).map((q: any) => {
-                  const completedAnswers = q.answers.filter((a: any) => a.status === 'Completed').length;
-                  const totalQuestions = q.answers.length;
-                  const progress = totalQuestions > 0 ? Math.round((completedAnswers / totalQuestions) * 100) : 0;
-                  
-                  let status = 'Not Started';
-                  if (progress === 100) {
-                    status = 'Completed';
-                  } else if (progress >= 75) {
-                    status = 'In Review';
-                  } else if (progress >= 25) {
-                    status = 'In Progress';
-                  } else if (progress > 0) {
-                    status = 'Draft';
-                  }
-                  
-                  return {
-                    ...q,
-                    status,
-                    progress
-                  };
-                });
-                
-                allQuestionnaires.push(...vendorQuestionnaires);
-              }
-            } catch (vendorError) {
-              console.error(`Error fetching questionnaires for vendor ${vendor.vendorId || vendor.id}:`, vendorError);
-            }
+          if (data.questionnaires && Array.isArray(data.questionnaires)) {
+            transformedQuestionnaires = data.questionnaires.map((q: any) => ({
+              id: q.id.toString(),
+              name: q.title || `${q.vendorName} - Questions`,
+              vendorId: q.vendorId?.toString(),
+              vendorName: q.vendorName,
+              status: q.status,
+              progress: q.progress || 0,
+              dueDate: new Date().toLocaleDateString(),
+              createdAt: q.createdAt,
+              updatedAt: q.updatedAt
+            }));
           }
-          
-          transformedQuestionnaires = allQuestionnaires;
+        } else {
+          console.error('Failed to fetch questionnaires:', response.status);
         }
       }
       
+      console.log(`✅ Loaded ${transformedQuestionnaires.length} questionnaires`);
       setQuestionnaires(transformedQuestionnaires);
       
     } catch (err) {
@@ -365,6 +285,7 @@ const QuestionnairesPage = () => {
         if (questionnairesData) {
           try {
             const localQuestionnaires = JSON.parse(questionnairesData);
+            console.log(`📦 Loaded ${localQuestionnaires.length} questionnaires from localStorage`);
             setQuestionnaires(localQuestionnaires);
           } catch (e) {
             console.error('Error parsing stored questionnaires:', e);

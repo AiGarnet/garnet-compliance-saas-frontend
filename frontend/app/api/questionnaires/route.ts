@@ -14,52 +14,85 @@ interface QuestionnaireData {
   answers?: QuestionAnswer[];
 }
 
-export async function POST(request: NextRequest) {
-  // For static builds, you would typically:
-  // 1. Use client-side state management instead of API routes
-  // 2. Or use Netlify functions for dynamic functionality
-  
-  // This API function will be pre-rendered at build time
-  // Client-side code should handle this limitation
-
-  try {
-    const body: QuestionnaireData = await request.json();
-    const { title, questions, answers } = body;
-    
-    if (!title || !questions || !Array.isArray(questions) || questions.length === 0) {
-      return NextResponse.json({ error: 'Title and questions array are required' }, { status: 400 });
-    }
-    
-    // Generate a unique ID
-    const id = `q${Date.now().toString(36)}${Math.random().toString(36).substr(2, 5)}`;
-    
-    // Create questionnaire object
-    const questionnaire = {
-      id,
-      name: title,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-      status: 'Not Started',
-      progress: 0,
-      answers: answers || questions.map((question: string) => ({
-        question,
-        answer: '' // Empty answer to be filled later
-      }))
-    };
-    
-    return NextResponse.json(questionnaire);
-  } catch (error) {
-    console.error('Error creating questionnaire:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
+// Backend API URL - adjust based on environment
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
 
 export async function GET(request: NextRequest) {
   try {
-    // For now, return empty array as questionnaires are stored in localStorage
-    // In a real implementation, this would fetch from database
-    return NextResponse.json([]);
+    console.log('🔄 Fetching all questionnaires from backend');
+    
+    // Forward the request to the backend API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/questionnaires`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log(`📡 Backend response status: ${backendResponse.status}`);
+    
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      console.error(`❌ Backend error: ${errorText}`);
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch questionnaires from backend',
+        details: errorText,
+        status: backendResponse.status
+      }, { status: backendResponse.status });
+    }
+    
+    const backendData = await backendResponse.json();
+    console.log(`✅ Successfully fetched ${backendData.questionnaires?.length || 0} questionnaires`);
+    
+    return NextResponse.json(backendData);
+    
   } catch (error) {
-    console.error('Error fetching questionnaires:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error fetching questionnaires:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    console.log('🔄 Creating questionnaire:', body.title);
+    
+    // Forward the request to the backend API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/questionnaires`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    
+    console.log(`📡 Backend response status: ${backendResponse.status}`);
+    
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      console.error(`❌ Backend error: ${errorText}`);
+      
+      return NextResponse.json({ 
+        error: 'Failed to create questionnaire',
+        details: errorText,
+        status: backendResponse.status
+      }, { status: backendResponse.status });
+    }
+    
+    const backendData = await backendResponse.json();
+    console.log(`✅ Successfully created questionnaire: ${backendData.questionnaire?.id}`);
+    
+    return NextResponse.json(backendData);
+    
+  } catch (error) {
+    console.error('❌ Error creating questionnaire:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
   }
 } 
