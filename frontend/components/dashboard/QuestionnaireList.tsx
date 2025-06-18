@@ -265,13 +265,15 @@ export function QuestionnaireList({
           !answer.includes('AI answer will be generated') &&
           !answer.includes('Generating...') &&
           !answer.includes('We couldn\'t generate an answer') &&
+          !answer.includes('couldn\'t generate a response') &&
           answer !== 'Processing in batch mode...';
       }).length;
       
       // Count questions that failed to generate answers
       const failedQuestions = questionnaire.answers.filter((a: any) => {
         const answer = a.answer || '';
-        return answer.includes('We couldn\'t generate an answer');
+        return answer.includes('We couldn\'t generate an answer') ||
+               answer.includes('couldn\'t generate a response');
       }).length;
       
       tooltip += ` - ${answeredQuestions}/${totalQuestions} questions answered`;
@@ -306,6 +308,7 @@ export function QuestionnaireList({
         !answer.includes('AI answer will be generated') &&
         !answer.includes('Generating...') &&
         !answer.includes('We couldn\'t generate an answer') &&
+        !answer.includes('couldn\'t generate a response') &&
         answer !== 'Processing in batch mode...';
     }).length;
   };
@@ -316,7 +319,8 @@ export function QuestionnaireList({
     
     return questionnaire.answers.filter((a: any) => {
       const answer = a.answer || '';
-      return answer.includes('We couldn\'t generate an answer');
+      return answer.includes('We couldn\'t generate an answer') ||
+             answer.includes('couldn\'t generate a response');
     }).length;
   };
 

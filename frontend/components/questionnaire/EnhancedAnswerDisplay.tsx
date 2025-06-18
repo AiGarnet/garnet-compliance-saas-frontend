@@ -219,7 +219,7 @@ export function EnhancedAnswerDisplay({
                       <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
                       <div>
                         <p className="text-red-800 dark:text-red-200 font-medium">
-                          We couldn't generate an answer—please try again.
+                          We apologize, but we couldn't generate a response at this time. Please contact our compliance team directly for this information.
                         </p>
                         <p className="text-red-600 dark:text-red-300 text-sm mt-1">
                           You can edit this manually or try regenerating the answer.

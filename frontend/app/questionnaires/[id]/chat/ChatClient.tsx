@@ -162,10 +162,10 @@ export function ChatClient({ params }: { params: { id: string } }) {
       }
       
       const data = await response.json();
-      return data.answer || "We couldn't generate an answer—please try again.";
+      return data.answer || "We apologize, but we couldn't generate a response at this time. Please contact our compliance team directly for this information.";
     } catch (error) {
       console.error('Error generating AI answer:', error);
-      return "We couldn't generate an answer—please try again.";
+      return "We apologize, but we couldn't generate a response at this time. Please contact our compliance team directly for this information.";
     }
   };
 
@@ -488,7 +488,7 @@ export function ChatClient({ params }: { params: { id: string } }) {
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         type: 'assistant',
-        content: `❌ **Error generating answer**\n\nI couldn't generate an answer for this question. Please try again or write your own response.`,
+        content: `❌ **Error generating answer**\n\nWe apologize, but we couldn't generate a response for this question at this time. Please contact our compliance team directly or provide a manual response.`,
         timestamp: new Date(),
         suggestions: ['Try again', 'I\'ll write my own', 'Show examples']
       }]);

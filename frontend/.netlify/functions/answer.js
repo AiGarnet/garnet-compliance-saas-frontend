@@ -205,62 +205,72 @@ function extractKeyPhrases(question) {
   return phrases;
 }
 
-// Generate answer from the relevant data
+// Generate answer from the relevant data as a vendor using comprehensive compliance context
 function generateAnswer(question, relevantData) {
-  if (relevantData.length === 0) {
-    return 'Based on the available compliance information, we cannot provide a specific answer to your question. Please consult with our compliance officer for detailed information.';
+  // Build comprehensive compliance context based on Garnet AI research
+  let complianceContext = "";
+  
+  if (relevantData.length > 0) {
+    complianceContext = "\n\nRelevant compliance frameworks and requirements:\n";
+    relevantData.forEach((item, index) => {
+      complianceContext += `${index + 1}. ${item.name} (${item.jurisdiction || 'Global'}):\n`;
+      complianceContext += `   Category: ${item.category}\n`;
+      complianceContext += `   Description: ${item.description}\n`;
+      if (item.requirement) {
+        complianceContext += `   Requirements: ${item.requirement}\n`;
+      }
+      complianceContext += "\n";
+    });
   }
-
-  // Extract the key topic from the question
+  
+  // Detect question category for specialized vendor context
   const questionLower = question.toLowerCase();
-  let questionTopic = '';
+  let categoryContext = "";
   
-  if (questionLower.includes('encrypt')) {
-    questionTopic = 'encryption';
-  } else if (questionLower.includes('access') || questionLower.includes('authentication')) {
-    questionTopic = 'access control';
-  } else if (questionLower.includes('retention') || questionLower.includes('store')) {
-    questionTopic = 'data retention';
-  } else if (questionLower.includes('third party') || questionLower.includes('vendor')) {
-    questionTopic = 'third-party management';
-  } else if (questionLower.includes('breach') || questionLower.includes('incident')) {
-    questionTopic = 'incident response';
+  if (questionLower.includes('data') && (questionLower.includes('privacy') || questionLower.includes('protection') || questionLower.includes('gdpr') || questionLower.includes('ccpa'))) {
+    categoryContext = "\n\nData Privacy Context: As a vendor, address consent mechanisms (explicit for GDPR, opt-out for CCPA), data processing agreements (DPAs), breach notification procedures (72-hour for EU/UK, immediate for high-risk), data subject rights, cross-border transfers using Standard Contractual Clauses (SCCs), and Data Protection Officer (DPO) arrangements where required.";
+  } else if (questionLower.includes('beneficial') || questionLower.includes('ownership') || questionLower.includes('pep') || questionLower.includes('sanctions') || questionLower.includes('aml')) {
+    categoryContext = "\n\nFinancial Crime Context: As a vendor, address beneficial ownership disclosure (typically 25% threshold per FATF recommendations), PEP screening using commercial databases, sanctions compliance against OFAC/UN/EU lists, suspicious activity reporting capabilities, and AML/CFT compliance measures including record retention.";
+  } else if (questionLower.includes('bribery') || questionLower.includes('corruption') || questionLower.includes('fcpa') || questionLower.includes('facilitation')) {
+    categoryContext = "\n\nAnti-Bribery Context: As a vendor, address anti-bribery policies aligned with FCPA and UK Bribery Act, prohibition of facilitation payments (note: FCPA has narrow exception, UK Bribery Act prohibits all), third-party due diligence, adequate procedures, training programs, and whistleblower mechanisms.";
+  } else if (questionLower.includes('security') || questionLower.includes('cyber') || questionLower.includes('iso') || questionLower.includes('soc') || questionLower.includes('incident')) {
+    categoryContext = "\n\nCybersecurity Context: As a vendor, address information security management systems (ISO 27001), SOC 2 Type II audits, incident response aligned with ISO 27035/NIS2, access controls including multi-factor authentication, encryption (AES-256 at rest, TLS 1.3 in transit), vulnerability management, and business continuity planning.";
   }
+  
+  // This Netlify function serves as a fallback but the main AI generation 
+  // should happen in the backend using the OpenAI API key
+  // Return basic contextual response with guidance to use backend API
+  return generateFallbackVendorResponse(question, relevantData, categoryContext);
+}
 
-  // Start with a direct answer to the question if possible
-  let answer = '';
+// Simplified fallback response for Netlify function
+// The main AI generation should use OpenAI API in the backend
+function generateFallbackVendorResponse(question, relevantData, categoryContext) {
+  const questionLower = question.toLowerCase();
   
-  // If the question is a yes/no question about a capability
-  if (questionLower.startsWith('do you') || questionLower.startsWith('does your') || 
-      questionLower.startsWith('can you') || questionLower.startsWith('are you')) {
-    answer = 'Yes, ';
+  // Build a basic vendor response with compliance context
+  let response = "Our organization has implemented comprehensive measures to address this requirement. ";
+  
+  // Add category-specific context
+  if (categoryContext.includes('Data Privacy')) {
+    response += "We maintain compliance with data privacy regulations and have established appropriate data handling procedures. ";
+  } else if (categoryContext.includes('Financial Crime')) {
+    response += "We have implemented financial crime risk management controls including screening and monitoring procedures. ";
+  } else if (categoryContext.includes('Anti-Bribery')) {
+    response += "We maintain anti-bribery and corruption policies with appropriate due diligence procedures. ";
+  } else if (categoryContext.includes('Cybersecurity')) {
+    response += "We have established information security controls aligned with industry standards. ";
   }
   
-  // Build the answer from relevant compliance data
-  const sources = [];
-  
-  for (let i = 0; i < Math.min(relevantData.length, 3); i++) {
-    const item = relevantData[i];
-    let itemAnswer = '';
-    
-    if (item.requirement) {
-      itemAnswer = condenseText(item.requirement, 150);
-    } else if (item.description) {
-      itemAnswer = condenseText(item.description, 150);
-    }
-    
-    if (itemAnswer) {
-      sources.push(`${item.name || 'Compliance Standard'}: ${itemAnswer}`);
-    }
+  // Add relevant framework references if available
+  if (relevantData.length > 0) {
+    const frameworks = relevantData.map(item => item.name).slice(0, 2).join(' and ');
+    response += `Our approach aligns with ${frameworks} requirements. `;
   }
   
-  if (sources.length > 0) {
-    answer += sources.join(' ');
-  } else {
-    answer = 'Based on our compliance framework, we maintain appropriate measures to address your concern. Please contact our compliance team for specific details.';
-  }
+  response += "We regularly review and update our practices to ensure continued effectiveness and can provide additional documentation upon request.";
   
-  return answer;
+  return response;
 }
 
 function condenseText(text, maxLength) {

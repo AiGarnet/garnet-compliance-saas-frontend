@@ -478,7 +478,7 @@ const QuestionnairesPage = () => {
                   ...qa, 
                   answer: newAnswer, 
                   isLoading: false, 
-                  hasError: newAnswer.includes('We couldn\'t generate an answer'),
+                  hasError: newAnswer.includes('We couldn\'t generate') || newAnswer.includes('couldn\'t generate a response'),
                   isGenerated: true 
                 }
               : qa
@@ -499,7 +499,7 @@ const QuestionnairesPage = () => {
           i === index 
             ? { 
                 ...qa, 
-                answer: 'We couldn\'t generate an answer—please try again.', 
+                answer: 'We apologize, but we couldn\'t generate a response at this time. Please contact our compliance team directly for this information.', 
                 isLoading: false, 
                 hasError: true,
                 isGenerated: false 
@@ -583,7 +583,7 @@ const QuestionnairesPage = () => {
           answer: answer.answer,
           isLoading: false,
           isGenerated: true,
-          hasError: answer.answer.includes('We couldn\'t generate an answer')
+          hasError: answer.answer.includes('We couldn\'t generate') || answer.answer.includes('couldn\'t generate a response')
         }));
         
         setGeneratedAnswers(finalAnswers);
@@ -609,7 +609,7 @@ const QuestionnairesPage = () => {
       // Update all answers to show error state
       const errorAnswers = questions.map(question => ({
         question,
-        answer: 'We couldn\'t generate an answer—please try again.',
+        answer: 'We apologize, but we couldn\'t generate a response at this time. Please contact our compliance team directly for this information.',
         isLoading: false,
         isGenerated: false,
         hasError: true
