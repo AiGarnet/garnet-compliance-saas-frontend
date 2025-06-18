@@ -678,7 +678,7 @@ const QuestionnairesPage = () => {
         selectedVendorId || undefined
       );
       
-      let newQuestionnaire: Questionnaire & { answers?: QuestionAnswer[] };
+      let newQuestionnaire: any;
       
       if (databaseResult.success && databaseResult.questionnaire) {
         // Successfully saved to database
@@ -695,10 +695,16 @@ const QuestionnairesPage = () => {
           status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
           dueDate: databaseResult.questionnaire.dueDate,
           progress: finalAnswers.length > 0 ? 100 : 0,
-          answers: databaseResult.questionnaire.answers || finalAnswers,
+          answers: (databaseResult.questionnaire.answers || finalAnswers).map((qa: any) => ({
+            question: qa.question,
+            answer: qa.answer || '',
+            isMandatory: true,
+            needsAttention: !qa.answer || qa.answer.trim() === '',
+            isLoading: false
+          })),
           vendorId: selectedVendorId || databaseResult.questionnaire.vendorId,
-          vendorName: selectedVendor?.name || databaseResult.questionnaire.vendorName,
-        };
+          vendorName: selectedVendor?.name || databaseResult.questionnaire.vendorName
+        } as any;
         
         // Show success message
         setValidationError(null);
@@ -719,10 +725,16 @@ const QuestionnairesPage = () => {
           status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
           dueDate: new Date().toLocaleDateString(),
           progress: finalAnswers.length > 0 ? 100 : 0,
-          answers: finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' })),
+          answers: (finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' }))).map((qa: any) => ({
+            question: qa.question,
+            answer: qa.answer || '',
+            isMandatory: true,
+            needsAttention: !qa.answer || qa.answer.trim() === '',
+            isLoading: false
+          })),
           vendorId: selectedVendorId,
-          vendorName: selectedVendor?.name,
-        };
+          vendorName: selectedVendor?.name
+        } as any;
         
         // Show warning about fallback
         setValidationError(`⚠️ Saved locally only. Database connection issue: ${databaseResult.error}`);

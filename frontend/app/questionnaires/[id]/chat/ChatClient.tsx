@@ -233,6 +233,12 @@ export function ChatClient({ params }: { params: { id: string } }) {
         console.error('❌ Questionnaire not found:', params.id);
         setLoading(false);
         
+        // Auto-redirect after 3 seconds
+        setTimeout(() => {
+          console.log('🔄 Auto-redirecting to questionnaires list...');
+          router.push('/questionnaires');
+        }, 3000);
+        
       } catch (error) {
         console.error('❌ Error loading questionnaire:', error);
         setLoading(false);
