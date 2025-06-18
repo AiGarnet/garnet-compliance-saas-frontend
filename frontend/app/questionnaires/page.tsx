@@ -289,7 +289,7 @@ const QuestionnairesPage = () => {
       const response = await vendorAPI.getAll();
       if (response.vendors && Array.isArray(response.vendors)) {
         const transformedVendors = response.vendors.map((vendor: any) => ({
-          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          id: vendor.vendorId?.toString() || vendor.id || vendor.uuid,
           name: vendor.companyName || vendor.name || 'Unknown Vendor',
           status: vendor.status || 'Questionnaire Pending'
         }));

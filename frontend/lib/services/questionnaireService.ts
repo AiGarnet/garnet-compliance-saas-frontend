@@ -334,39 +334,41 @@ export const QuestionnaireService = {
         answers = questions.map(q => ({ question: q, answer: '' }));
       }
 
-      // If vendorId is provided, save questionnaire to existing vendor
-      if (vendorId) {
+      // Step 1: Create the questionnaire record with questions
+      const questionnaireData = {
+        title: title,
+        questions: questions.map((q, index) => ({
+          questionText: q,
+          questionOrder: index + 1,
+          isRequired: true
+        })),
+        vendorId: vendorId ? parseInt(vendorId) : undefined
+      };
+
+      // Create questionnaire using the simplified backend API
+      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('/api/questionnaires', questionnaireData);
+
+      if (!questionnaireResponse.questionnaire) {
+        throw new Error('Failed to create questionnaire record');
+      }
+
+      const questionnaireId = questionnaireResponse.questionnaire.id;
+
+      // Step 2: If vendorId is provided and we have answers, save them
+      if (vendorId && answers.length > 0) {
         try {
-          // First create the questionnaire record
-          const questionnaireData = {
-            vendor_id: parseInt(vendorId),
-            title: title,
-            status: 'Completed'
-          };
-
-          // Create questionnaire in database
-          const { questionnaires } = await import('@/lib/api');
-          const questionnaireResult = await questionnaires.create(questionnaireData);
-
-          if (!questionnaireResult.questionnaire) {
-            throw new Error('Failed to create questionnaire record');
-          }
-
-          const questionnaireId = questionnaireResult.questionnaire.id;
-
-          // Save questionnaire answers to existing vendor
+          // Save vendor answers directly to the questionnaire
           const answersWithIds = answers.map(answer => ({
             questionId: uuidv4(),
             question: answer.question,
-            answer: answer.answer,
-            questionnaire_id: questionnaireId
+            answer: answer.answer
           }));
 
-          // Call the backend API to save answers to existing vendor
-          const response = await apiClient.post<{ 
+          // Use the simplified endpoint to save vendor answers
+          const answersResponse = await apiClient.post<{ 
             answers: any[], 
-            vendor?: any 
-          }>(`/api/vendors/${vendorId}/answers`, answersWithIds);
+            message: string 
+          }>(`/api/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
 
           // Create questionnaire object for frontend
           const questionnaire = {
@@ -376,51 +378,101 @@ export const QuestionnaireService = {
             status: 'Completed',
             progress: 100,
             dueDate: new Date().toISOString().split('T')[0],
-            answers: answers,
+            answers: answersResponse.answers || answers,
             createdAt: new Date().toISOString()
           };
 
           return {
             success: true,
             questionnaire: questionnaire,
-            vendor: response.vendor || { id: vendorId }
+            vendor: { id: vendorId }
           };
         } catch (error: any) {
-          console.error('Error saving questionnaire to existing vendor:', error);
+          console.error('Error saving vendor answers for questionnaire:', error);
           return {
             success: false,
-            error: `Failed to save questionnaire to vendor: ${error.message}`
+            error: `Failed to save vendor answers: ${error.message}`
           };
         }
       }
 
-      // If no vendorId provided, create new vendor (existing behavior)
-      // Create a vendor name based on the questionnaire title
-      const vendorName = title.includes('Questionnaire') ? 
-        title.replace('Questionnaire', '').trim() || `Vendor for ${title}` :
-        `Vendor for ${title}`;
+      // Step 3: If no vendorId provided, create new vendor and save answers
+      if (!vendorId) {
+        try {
+          // Create a vendor name based on the questionnaire title
+          const vendorName = title.includes('Questionnaire') ? 
+            title.replace('Questionnaire', '').trim() || `Vendor for ${title}` :
+            `Vendor for ${title}`;
 
-      // Create vendor with questionnaire
-      const result = await this.createVendorWithQuestionnaire(
-        vendorName,
-        questions,
-        answers,
-        {
-          description: `Vendor created from questionnaire: ${title}`
+          // Create vendor first
+          const vendorData = {
+            companyName: vendorName,
+            region: 'Unknown',
+            status: 'QUESTIONNAIRE_PENDING',
+            description: `Vendor created from questionnaire: ${title}`
+          };
+
+          const vendorResponse = await apiClient.post<{ vendor: any }>('/api/vendors', vendorData);
+          
+          if (!vendorResponse.vendor) {
+            throw new Error('Failed to create vendor');
+          }
+
+          const newVendorId = vendorResponse.vendor.id || vendorResponse.vendor.vendorId;
+
+          // Now save answers if we have them
+          if (answers.length > 0) {
+            const answersWithIds = answers.map(answer => ({
+              questionId: uuidv4(),
+              question: answer.question,
+              answer: answer.answer
+            }));
+
+            try {
+              await apiClient.post(`/api/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
+            } catch (linkError) {
+              console.warn('Failed to link vendor answers to questionnaire:', linkError);
+              // Continue anyway, the vendor and questionnaire are created
+            }
+          }
+
+          return {
+            success: true,
+            questionnaire: {
+              id: questionnaireId,
+              name: title,
+              vendorId: newVendorId,
+              status: answers.length > 0 ? 'Completed' : 'Not Started',
+              progress: answers.length > 0 ? 100 : 0,
+              dueDate: new Date().toISOString().split('T')[0],
+              answers: answers,
+              createdAt: new Date().toISOString()
+            },
+            vendor: vendorResponse.vendor
+          };
+        } catch (error: any) {
+          console.error('Error creating vendor for questionnaire:', error);
+          return {
+            success: false,
+            error: `Failed to create vendor: ${error.message}`
+          };
         }
-      );
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error
-        };
       }
 
+      // If vendorId provided but no answers, just return the questionnaire
       return {
         success: true,
-        questionnaire: result.questionnaire,
-        vendor: result.vendor
+        questionnaire: {
+          id: questionnaireId,
+          name: title,
+          vendorId: vendorId,
+          status: 'Not Started',
+          progress: 0,
+          dueDate: new Date().toISOString().split('T')[0],
+          answers: [],
+          createdAt: new Date().toISOString()
+        },
+        vendor: { id: vendorId }
       };
     } catch (error: any) {
       console.error('Error saving questionnaire to database:', error);
