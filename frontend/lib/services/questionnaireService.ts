@@ -351,8 +351,8 @@ export const QuestionnaireService = {
         generateAnswers: generateAnswers
       };
 
-      // Create questionnaire using the Netlify function
-      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('/.netlify/functions/questionnaires', questionnaireData);
+      // Create questionnaire using the Railway backend API
+      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires', questionnaireData);
 
       if (!questionnaireResponse.questionnaire) {
         throw new Error('Failed to create questionnaire record');
@@ -370,11 +370,11 @@ export const QuestionnaireService = {
             answer: answer.answer
           }));
 
-          // Use the Netlify function to save vendor answers
+          // Use the Railway backend to save vendor answers
           const answersResponse = await apiClient.post<{ 
             answers: any[], 
             message: string 
-          }>(`/.netlify/functions/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
+          }>(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
 
           // Create questionnaire object for frontend
           const questionnaire = {
@@ -435,7 +435,7 @@ export const QuestionnaireService = {
             }));
 
             try {
-              await apiClient.post(`/.netlify/functions/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
+              await apiClient.post(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
             } catch (linkError) {
               console.warn('Failed to link vendor answers to questionnaire:', linkError);
               // Continue anyway, the vendor and questionnaire are created
