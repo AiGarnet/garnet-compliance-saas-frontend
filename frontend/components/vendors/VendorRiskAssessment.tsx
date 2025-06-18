@@ -164,12 +164,9 @@ export function VendorRiskAssessment({ vendorId, className = '', riskAssessment:
             <div key={index} className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-gray-900">{factor.factor}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Weight: {(factor.weight * 100).toFixed(0)}%</span>
-                  <span className={`font-semibold ${getFactorScoreColor(factor.score)}`}>
-                    {factor.score}/100
-                  </span>
-                </div>
+                <span className={`font-semibold ${getFactorScoreColor(factor.score)}`}>
+                  {factor.score}/100
+                </span>
               </div>
               
               {/* Progress bar */}
