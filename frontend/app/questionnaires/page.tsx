@@ -1179,7 +1179,7 @@ const QuestionnairesPage = () => {
         
       } catch (error) {
         console.error('❌ Error deleting questionnaire:', error);
-        alert('Failed to delete questionnaire. Please try again.');
+        alert('Failed to delete questionnaire from database. Please try again or contact support if the problem persists.');
       }
     }
   };

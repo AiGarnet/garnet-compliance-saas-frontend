@@ -100,6 +100,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params;
     
+    console.log(`🗑️ Frontend API: Deleting questionnaire ${id}`);
+    
     // Forward the delete request to the backend API
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/questionnaires/${id}`, {
       method: 'DELETE',
@@ -108,24 +110,34 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       },
     });
     
+    console.log(`📡 Backend response status: ${backendResponse.status}`);
+    
     if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      console.error(`❌ Backend error: ${errorText}`);
+      
       if (backendResponse.status === 404) {
         return NextResponse.json({ 
-          error: 'Questionnaire not found' 
+          error: 'Questionnaire not found in database',
+          details: 'The questionnaire may have already been deleted or never existed.'
         }, { status: 404 });
       }
       return NextResponse.json({ 
-        error: 'Failed to delete questionnaire' 
+        error: 'Failed to delete questionnaire from database',
+        details: errorText,
+        status: backendResponse.status
       }, { status: backendResponse.status });
     }
     
     const backendData = await backendResponse.json();
+    console.log(`✅ Successfully deleted questionnaire ${id}`);
     return NextResponse.json(backendData);
     
   } catch (error) {
-    console.error('Error deleting questionnaire:', error);
+    console.error('❌ Error deleting questionnaire:', error);
     return NextResponse.json({ 
-      error: 'Internal server error' 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 });
   }
 }
