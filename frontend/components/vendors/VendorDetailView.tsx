@@ -9,6 +9,7 @@ import { VendorActivityFeed } from '@/components/vendors/VendorActivityFeed';
 import { VendorDetailSkeleton } from '@/components/vendors/VendorDetailSkeleton';
 import { EditVendorModal } from '@/components/vendors/EditVendorModal';
 import { VendorEvidenceSection } from '@/components/vendors/VendorEvidenceSection';
+import { VendorRiskAssessment } from '@/components/vendors/VendorRiskAssessment';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
@@ -215,8 +216,9 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
             </div>
             
             {/* Right column */}
-            <div>
+            <div className="space-y-6">
               <VendorInfoCard vendor={vendor} />
+              <VendorRiskAssessment vendorId={vendor.id} />
             </div>
           </div>
         </div>

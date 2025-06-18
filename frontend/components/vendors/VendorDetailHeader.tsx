@@ -20,6 +20,8 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [riskAssessment, setRiskAssessment] = useState<any>(null);
+  const [isCalculatingRisk, setIsCalculatingRisk] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -35,6 +37,66 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Calculate risk assessment when vendor changes - now using backend API
+  useEffect(() => {
+    const calculateRiskAssessment = async () => {
+      if (!vendor?.id) return;
+      
+      try {
+        setIsCalculatingRisk(true);
+        
+        // Call backend to calculate and update risk assessment
+        const response = await vendors.risk.calculateAndUpdate(vendor.id);
+        
+        console.log('Risk assessment response:', response);
+        
+        if (response.assessment) {
+          setRiskAssessment(response.assessment);
+        }
+      } catch (error) {
+        console.error('Failed to calculate risk assessment:', error);
+        
+        // Fallback to simple calculation if backend fails
+        const answers = vendor.questionnaireAnswers || [];
+        const totalQuestions = answers.length;
+        const completedQuestions = answers.filter(qa => qa.status === 'Completed').length;
+        
+        let riskScore = 50;
+        let riskLevel = 'Medium';
+        
+        if (totalQuestions === 0) {
+          riskScore = 85;
+          riskLevel = 'High';
+        } else {
+          const completionRate = completedQuestions / totalQuestions;
+          
+          if (completionRate >= 0.8) {
+            riskScore = 25;
+            riskLevel = 'Low';
+          } else if (completionRate >= 0.5) {
+            riskScore = 45;
+            riskLevel = 'Medium';
+          } else {
+            riskScore = 75;
+            riskLevel = 'High';
+          }
+        }
+        
+        setRiskAssessment({
+          overallScore: riskScore,
+          riskLevel: riskLevel,
+          factors: [],
+          recommendations: [],
+          lastAssessed: new Date()
+        });
+      } finally {
+        setIsCalculatingRisk(false);
+      }
+    };
+
+    calculateRiskAssessment();
+  }, [vendor?.id, vendor?.questionnaireAnswers]);
 
   const handleManageWorks = () => {
     router.push(`/vendor-works?id=${vendor.id}`);
@@ -128,13 +190,14 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
                         </span>
                       )}
                       
-                      {vendor.riskLevel && (
+                      {(riskAssessment?.riskLevel || vendor.riskLevel) && (
                         <span className={`text-xs px-2 py-1 rounded-full font-medium
-                          ${vendor.riskLevel === 'Low' ? 'bg-green-50 text-green-700' : 
-                            vendor.riskLevel === 'Medium' ? 'bg-yellow-50 text-yellow-700' : 
+                          ${(riskAssessment?.riskLevel || vendor.riskLevel) === 'Low' ? 'bg-green-50 text-green-700' : 
+                            (riskAssessment?.riskLevel || vendor.riskLevel) === 'Medium' ? 'bg-yellow-50 text-yellow-700' : 
                             'bg-red-50 text-red-700'}`}
                         >
-                          {vendor.riskLevel} Risk
+                          {isCalculatingRisk ? 'Calculating...' : `${riskAssessment?.riskLevel || vendor.riskLevel} Risk`}
+                          {riskAssessment?.overallScore && ` (${riskAssessment.overallScore})`}
                         </span>
                       )}
                     </div>

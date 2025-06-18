@@ -244,6 +244,28 @@ export const vendors = {
       method: 'PATCH',
       body: JSON.stringify({ shareToTrustPortal }),
     }),
+
+  // Risk Assessment Management
+  risk: {
+    // Get risk distribution statistics
+    getDistribution: () => apiCall('/api/vendors/risk/distribution'),
+    
+    // Get vendors by risk level
+    getByRiskLevel: (riskLevel: string) => apiCall(`/api/vendors/risk/${riskLevel}`),
+    
+    // Recalculate risk for all vendors
+    recalculateAll: () => apiCall('/api/vendors/risk/recalculate', {
+      method: 'POST',
+    }),
+    
+    // Get detailed risk assessment for a vendor
+    getAssessment: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/risk/assessment`),
+    
+    // Calculate and update risk assessment for a vendor
+    calculateAndUpdate: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/risk/calculate`, {
+      method: 'POST',
+    }),
+  },
 };
 
 // Evidence file API functions
