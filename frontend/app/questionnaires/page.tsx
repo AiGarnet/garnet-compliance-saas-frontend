@@ -771,14 +771,16 @@ const QuestionnairesPage = () => {
       
       // Redirect to the chat interface instead of answers page
       console.log('🔄 Redirecting to chat page for questionnaire:', newQuestionnaire.id);
+      console.log('📊 Questionnaire data structure:', newQuestionnaire);
       
       // Close modal first to avoid navigation issues
       setShowQuestionnaireInput(false);
       
-      // Use setTimeout to ensure modal closes before navigation
+      // Use longer timeout to ensure database transaction is committed
       setTimeout(() => {
+        console.log('🚀 Navigating to chat interface...');
         router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
-      }, 100);
+      }, 500);
       
     } catch (error) {
       console.error('❌ Error submitting questionnaire:', error);

@@ -231,13 +231,15 @@ export function ChatClient({ params }: { params: { id: string } }) {
         
         // If not found anywhere
         console.error('❌ Questionnaire not found:', params.id);
+        console.log('🔍 Available questionnaires in localStorage:', 
+          typeof window !== 'undefined' ? localStorage.getItem('user_questionnaires') : 'N/A');
         setLoading(false);
         
-        // Auto-redirect after 3 seconds
+        // Auto-redirect after 5 seconds (increased from 3)
         setTimeout(() => {
           console.log('🔄 Auto-redirecting to questionnaires list...');
           router.push('/questionnaires');
-        }, 3000);
+        }, 5000);
         
       } catch (error) {
         console.error('❌ Error loading questionnaire:', error);
