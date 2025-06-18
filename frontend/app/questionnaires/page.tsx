@@ -668,14 +668,15 @@ const QuestionnairesPage = () => {
         finalAnswers = await handleGenerateAnswers();
       }
       
-      // Save to database with generated answers
-      const shouldGenerateAnswers = true; // Always generate answers for better UX
+      // Save to database with pre-generated answers (avoid duplicate generation)
+      const shouldGenerateAnswers = false; // Don't generate again, we already have answers
       
       const databaseResult = await QuestionnaireService.saveQuestionnaireToDatabase(
         questionnaireTitle,
         questions,
         shouldGenerateAnswers,
-        selectedVendorId || undefined
+        selectedVendorId || undefined,
+        finalAnswers // Pass pre-generated answers to avoid duplication
       );
       
       let newQuestionnaire: any;
@@ -765,24 +766,23 @@ const QuestionnairesPage = () => {
         localStorage.removeItem(AUTOSAVE_KEY);
       }
       
-      // Close modal
-      closeQuestionnaireInput();
-      
-      // Refresh the questionnaire list
-      fetchQuestionnaires();
-      
-      // Redirect to the chat interface instead of answers page
+      // Redirect to the chat interface immediately after successful creation
       console.log('🔄 Redirecting to chat page for questionnaire:', newQuestionnaire.id);
       console.log('📊 Questionnaire data structure:', newQuestionnaire);
       
-      // Close modal first to avoid navigation issues
+      // Close modal and clear state immediately
       setShowQuestionnaireInput(false);
+      setIsSubmitting(false);
+      closeQuestionnaireInput();
       
-      // Use longer timeout to ensure database transaction is committed
+      // Navigate immediately without timeout - the data is already saved
+      console.log('🚀 Navigating to chat interface...');
+      router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
+      
+      // Refresh the questionnaire list in the background for when user returns
       setTimeout(() => {
-        console.log('🚀 Navigating to chat interface...');
-        router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
-      }, 500);
+        fetchQuestionnaires();
+      }, 100);
       
     } catch (error) {
       console.error('❌ Error submitting questionnaire:', error);

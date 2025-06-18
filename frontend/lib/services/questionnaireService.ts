@@ -313,18 +313,23 @@ export const QuestionnaireService = {
    * @param questions - Array of questions
    * @param generateAnswers - Whether to generate AI answers
    * @param vendorId - Optional vendor ID to save questionnaire to existing vendor
+   * @param preGeneratedAnswers - Optional pre-generated answers to avoid duplication
    * @returns Promise with the saved questionnaire data
    */
   async saveQuestionnaireToDatabase(
     title: string,
     questions: string[],
     generateAnswers: boolean = true,
-    vendorId?: string
+    vendorId?: string,
+    preGeneratedAnswers?: Array<{ question: string; answer: string }>
   ): Promise<{ success: boolean; questionnaire?: any; vendor?: any; error?: string }> {
     try {
-      // Generate answers if requested
+      // Use pre-generated answers if provided, otherwise generate if requested
       let answers: Array<{ question: string; answer: string }> = [];
-      if (generateAnswers) {
+      if (preGeneratedAnswers && preGeneratedAnswers.length > 0) {
+        // Use the pre-generated answers to avoid duplicate processing
+        answers = preGeneratedAnswers;
+      } else if (generateAnswers) {
         const generateResult = await this.generateAnswers(questions);
         if (generateResult.success && generateResult.data) {
           answers = generateResult.data.answers;
