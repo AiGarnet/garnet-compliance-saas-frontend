@@ -16,48 +16,53 @@ export function QuestionnaireStatus({ vendor }: QuestionnaireStatusProps) {
   const progress = totalQuestions > 0 ? Math.round((completedQuestions / totalQuestions) * 100) : 0;
   
   const getStatusInfo = () => {
-    switch (vendor.status) {
-      case 'Approved':
-        return {
-          icon: <CheckCircle2 className="h-10 w-10 text-success" />,
-          title: 'Approved',
-          description: 'This vendor has been approved and is ready for integration.',
-          color: 'text-success',
-          bgColor: 'bg-success-light',
-          borderColor: 'border-success',
-          descriptionColor: 'text-gray-600'
-        };
-      case 'In Review':
-        return {
-          icon: <Clock className="h-10 w-10 text-warning" />,
-          title: 'In Review',
-          description: 'This vendor\'s questionnaire is currently being reviewed.',
-          color: 'text-warning',
-          bgColor: 'bg-warning-light',
-          borderColor: 'border-warning',
-          descriptionColor: 'text-gray-600'
-        };
-      case 'Questionnaire Pending':
-        return {
-          icon: <HelpCircle className="h-10 w-10 text-secondary" />,
-          title: 'Questionnaire Pending',
-          description: 'Waiting for the vendor to complete the questionnaire.',
-          color: 'text-secondary',
-          bgColor: 'bg-secondary-light',
-          borderColor: 'border-secondary',
-          descriptionColor: 'text-gray-600'
-        };
-      default:
-        return {
-          icon: <AlertTriangle className="h-10 w-10 text-danger" />,
-          title: 'Status Unknown',
-          description: 'The status of this vendor is currently unknown.',
-          color: 'text-danger',
-          bgColor: 'bg-danger-light',
-          borderColor: 'border-danger',
-          descriptionColor: 'text-gray-900 font-semibold'
-        };
+    // Dynamic status based on actual question completion
+    if (totalQuestions === 0) {
+      return {
+        icon: <HelpCircle className="h-10 w-10 text-gray-500" />,
+        title: 'No Questionnaire',
+        description: 'No questionnaire has been assigned to this vendor yet.',
+        color: 'text-gray-500',
+        bgColor: 'bg-gray-50',
+        borderColor: 'border-gray-200',
+        descriptionColor: 'text-gray-600'
+      };
     }
+    
+    if (progress === 100) {
+      return {
+        icon: <CheckCircle2 className="h-10 w-10 text-green-600" />,
+        title: 'Questionnaire Completed',
+        description: 'All questionnaire questions have been completed.',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        descriptionColor: 'text-gray-600'
+      };
+    }
+    
+    if (progress > 0) {
+      return {
+        icon: <Clock className="h-10 w-10 text-yellow-600" />,
+        title: 'Questionnaire In Progress',
+        description: `${completedQuestions} of ${totalQuestions} questions completed. ${totalQuestions - completedQuestions} questions remaining.`,
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-200',
+        descriptionColor: 'text-gray-600'
+      };
+    }
+    
+    // Default: No questions completed yet
+    return {
+      icon: <AlertTriangle className="h-10 w-10 text-red-600" />,
+      title: 'Questionnaire Pending',
+      description: 'Waiting for the vendor to complete the questionnaire.',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      descriptionColor: 'text-gray-600'
+    };
   };
   
   const statusInfo = getStatusInfo();

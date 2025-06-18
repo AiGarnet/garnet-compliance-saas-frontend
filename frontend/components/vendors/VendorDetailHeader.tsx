@@ -77,6 +77,27 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
     }
   };
 
+  // Calculate dynamic status based on questionnaire completion
+  const getVendorStatus = () => {
+    const questionnaireAnswers = vendor.questionnaireAnswers || [];
+    const totalQuestions = questionnaireAnswers.length;
+    const completedQuestions = questionnaireAnswers.filter(qa => qa.status === 'Completed').length;
+    
+    if (totalQuestions === 0) {
+      return { status: 'No Questionnaire', color: 'bg-gray-50 text-gray-700 border-gray-200' };
+    }
+    
+    if (completedQuestions === totalQuestions) {
+      return { status: 'Questionnaire Completed', color: 'bg-green-50 text-green-700 border-green-200' };
+    }
+    
+    if (completedQuestions > 0) {
+      return { status: 'Questionnaire In Progress', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
+    }
+    
+    return { status: 'Questionnaire Pending', color: 'bg-red-50 text-red-700 border-red-200' };
+  };
+
   return (
     <>
       <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -97,13 +118,8 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">{vendor.name}</h1>
                     <div className="mt-2 flex items-center gap-3">
-                      <span className={`text-xs px-3 py-1 rounded-full font-medium border ${
-                        vendor.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                        vendor.status === 'In Review' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                        vendor.status === 'Questionnaire Pending' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        'bg-gray-50 text-gray-700 border-gray-200'
-                      }`}>
-                        {vendor.status}
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium border ${getVendorStatus().color}`}>
+                        {getVendorStatus().status}
                       </span>
                       
                       {vendor.industry && (
