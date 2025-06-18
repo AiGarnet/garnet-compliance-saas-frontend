@@ -14,7 +14,7 @@ export function QuestionnaireStatus({ vendor }: QuestionnaireStatusProps) {
   const totalQuestions = questionnaireAnswers.length;
   const completedQuestions = questionnaireAnswers.filter(qa => qa.status === 'Completed').length;
   const progress = totalQuestions > 0 ? Math.round((completedQuestions / totalQuestions) * 100) : 0;
-  
+
   const getStatusInfo = () => {
     // Dynamic status based on actual question completion
     if (totalQuestions === 0) {

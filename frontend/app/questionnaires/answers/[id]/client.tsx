@@ -50,140 +50,83 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
   };
 
   useEffect(() => {
-    // Load the questionnaire from localStorage
+    // Load the questionnaire from backend API
     const loadQuestionnaire = async () => {
       try {
-        if (typeof window !== 'undefined') {
-          const storedQuestionnaires = localStorage.getItem('user_questionnaires');
-          if (storedQuestionnaires) {
-            const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
-            const found = parsedQuestionnaires.find((q: any) => q.id === id);
-            
-            if (found) {
-              // Check for and remove duplicate questions
-              if (found.answers && found.answers.length > 0) {
-                // Create a Map to track unique questions (case insensitive)
-                const uniqueQuestions = new Map();
-                
-                // Filter out duplicate questions, keeping only the first occurrence
-                const uniqueAnswers = found.answers.filter((qa: QuestionAnswer) => {
-                  const normalizedQuestion = qa.question.trim().toLowerCase();
-                  if (!uniqueQuestions.has(normalizedQuestion)) {
-                    uniqueQuestions.set(normalizedQuestion, true);
-                    return true;
-                  }
-                  return false;
-                });
-                
-                // If we found and removed duplicates, update the questionnaire
-                if (uniqueAnswers.length < found.answers.length) {
-                  console.log(`Removed ${found.answers.length - uniqueAnswers.length} duplicate questions`);
-                  
-                  // Update the questionnaire with de-duplicated answers
-                  found.answers = uniqueAnswers;
-                  
-                  // Update in local storage
-                  const updatedQuestionnaires = parsedQuestionnaires.map((q: any) => 
-                    q.id === id ? found : q
-                  );
-                  
-                  localStorage.setItem('user_questionnaires', JSON.stringify(updatedQuestionnaires));
-                }
-              }
+        // Fetch questionnaire data from backend API
+        const response = await fetch(`http://localhost:8080/api/questionnaires/${id}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch questionnaire: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Questionnaire data from backend:', data);
+        
+        if (data.questionnaire) {
+          // Transform backend data to frontend format
+          const questionnaire = {
+            id: data.questionnaire.id.toString(),
+            name: data.questionnaire.title || `Questionnaire ${data.questionnaire.id}`,
+            status: data.questionnaire.status || 'Completed',
+            progress: data.questionnaire.progress || 100,
+            vendorId: data.questionnaire.vendorId?.toString(),
+            vendorName: data.questionnaire.vendorName,
+            answers: data.questionnaire.questions?.map((q: any) => ({
+              question: q.questionText,
+              answer: q.answer || '',
+              questionId: q.id
+            })) || []
+          };
+          
+          setQuestionnaire(questionnaire);
+          
+          // Initialize the answer cache with current answers
+          const initialCache: Record<string, string> = {};
+          if (questionnaire.answers) {
+            questionnaire.answers.forEach((qa: QuestionAnswer, index: number) => {
+              initialCache[`${questionnaire.id}-${index}`] = qa.answer;
+            });
+          }
+          setAnswerCache(initialCache);
+        } else {
+          console.error('Questionnaire not found in API response');
+          // Redirect back to questionnaires list if not found
+          router.push('/questionnaires');
+        }
+      } catch (error) {
+        console.error('Error loading questionnaire from API:', error);
+        
+        // Fallback to localStorage if API fails
+        try {
+          if (typeof window !== 'undefined') {
+            const storedQuestionnaires = localStorage.getItem('user_questionnaires');
+            if (storedQuestionnaires) {
+              const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
+              const found = parsedQuestionnaires.find((q: any) => q.id === id);
               
-              // Check if this is a new questionnaire (all answers are empty)
-              const hasEmptyAnswers = found.answers && found.answers.some((qa: QuestionAnswer) => 
-                !qa.answer || qa.answer.trim() === ''
-              );
-              
-              if (hasEmptyAnswers) {
-                // This is a new questionnaire, auto-generate answers
-                console.log('Detected new questionnaire, auto-generating AI answers...');
-                
-                // Set questionnaire first with loading states
-                const questionnaireWithLoading = {
-                  ...found,
-                  answers: found.answers.map((qa: QuestionAnswer) => ({
-                    ...qa,
-                    answer: qa.answer || 'Generating AI answer...',
-                    isLoading: !qa.answer || qa.answer.trim() === ''
-                  }))
-                };
-                setQuestionnaire(questionnaireWithLoading);
-                
-                // Generate answers for empty questions
-                const updatedAnswers = await Promise.all(
-                  found.answers.map(async (qa: QuestionAnswer, index: number) => {
-                    if (!qa.answer || qa.answer.trim() === '') {
-                      try {
-                        const aiAnswer = await generateAIAnswer(qa.question);
-                        return { ...qa, answer: aiAnswer, isLoading: false };
-                      } catch (error) {
-                        console.error(`Error generating answer for question ${index + 1}:`, error);
-                        return { 
-                          ...qa, 
-                          answer: "We couldn't generate an answer—please try again.", 
-                          isLoading: false 
-                        };
-                      }
-                    }
-                    return qa;
-                  })
-                );
-                
-                                 // Calculate progress
-                 const answeredQuestions = updatedAnswers.filter(qa => qa.answer && qa.answer.trim() !== '' && qa.answer !== "Generating AI answer...").length;
-                 const totalQuestions = updatedAnswers.length;
-                 const progress = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
-                 
-                 // Determine status
-                 let status = 'Not Started';
-                 if (progress === 100) {
-                   status = 'Completed';
-                 } else if (progress >= 75) {
-                   status = 'In Review';
-                 } else if (progress >= 25) {
-                   status = 'In Progress';
-                 } else if (progress > 0) {
-                   status = 'Draft';
-                 }
-
-                 // Update questionnaire with generated answers
-                 const updatedQuestionnaire = {
-                   ...found,
-                   answers: updatedAnswers,
-                   status: status as any,
-                   progress: progress
-                 };
-                
-                // Save back to localStorage
-                const finalQuestionnaires = parsedQuestionnaires.map((q: any) => 
-                  q.id === id ? updatedQuestionnaire : q
-                );
-                localStorage.setItem('user_questionnaires', JSON.stringify(finalQuestionnaires));
-                
-                setQuestionnaire(updatedQuestionnaire);
-              } else {
+              if (found) {
                 setQuestionnaire(found);
+                
+                // Initialize the answer cache with current answers
+                const initialCache: Record<string, string> = {};
+                if (found.answers) {
+                  found.answers.forEach((qa: QuestionAnswer, index: number) => {
+                    initialCache[`${found.id}-${index}`] = qa.answer;
+                  });
+                }
+                setAnswerCache(initialCache);
+              } else {
+                router.push('/questionnaires');
               }
-              
-              // Initialize the answer cache with current answers
-              const initialCache: Record<string, string> = {};
-              if (found.answers) {
-                found.answers.forEach((qa: QuestionAnswer, index: number) => {
-                  initialCache[`${found.id}-${index}`] = qa.answer;
-                });
-              }
-              setAnswerCache(initialCache);
             } else {
-              console.error('Questionnaire not found');
-              // Redirect back to questionnaires list if not found
               router.push('/questionnaires');
             }
           }
+        } catch (fallbackError) {
+          console.error('Error loading questionnaire from localStorage:', fallbackError);
+          router.push('/questionnaires');
         }
-      } catch (error) {
-        console.error('Error loading questionnaire:', error);
       } finally {
         setLoading(false);
       }
