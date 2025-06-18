@@ -342,7 +342,8 @@ export const QuestionnaireService = {
           questionOrder: index + 1,
           isRequired: true
         })),
-        vendorId: vendorId ? parseInt(vendorId) : undefined
+        vendorId: vendorId ? parseInt(vendorId) : undefined,
+        generateAnswers: generateAnswers
       };
 
       // Create questionnaire using the simplified backend API

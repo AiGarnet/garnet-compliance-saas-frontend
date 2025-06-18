@@ -659,8 +659,17 @@ const QuestionnairesPage = () => {
     setIsSubmitting(true);
     
     try {
-      // First, try to save directly to the backend database
-      const shouldGenerateAnswers = generatedAnswers.length > 0 || true; // Always generate answers for better UX
+      // Always generate AI answers during questionnaire creation for better UX
+      let finalAnswers = generatedAnswers;
+      
+      if (finalAnswers.length === 0) {
+        // Generate AI answers before saving to database
+        console.log('🤖 Generating AI answers for questionnaire creation...');
+        finalAnswers = await handleGenerateAnswers();
+      }
+      
+      // Save to database with generated answers
+      const shouldGenerateAnswers = true; // Always generate answers for better UX
       
       const databaseResult = await QuestionnaireService.saveQuestionnaireToDatabase(
         questionnaireTitle,
@@ -683,10 +692,10 @@ const QuestionnairesPage = () => {
         newQuestionnaire = {
           id: databaseResult.questionnaire.id,
           name: databaseResult.questionnaire.name,
-          status: "Completed" as QuestionnaireStatus, // Mark as completed since we have answers
+          status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
           dueDate: databaseResult.questionnaire.dueDate,
-          progress: 100, // 100% since we have all answers
-          answers: databaseResult.questionnaire.answers,
+          progress: finalAnswers.length > 0 ? 100 : 0,
+          answers: databaseResult.questionnaire.answers || finalAnswers,
           vendorId: selectedVendorId || databaseResult.questionnaire.vendorId,
           vendorName: selectedVendor?.name || databaseResult.questionnaire.vendorName,
         };
@@ -698,13 +707,8 @@ const QuestionnairesPage = () => {
         // Fallback to local storage if database save fails
         console.warn('⚠️ Database save failed, falling back to local storage:', databaseResult.error);
         
-        // Use generated answers if available, otherwise generate them
-        let finalAnswers = generatedAnswers;
-        
-        if (finalAnswers.length === 0) {
-          // Generate answers if not already done
-          finalAnswers = await handleGenerateAnswers();
-        }
+        // Use the already generated answers from above
+        // finalAnswers is already set from the earlier generation step
         
         // Get selected vendor info
         const selectedVendor = vendors.find(v => v.id === selectedVendorId);
@@ -712,7 +716,7 @@ const QuestionnairesPage = () => {
         newQuestionnaire = {
           id: `q${Date.now()}`,  
           name: questionnaireTitle,
-          status: "Not Started" as QuestionnaireStatus,
+          status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
           dueDate: new Date().toLocaleDateString(),
           progress: finalAnswers.length > 0 ? 100 : 0,
           answers: finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' })),
@@ -818,16 +822,24 @@ const QuestionnairesPage = () => {
       } else if (fileExtension === 'csv') {
         // Read and parse CSV
         const text = await readFileAsText(file);
-        const lines = text.split('\n')
-          .map(line => {
-            // Extract first column if CSV
-            const columns = line.split(',');
-            return columns[0]?.trim().replace(/^["']|["']$/g, '') || '';
-          })
-          .filter(line => line.length > 0)
-          .join('\n');
         
-        setQuestionnaireInput(lines);
+        // Basic CSV parsing - split by lines, then by commas
+        const lines = text.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+        
+        // If first row contains headers like "question", skip it
+        if (lines.length > 0 && lines[0].toLowerCase().includes('question')) {
+          lines.shift();
+        }
+        
+        // Extract first column as questions (assuming questions are in first column)
+        const questions = lines.map(line => {
+          const firstColumn = line.split(',')[0];
+          return firstColumn.replace(/^["']|["']$/g, ''); // Remove quotes
+        }).filter(q => q.length > 0);
+        
+        setQuestionnaireInput(questions.join('\n'));
         
         // Auto-generate title from filename
         if (!questionnaireTitle) {
@@ -860,8 +872,34 @@ const QuestionnairesPage = () => {
             .replace(/\b\w/g, c => c.toUpperCase());
           setQuestionnaireTitle(baseName);
         }
+      } else if (fileExtension === 'pdf') {
+        // Handle PDF files - for now, show a message that PDF processing is coming soon
+        // In the future, this would use a PDF parsing library like pdf-parse or PDF.js
+        try {
+          // For now, we'll show a message that PDF text extraction is being implemented
+          const pdfContent = await extractTextFromPDF(file);
+          if (pdfContent) {
+            setQuestionnaireInput(pdfContent);
+            
+            // Auto-generate title from filename
+            if (!questionnaireTitle) {
+              const baseName = sanitizedName.split('.')[0]
+                .replace(/[_-]/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+              setQuestionnaireTitle(baseName);
+            }
+          } else {
+            throw new Error('Could not extract text from PDF. Please try converting to TXT, MD, or CSV format.');
+          }
+        } catch (error) {
+          console.error('PDF processing error:', error);
+          setUploadError('PDF text extraction is being implemented. For now, please convert your PDF to TXT, MD, or CSV format.');
+        }
+      } else if (['doc', 'docx'].includes(fileExtension || '')) {
+        // Handle Word documents - for now, show a message about format support
+        setUploadError('Word document support is being implemented. For now, please save your document as TXT, MD, or CSV format.');
       } else {
-        throw new Error('Only .txt, .csv, and .md files are supported at this time');
+        throw new Error('Supported formats: .txt, .csv, .md, .pdf (coming soon), .doc/.docx (coming soon)');
       }
       
     } catch (error) {
@@ -873,6 +911,91 @@ const QuestionnairesPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // PDF text extraction function using PDF.js
+  const extractTextFromPDF = async (file: File): Promise<string | null> => {
+    try {
+      // Dynamically import PDF.js to avoid SSR issues
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Set up PDF.js worker
+      if (typeof window !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+      }
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            if (!arrayBuffer) {
+              reject(new Error('Failed to read PDF file'));
+              return;
+            }
+
+            // Load the PDF document
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+
+            // Extract text from each page
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+              const page = await pdf.getPage(pageNum);
+              const textContent = await page.getTextContent();
+              
+              // Combine text items into readable text
+              const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ')
+                .trim();
+              
+              if (pageText) {
+                fullText += pageText + '\n';
+              }
+            }
+
+            // Process the extracted text to find potential questions
+            if (fullText.trim()) {
+              // Split into lines and filter for potential questions
+              const lines = fullText
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => {
+                  // Filter for lines that look like questions
+                  return line.length > 10 && // Minimum length
+                         (line.includes('?') || // Contains question mark
+                          line.toLowerCase().includes('do you') ||
+                          line.toLowerCase().includes('does your') ||
+                          line.toLowerCase().includes('have you') ||
+                          line.toLowerCase().includes('what') ||
+                          line.toLowerCase().includes('how') ||
+                          line.toLowerCase().includes('when') ||
+                          line.toLowerCase().includes('where') ||
+                          line.toLowerCase().includes('why') ||
+                          line.toLowerCase().includes('which') ||
+                          line.toLowerCase().includes('describe') ||
+                          line.toLowerCase().includes('explain') ||
+                          line.toLowerCase().includes('provide'));
+                })
+                .slice(0, 50); // Limit to first 50 potential questions
+
+              resolve(lines.join('\n'));
+            } else {
+              resolve(null);
+            }
+          } catch (pdfError) {
+            console.error('PDF parsing error:', pdfError);
+            reject(new Error('Failed to extract text from PDF. Please ensure the PDF contains readable text.'));
+          }
+        };
+        
+        reader.onerror = () => reject(new Error('Failed to read PDF file'));
+        reader.readAsArrayBuffer(file);
+      });
+    } catch (error) {
+      console.error('PDF.js loading error:', error);
+      return null;
     }
   };
 
@@ -1271,18 +1394,26 @@ const QuestionnairesPage = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                         {dragActive ? 'Drop file here' : 'Drag and drop a file here, or click to browse'}
                       </p>
-                            <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 mb-3">
-                              <div className="flex items-center mr-3">
+                            <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 mb-3 flex-wrap">
+                              <div className="flex items-center mr-3 mb-1">
                                 <FileText className="h-4 w-4 mr-1" />
                                 <span>.TXT</span>
                               </div>
-                              <div className="flex items-center mr-3">
+                              <div className="flex items-center mr-3 mb-1">
                                 <FileType className="h-4 w-4 mr-1" />
                                 <span>.CSV</span>
                               </div>
-                              <div className="flex items-center">
+                              <div className="flex items-center mr-3 mb-1">
                                 <Files className="h-4 w-4 mr-1" />
                                 <span>.MD</span>
+                              </div>
+                              <div className="flex items-center mr-3 mb-1">
+                                <FileText className="h-4 w-4 mr-1" />
+                                <span>.PDF</span>
+                              </div>
+                              <div className="flex items-center mb-1">
+                                <FileText className="h-4 w-4 mr-1" />
+                                <span>.DOC/.DOCX</span>
                               </div>
                             </div>
                             <label className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
@@ -1290,7 +1421,7 @@ const QuestionnairesPage = () => {
                         <input
                           type="file"
                           className="hidden"
-                                accept=".txt,.csv,.md"
+                                accept=".txt,.csv,.md,.pdf,.doc,.docx"
                                 onChange={handleFileUpload}
                                 ref={fileInputRef}
                           disabled={isUploading}
