@@ -22,8 +22,8 @@ exports.handler = async function(event, context) {
     const body = JSON.parse(event.body);
     const { title, questions } = body;
     
-    // Generate a random ID
-    const id = `q${Date.now().toString(36)}`;
+    // Generate a timestamp ID matching backend format (numeric timestamp)
+    const id = Date.now();
     
     // Generate a random due date in the next 30 days
     const dueDate = new Date();
@@ -34,8 +34,9 @@ exports.handler = async function(event, context) {
       year: 'numeric' 
     });
     
-    // Store the questionnaire in memory (in a real app, this would go to a database)
-    // In this demo, we'll just return a mock response since we can't persist data between requests
+    // Note: This function is now DEPRECATED and not used by the frontend
+    // The frontend calls the Railway backend API directly for questionnaire operations
+    console.log('⚠️ DEPRECATED: This Netlify function is no longer used. Frontend calls Railway backend directly.');
     
     return {
       statusCode: 200,
@@ -45,15 +46,16 @@ exports.handler = async function(event, context) {
       },
       body: JSON.stringify({
         success: true,
-        message: 'Questionnaire created successfully',
+        message: 'Questionnaire created successfully (via deprecated Netlify function)',
         questionnaire: {
-          id,
+          id: id.toString(),
           name: title,
           status: 'Not Started',
           dueDate: formattedDueDate,
           progress: 0,
-          questions
-        }
+          questions: questions || []
+        },
+        warning: 'This function is deprecated. Frontend should call Railway backend directly.'
       })
     };
   } catch (error) {
@@ -64,7 +66,11 @@ exports.handler = async function(event, context) {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*"
       },
-      body: JSON.stringify({ success: false, message: 'Failed to process questionnaire' })
+      body: JSON.stringify({ 
+        success: false, 
+        message: 'Failed to process questionnaire (deprecated function)',
+        error: error.message
+      })
     };
   }
 }; 
