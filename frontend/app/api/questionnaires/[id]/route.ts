@@ -41,29 +41,35 @@ interface Questionnaire {
   createdAt?: string;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// Backend API URL - adjust based on environment
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
     
-    // For static export, we'll return a mock questionnaire
-    // In a real implementation, this would fetch from database
-    const mockQuestionnaire: Questionnaire = {
-      id,
-      name: `Questionnaire ${id}`,
-      status: 'Not Started',
-      progress: 0,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      answers: [],
-      createdAt: new Date().toISOString()
-    };
+    // Forward the request to the backend API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/questionnaires/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     
-    return NextResponse.json(mockQuestionnaire);
+    if (!backendResponse.ok) {
+      return NextResponse.json({ 
+        error: 'Questionnaire not found' 
+      }, { status: backendResponse.status });
+    }
+    
+    const backendData = await backendResponse.json();
+    return NextResponse.json(backendData);
+    
   } catch (error) {
     console.error('Error fetching questionnaire:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
 }
 
@@ -90,19 +96,37 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
     
-    // For static export, we'll just return success
-    // In a real implementation, this would delete from database
-    return NextResponse.json({ message: 'Questionnaire deleted successfully' });
+    // Forward the delete request to the backend API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/questionnaires/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!backendResponse.ok) {
+      if (backendResponse.status === 404) {
+        return NextResponse.json({ 
+          error: 'Questionnaire not found' 
+        }, { status: 404 });
+      }
+      return NextResponse.json({ 
+        error: 'Failed to delete questionnaire' 
+      }, { status: backendResponse.status });
+    }
+    
+    const backendData = await backendResponse.json();
+    return NextResponse.json(backendData);
+    
   } catch (error) {
     console.error('Error deleting questionnaire:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
 }
 

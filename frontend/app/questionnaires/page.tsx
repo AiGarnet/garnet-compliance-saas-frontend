@@ -1135,29 +1135,51 @@ const QuestionnairesPage = () => {
   };
   
   // Add handling for deleting a questionnaire
-  const handleDeleteQuestionnaire = (questionnaire: Questionnaire) => {
+  const handleDeleteQuestionnaire = async (questionnaire: Questionnaire) => {
     if (confirm(`Are you sure you want to delete the questionnaire "${questionnaire.name}"?`)) {
-      // Get existing questionnaires from local storage (only on client side)
-      if (typeof window !== 'undefined') {
-        const savedQuestionnaires = localStorage.getItem('user_questionnaires');
-        if (savedQuestionnaires) {
-          try {
-            const userQuestionnaires = JSON.parse(savedQuestionnaires);
-            
-            // Filter out the questionnaire to delete
-            const updatedQuestionnaires = userQuestionnaires.filter(
-              (q: Questionnaire) => q.id !== questionnaire.id
-            );
-            
-            // Save back to local storage
-            localStorage.setItem('user_questionnaires', JSON.stringify(updatedQuestionnaires));
-            
-            // Refresh the questionnaire list
-            fetchQuestionnaires();
-          } catch (e) {
-            console.error('Error deleting questionnaire:', e);
+      try {
+        // First, try to delete from backend database
+        console.log('🗑️ Deleting questionnaire from backend:', questionnaire.id);
+        
+        const response = await fetch(`/api/questionnaires/${questionnaire.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          console.log('✅ Successfully deleted from backend');
+        } else {
+          console.warn('⚠️ Backend delete failed, will delete from local storage only');
+        }
+        
+        // Also delete from local storage for immediate UI update
+        if (typeof window !== 'undefined') {
+          const savedQuestionnaires = localStorage.getItem('user_questionnaires');
+          if (savedQuestionnaires) {
+            try {
+              const userQuestionnaires = JSON.parse(savedQuestionnaires);
+              
+              // Filter out the questionnaire to delete
+              const updatedQuestionnaires = userQuestionnaires.filter(
+                (q: Questionnaire) => q.id !== questionnaire.id
+              );
+              
+              // Save back to local storage
+              localStorage.setItem('user_questionnaires', JSON.stringify(updatedQuestionnaires));
+            } catch (e) {
+              console.error('Error updating local storage:', e);
+            }
           }
         }
+        
+        // Refresh the questionnaire list to reflect changes
+        fetchQuestionnaires();
+        
+      } catch (error) {
+        console.error('❌ Error deleting questionnaire:', error);
+        alert('Failed to delete questionnaire. Please try again.');
       }
     }
   };
