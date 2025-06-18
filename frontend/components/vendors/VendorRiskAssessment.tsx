@@ -22,33 +22,44 @@ interface RiskAssessment {
 interface VendorRiskAssessmentProps {
   vendorId: string;
   className?: string;
+  riskAssessment?: RiskAssessment | null;
+  isCalculatingRisk?: boolean;
 }
 
-export function VendorRiskAssessment({ vendorId, className = '' }: VendorRiskAssessmentProps) {
-  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
-  const [loading, setLoading] = useState(true);
+export function VendorRiskAssessment({ vendorId, className = '', riskAssessment: propRiskAssessment, isCalculatingRisk: propIsCalculatingRisk }: VendorRiskAssessmentProps) {
+  const [localRiskAssessment, setLocalRiskAssessment] = useState<RiskAssessment | null>(null);
+  const [localLoading, setLocalLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use prop data if available, otherwise fetch locally
+  const riskAssessment = propRiskAssessment || localRiskAssessment;
+  const loading = propIsCalculatingRisk !== undefined ? propIsCalculatingRisk : localLoading;
+
   useEffect(() => {
+    // Only fetch if we don't have prop data
+    if (propRiskAssessment !== undefined) {
+      return; // Use prop data, no need to fetch
+    }
+
     const fetchRiskAssessment = async () => {
       try {
-        setLoading(true);
+        setLocalLoading(true);
         setError(null);
         
         const response = await vendors.risk.getAssessment(vendorId);
-        setRiskAssessment(response.assessment);
+        setLocalRiskAssessment(response.assessment);
       } catch (err: any) {
         console.error('Failed to fetch risk assessment:', err);
         setError(err.message || 'Failed to load risk assessment');
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     };
 
     if (vendorId) {
       fetchRiskAssessment();
     }
-  }, [vendorId]);
+  }, [vendorId, propRiskAssessment]);
 
   const getRiskLevelColor = (level: string) => {
     switch (level?.toLowerCase()) {

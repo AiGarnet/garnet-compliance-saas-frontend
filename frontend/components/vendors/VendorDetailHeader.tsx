@@ -11,17 +11,17 @@ import { vendors } from '@/lib/api';
 interface VendorDetailHeaderProps {
   vendor: VendorDetail;
   onEdit?: () => void;
+  riskAssessment?: any;
+  isCalculatingRisk?: boolean;
 }
 
-export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) {
+export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculatingRisk }: VendorDetailHeaderProps) {
   const router = useRouter();
   const [inviteLink, setInviteLink] = useState<string>('');
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [riskAssessment, setRiskAssessment] = useState<any>(null);
-  const [isCalculatingRisk, setIsCalculatingRisk] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -37,66 +37,6 @@ export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Calculate risk assessment when vendor changes - now using backend API
-  useEffect(() => {
-    const calculateRiskAssessment = async () => {
-      if (!vendor?.id) return;
-      
-      try {
-        setIsCalculatingRisk(true);
-        
-        // Call backend to calculate and update risk assessment
-        const response = await vendors.risk.calculateAndUpdate(vendor.id);
-        
-        console.log('Risk assessment response:', response);
-        
-        if (response.assessment) {
-          setRiskAssessment(response.assessment);
-        }
-      } catch (error) {
-        console.error('Failed to calculate risk assessment:', error);
-        
-        // Fallback to simple calculation if backend fails
-        const answers = vendor.questionnaireAnswers || [];
-        const totalQuestions = answers.length;
-        const completedQuestions = answers.filter(qa => qa.status === 'Completed').length;
-        
-        let riskScore = 50;
-        let riskLevel = 'Medium';
-        
-        if (totalQuestions === 0) {
-          riskScore = 85;
-          riskLevel = 'High';
-        } else {
-          const completionRate = completedQuestions / totalQuestions;
-          
-          if (completionRate >= 0.8) {
-            riskScore = 25;
-            riskLevel = 'Low';
-          } else if (completionRate >= 0.5) {
-            riskScore = 45;
-            riskLevel = 'Medium';
-          } else {
-            riskScore = 75;
-            riskLevel = 'High';
-          }
-        }
-        
-        setRiskAssessment({
-          overallScore: riskScore,
-          riskLevel: riskLevel,
-          factors: [],
-          recommendations: [],
-          lastAssessed: new Date()
-        });
-      } finally {
-        setIsCalculatingRisk(false);
-      }
-    };
-
-    calculateRiskAssessment();
-  }, [vendor?.id, vendor?.questionnaireAnswers]);
 
   const handleManageWorks = () => {
     router.push(`/vendor-works?id=${vendor.id}`);

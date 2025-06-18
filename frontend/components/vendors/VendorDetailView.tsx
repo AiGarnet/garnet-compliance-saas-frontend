@@ -31,6 +31,70 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportingAnswers, setIsImportingAnswers] = useState(false);
+  const [riskAssessment, setRiskAssessment] = useState<any>(null);
+  const [isCalculatingRisk, setIsCalculatingRisk] = useState(false);
+
+  // Calculate risk assessment when vendor changes
+  useEffect(() => {
+    const calculateRiskAssessment = async () => {
+      if (!vendor?.id) return;
+      
+      try {
+        setIsCalculatingRisk(true);
+        
+        // Get the latest risk assessment from backend
+        const response = await vendorAPI.risk.getAssessment(vendor.id);
+        
+        console.log('Shared risk assessment response:', response);
+        
+        if (response.assessment) {
+          setRiskAssessment(response.assessment);
+        }
+      } catch (error) {
+        console.error('Failed to get shared risk assessment:', error);
+        
+        // Fallback calculation if backend fails
+        const answers = vendor.questionnaireAnswers || [];
+        const totalQuestions = answers.length;
+        const completedQuestions = answers.filter(qa => qa.status === 'Completed').length;
+        
+        let riskScore = 50;
+        let riskLevel = 'Medium';
+        
+        if (totalQuestions === 0) {
+          riskScore = 85;
+          riskLevel = 'High';
+        } else {
+          const completionRate = completedQuestions / totalQuestions;
+          
+          if (completionRate >= 0.8) {
+            riskScore = 25;
+            riskLevel = 'Low';
+          } else if (completionRate >= 0.5) {
+            riskScore = 45;
+            riskLevel = 'Medium';
+          } else {
+            riskScore = 75;
+            riskLevel = 'High';
+          }
+        }
+        
+        setRiskAssessment({
+          overallScore: riskScore,
+          riskLevel: riskLevel,
+          factors: [],
+          recommendations: [],
+          lastAssessed: new Date()
+        });
+      } finally {
+        setIsCalculatingRisk(false);
+      }
+    };
+
+    if (vendor) {
+      calculateRiskAssessment();
+    }
+  }, [vendor?.id]);
 
   // Check if edit mode is requested via URL parameter (client-side only)
   useEffect(() => {
@@ -182,7 +246,12 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-        <VendorDetailHeader vendor={vendor} onEdit={() => setIsEditModalOpen(true)} />
+        <VendorDetailHeader 
+          vendor={vendor} 
+          onEdit={() => setIsEditModalOpen(true)}
+          riskAssessment={riskAssessment}
+          isCalculatingRisk={isCalculatingRisk}
+        />
         
         <div className="container mx-auto max-w-7xl py-8 px-4">
           {/* Import Questionnaire Button */}
@@ -218,7 +287,11 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
             {/* Right column */}
             <div className="space-y-6">
               <VendorInfoCard vendor={vendor} />
-              <VendorRiskAssessment vendorId={vendor.id} />
+              <VendorRiskAssessment 
+                vendorId={vendor.id} 
+                riskAssessment={riskAssessment}
+                isCalculatingRisk={isCalculatingRisk}
+              />
             </div>
           </div>
         </div>
