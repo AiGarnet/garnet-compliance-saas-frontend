@@ -36,6 +36,7 @@ import {
 import Header from '@/components/Header';
 
 interface QuestionAnswer {
+  questionId?: string;
   question: string;
   answer: string;
   isLoading?: boolean;
@@ -177,10 +178,11 @@ export function ChatClient({ params }: { params: { id: string } }) {
         console.log('🔍 Loading questionnaire from backend API:', params.id);
         
         try {
-          const backendResponse = await fetch(`/api/questionnaires/${params.id}`);
+          const backendResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${params.id}`);
           
           if (backendResponse.ok) {
-            const backendQuestionnaire = await backendResponse.json();
+            const backendData = await backendResponse.json();
+            const backendQuestionnaire = backendData.questionnaire || backendData;
             console.log('✅ Loaded from backend:', backendQuestionnaire);
             
             // Transform backend format to frontend format
@@ -192,6 +194,7 @@ export function ChatClient({ params }: { params: { id: string } }) {
               dueDate: new Date().toLocaleDateString(),
               createdAt: backendQuestionnaire.createdAt,
               answers: backendQuestionnaire.questions?.map((q: any) => ({
+                questionId: q.id || q.questionId,
                 question: q.questionText,
                 answer: q.answer || '',
                 isLoading: false,
@@ -330,14 +333,19 @@ export function ChatClient({ params }: { params: { id: string } }) {
     if (editingQuestion === null || !questionnaire) return;
 
     try {
-      // Call backend API first
-      const response = await fetch(`/api/questionnaires/${params.id}/questions/${editingQuestion}`, {
+      // Call backend API first - use questionId if available
+      const questionId = questionnaire?.answers[editingQuestion]?.questionId;
+      if (!questionId) {
+        throw new Error('Question ID not available - using fallback mode');
+      }
+      
+      const response = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${params.id}/questions/${questionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          question: editedQuestionText
+          questionText: editedQuestionText
         }),
       });
 
@@ -460,6 +468,34 @@ export function ChatClient({ params }: { params: { id: string } }) {
     setEditedQuestionText('');
   };
 
+  // Function to save answer to backend
+  const saveAnswerToBackend = async (questionIndex: number, answer: string) => {
+    if (!questionnaire) return false;
+    
+    try {
+      const questionId = questionnaire.answers[questionIndex].questionId;
+      if (!questionId) {
+        console.warn('No question ID available for backend save');
+        return false;
+      }
+      
+      const response = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${params.id}/questions/${questionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          answer: answer
+        }),
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error saving answer to backend:', error);
+      return false;
+    }
+  };
+
   const handleGenerateAnswer = async (questionIndex: number) => {
     if (!questionnaire) return;
     
@@ -475,10 +511,34 @@ export function ChatClient({ params }: { params: { id: string } }) {
     try {
       const answer = await generateAIAnswer(question);
       
+      // Save to backend
+      const backendSaved = await saveAnswerToBackend(questionIndex, answer);
+      
+      // Update local state
+      const updatedQuestionnaire = {
+        ...questionnaire,
+        answers: questionnaire.answers.map((qa, index) => 
+          index === questionIndex ? { ...qa, answer } : qa
+        )
+      };
+      setQuestionnaire(updatedQuestionnaire);
+      
+      // Update localStorage
+      if (typeof window !== 'undefined') {
+        const storedQuestionnaires = localStorage.getItem('user_questionnaires');
+        if (storedQuestionnaires) {
+          const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
+          const updatedQuestionnaires = parsedQuestionnaires.map((q: any) => 
+            q.id === params.id ? updatedQuestionnaire : q
+          );
+          localStorage.setItem('user_questionnaires', JSON.stringify(updatedQuestionnaires));
+        }
+      }
+      
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         type: 'assistant',
-        content: `✨ **AI-Generated Answer:**\n\n${answer}\n\n*You can edit this answer or regenerate a new one if needed.*`,
+        content: `✨ **AI-Generated Answer:**\n\n${answer}\n\n*${backendSaved ? 'Saved to database!' : 'Saved locally!'} You can edit this answer or regenerate a new one if needed.*`,
         timestamp: new Date(),
         questionIndex,
         suggestions: ['Edit this answer', 'Regenerate answer', 'Accept and continue']
