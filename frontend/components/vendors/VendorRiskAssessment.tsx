@@ -186,23 +186,7 @@ export function VendorRiskAssessment({ vendorId, className = '', riskAssessment:
         </div>
       </div>
 
-      {/* Recommendations */}
-      {riskAssessment.recommendations?.length > 0 && (
-        <div className="p-6 border-t border-gray-200 bg-blue-50">
-          <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            Recommendations
-          </h4>
-          <ul className="space-y-2">
-            {riskAssessment.recommendations.map((recommendation, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                {recommendation}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+
     </div>
   );
 } 
