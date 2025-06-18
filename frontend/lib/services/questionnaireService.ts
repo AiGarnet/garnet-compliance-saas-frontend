@@ -351,8 +351,8 @@ export const QuestionnaireService = {
         generateAnswers: generateAnswers
       };
 
-      // Create questionnaire using the simplified backend API
-      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('/api/questionnaires', questionnaireData);
+      // Create questionnaire using the Netlify function
+      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('/.netlify/functions/questionnaires', questionnaireData);
 
       if (!questionnaireResponse.questionnaire) {
         throw new Error('Failed to create questionnaire record');
@@ -370,11 +370,11 @@ export const QuestionnaireService = {
             answer: answer.answer
           }));
 
-          // Use the simplified endpoint to save vendor answers
+          // Use the Netlify function to save vendor answers
           const answersResponse = await apiClient.post<{ 
             answers: any[], 
             message: string 
-          }>(`/api/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
+          }>(`/.netlify/functions/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
 
           // Create questionnaire object for frontend
           const questionnaire = {
@@ -435,7 +435,7 @@ export const QuestionnaireService = {
             }));
 
             try {
-              await apiClient.post(`/api/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
+              await apiClient.post(`/.netlify/functions/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
             } catch (linkError) {
               console.warn('Failed to link vendor answers to questionnaire:', linkError);
               // Continue anyway, the vendor and questionnaire are created

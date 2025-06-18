@@ -220,10 +220,10 @@ const QuestionnairesPage = () => {
       let transformedQuestionnaires: Questionnaire[] = [];
       
       if (selectedVendorId) {
-        // Get questionnaires for specific vendor
+        // Get questionnaires for specific vendor using Netlify function
         console.log(`🔍 Fetching questionnaires for vendor ${selectedVendorId}`);
         
-        const response = await fetch(`/api/questionnaires/vendor/${selectedVendorId}`);
+        const response = await fetch(`/.netlify/functions/questionnaires/vendor/${selectedVendorId}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -245,10 +245,10 @@ const QuestionnairesPage = () => {
           console.error('Failed to fetch vendor questionnaires:', response.status);
         }
       } else {
-        // Get all questionnaires
+        // Get all questionnaires using Netlify function
         console.log('🔍 Fetching all questionnaires');
         
-        const response = await fetch('/api/questionnaires');
+        const response = await fetch('/.netlify/functions/questionnaires');
         
         if (response.ok) {
           const data = await response.json();
@@ -1062,7 +1062,7 @@ const QuestionnairesPage = () => {
         // First, try to delete from backend database
         console.log('🗑️ Deleting questionnaire from backend:', questionnaire.id);
         
-        const response = await fetch(`/api/questionnaires/${questionnaire.id}`, {
+        const response = await fetch(`/.netlify/functions/questionnaires/${questionnaire.id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
