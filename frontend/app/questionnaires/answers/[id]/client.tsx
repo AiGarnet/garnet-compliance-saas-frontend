@@ -50,10 +50,34 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
   };
 
   useEffect(() => {
-    // Load the questionnaire from backend API
+    // Load the questionnaire from localStorage first, then fallback to backend API
     const loadQuestionnaire = async () => {
       try {
-        // Fetch questionnaire data from backend API
+        // First try to get from localStorage (passed from questionnaire page)
+        if (typeof window !== 'undefined') {
+          const storedQuestionnaires = localStorage.getItem('user_questionnaires');
+          if (storedQuestionnaires) {
+            const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
+            const found = parsedQuestionnaires.find((q: any) => q.id === id);
+            
+            if (found && found.answers && found.answers.length > 0) {
+              setQuestionnaire(found);
+              
+              // Initialize the answer cache with current answers
+              const initialCache: Record<string, string> = {};
+              if (found.answers) {
+                found.answers.forEach((qa: QuestionAnswer, index: number) => {
+                  initialCache[`${found.id}-${index}`] = qa.answer;
+                });
+              }
+              setAnswerCache(initialCache);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+        
+        // If not found in localStorage, try backend API
         const response = await fetch(`http://localhost:8080/api/questionnaires/${id}`);
         
         if (!response.ok) {
@@ -91,42 +115,11 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
           setAnswerCache(initialCache);
         } else {
           console.error('Questionnaire not found in API response');
-          // Redirect back to questionnaires list if not found
           router.push('/questionnaires');
         }
       } catch (error) {
-        console.error('Error loading questionnaire from API:', error);
-        
-        // Fallback to localStorage if API fails
-        try {
-          if (typeof window !== 'undefined') {
-            const storedQuestionnaires = localStorage.getItem('user_questionnaires');
-            if (storedQuestionnaires) {
-              const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
-              const found = parsedQuestionnaires.find((q: any) => q.id === id);
-              
-              if (found) {
-                setQuestionnaire(found);
-                
-                // Initialize the answer cache with current answers
-                const initialCache: Record<string, string> = {};
-                if (found.answers) {
-                  found.answers.forEach((qa: QuestionAnswer, index: number) => {
-                    initialCache[`${found.id}-${index}`] = qa.answer;
-                  });
-                }
-                setAnswerCache(initialCache);
-              } else {
-                router.push('/questionnaires');
-              }
-            } else {
-              router.push('/questionnaires');
-            }
-          }
-        } catch (fallbackError) {
-          console.error('Error loading questionnaire from localStorage:', fallbackError);
-          router.push('/questionnaires');
-        }
+        console.error('Error loading questionnaire:', error);
+        router.push('/questionnaires');
       } finally {
         setLoading(false);
       }
