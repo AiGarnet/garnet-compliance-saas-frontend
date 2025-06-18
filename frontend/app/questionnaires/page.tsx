@@ -231,9 +231,10 @@ const QuestionnairesPage = () => {
           if (data.questionnaires && Array.isArray(data.questionnaires)) {
             transformedQuestionnaires = data.questionnaires.map((q: any) => ({
               id: q.id.toString(),
-              name: q.title || `${q.vendorName} - Questions`,
+              name: q.title, // Backend now returns formatted title as {Vendor_name}-{question_title}
               vendorId: q.vendorId?.toString(),
               vendorName: q.vendorName,
+              questionTitle: q.questionTitle,
               status: q.status,
               progress: q.progress || 0,
               dueDate: new Date().toLocaleDateString(),
@@ -256,9 +257,10 @@ const QuestionnairesPage = () => {
           if (data.questionnaires && Array.isArray(data.questionnaires)) {
             transformedQuestionnaires = data.questionnaires.map((q: any) => ({
               id: q.id.toString(),
-              name: q.title || `${q.vendorName} - Questions`,
+              name: q.title, // Backend now returns formatted title as {Vendor_name}-{question_title}
               vendorId: q.vendorId?.toString(),
               vendorName: q.vendorName,
+              questionTitle: q.questionTitle,
               status: q.status,
               progress: q.progress || 0,
               dueDate: new Date().toLocaleDateString(),
