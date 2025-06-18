@@ -691,11 +691,12 @@ const QuestionnairesPage = () => {
         
         newQuestionnaire = {
           id: databaseResult.questionnaire.id,
-          name: databaseResult.questionnaire.name,
+          name: databaseResult.questionnaire.title || questionnaireTitle,
           status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
-          dueDate: databaseResult.questionnaire.dueDate,
+          dueDate: new Date().toLocaleDateString(),
           progress: finalAnswers.length > 0 ? 100 : 0,
-          answers: (databaseResult.questionnaire.answers || finalAnswers).map((qa: any) => ({
+          createdAt: new Date().toISOString(),
+          answers: (finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' }))).map((qa: any) => ({
             question: qa.question,
             answer: qa.answer || '',
             isMandatory: true,
@@ -725,6 +726,7 @@ const QuestionnairesPage = () => {
           status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
           dueDate: new Date().toLocaleDateString(),
           progress: finalAnswers.length > 0 ? 100 : 0,
+          createdAt: new Date().toISOString(),
           answers: (finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' }))).map((qa: any) => ({
             question: qa.question,
             answer: qa.answer || '',
@@ -1233,18 +1235,18 @@ const QuestionnairesPage = () => {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-auto p-4">
               <div 
                 ref={modalRef}
-              className="bg-white dark:bg-card-bg rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+                              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
                 role="dialog"
                 aria-modal="true"
               aria-labelledby="questionnaire-modal-title"
             >
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 id="questionnaire-modal-title" className="text-xl font-semibold text-gray-800 dark:text-white">
+                              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                                  <h2 id="questionnaire-modal-title" className="text-xl font-semibold text-gray-800">
                   Create Questionnaire with AI Assistance
                       </h2>
                     <button 
                   onClick={closeQuestionnaireInput}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                                      className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
                       aria-label="Close"
                     >
                       <X className="h-5 w-5" />
@@ -1255,13 +1257,13 @@ const QuestionnairesPage = () => {
                 <form onSubmit={handleSubmitQuestionnaire}>
                   {/* Title input */}
                   <div className="mb-4">
-                    <label htmlFor="questionnaire-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="questionnaire-title" className="block text-sm font-medium text-gray-700 mb-1">
                       Questionnaire Title
                     </label>
                     <input
                       type="text"
                       id="questionnaire-title"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
                       placeholder="Enter title for this questionnaire"
                       value={questionnaireTitle}
                       onChange={(e) => setQuestionnaireTitle(e.target.value)}
@@ -1272,7 +1274,7 @@ const QuestionnairesPage = () => {
 
                   {/* Vendor Selection */}
                   <div className="mb-4">
-                    <label htmlFor="vendor-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="vendor-select" className="block text-sm font-medium text-gray-700 mb-1">
                       <Building2 className="inline h-4 w-4 mr-1" />
                       Select Vendor (Optional)
                     </label>
@@ -1456,7 +1458,7 @@ const QuestionnairesPage = () => {
                     )}
                     
                     {uploadError && (
-                          <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+                          <p className="mb-4 text-sm text-red-600">
                         {uploadError}
                           </p>
                         )}
@@ -1465,7 +1467,7 @@ const QuestionnairesPage = () => {
                       <div className="relative mb-4">
                         <textarea
                           ref={textareaRef}
-                          className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-md resize-none text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary min-h-[200px] max-h-[400px]"
+                          className="w-full p-4 border border-gray-300 rounded-md resize-none text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary min-h-[200px] max-h-[400px]"
                           placeholder="Type or paste each question on its own line (e.g. 'Do you encrypt data at rest?')."
                           value={questionnaireInput}
                           onChange={(e) => {
@@ -1480,7 +1482,7 @@ const QuestionnairesPage = () => {
                           <button
                             type="button"
                             onClick={handleClearTextarea}
-                            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
                             aria-label="Clear questions"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1494,7 +1496,7 @@ const QuestionnairesPage = () => {
                   {showPreview && (
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-800 dark:text-white">Question Preview</h3>
+                        <h3 className="text-lg font-medium text-gray-800">Question Preview</h3>
                         <div className="flex space-x-2">
                           <button 
                             type="button"
@@ -1515,17 +1517,17 @@ const QuestionnairesPage = () => {
                         </div>
                   </div>
 
-                      <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 max-h-[400px] overflow-y-auto">
+                      <div className="border border-gray-200 rounded-md p-4 max-h-[400px] overflow-y-auto">
                         {getParsedQuestions().length > 0 ? (
                           <ol className="list-decimal pl-5 space-y-2">
                             {getParsedQuestions().map((question, index) => (
-                              <li key={index} className="text-gray-800 dark:text-gray-200">
+                              <li key={index} className="text-gray-800">
                                 {question}
                               </li>
                             ))}
                           </ol>
                         ) : (
-                          <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                          <p className="text-gray-500 text-center py-4">
                             No questions added yet. Go back to edit and add some questions.
                           </p>
                         )}
@@ -1538,7 +1540,7 @@ const QuestionnairesPage = () => {
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center">
-                          <h3 className="text-lg font-medium text-gray-800 dark:text-white flex items-center">
+                          <h3 className="text-lg font-medium text-gray-800 flex items-center">
                             <MessageSquare className="h-5 w-5 mr-2 text-purple-500" />
                             AI-Generated Answers
                           </h3>
@@ -1574,7 +1576,7 @@ const QuestionnairesPage = () => {
                   )}
                   
                   <div className="flex justify-between items-center">
-                    <div id="question-counter" className="text-sm text-gray-600 dark:text-gray-400">
+                    <div id="question-counter" className="text-sm text-gray-600">
                       {questionCount > 0 ? (
                         <>You've entered {questionCount} question{questionCount !== 1 ? 's' : ''}</>
                       ) : (
@@ -1594,7 +1596,7 @@ const QuestionnairesPage = () => {
                     
                     {/* Validation errors */}
                     {validationError && (
-                      <p className="text-sm text-red-600 dark:text-red-400">
+                      <p className="text-sm text-red-600">
                         {validationError}
                       </p>
                     )}
@@ -1604,7 +1606,7 @@ const QuestionnairesPage = () => {
                     <button
                       type="button"
                       onClick={closeQuestionnaireInput}
-                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                     >
                       Cancel
                     </button>
@@ -1614,7 +1616,7 @@ const QuestionnairesPage = () => {
                       className={`py-2 px-6 rounded-md transition-colors ${
                         questionnaireInput.trim() && questionnaireTitle.trim() && !isSubmitting && questionCount <= MAX_QUESTIONS
                           ? 'bg-primary text-white hover:bg-primary/90' 
-                          : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                       aria-live="polite"
                     >
