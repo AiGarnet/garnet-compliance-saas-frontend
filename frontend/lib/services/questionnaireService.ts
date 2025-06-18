@@ -352,7 +352,7 @@ export const QuestionnaireService = {
       };
 
       // Create questionnaire using the Railway backend API
-      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires', questionnaireData);
+      const questionnaireResponse = await apiClient.post<{ questionnaire: any }>('/api/questionnaires', questionnaireData);
 
       if (!questionnaireResponse.questionnaire) {
         throw new Error('Failed to create questionnaire record');
@@ -374,7 +374,7 @@ export const QuestionnaireService = {
           const answersResponse = await apiClient.post<{ 
             answers: any[], 
             message: string 
-          }>(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
+          }>(`/api/questionnaires/${questionnaireId}/vendor/${vendorId}/answers`, answersWithIds);
 
           // Create questionnaire object for frontend
           const questionnaire = {
@@ -435,7 +435,7 @@ export const QuestionnaireService = {
             }));
 
             try {
-              await apiClient.post(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
+              await apiClient.post(`/api/questionnaires/${questionnaireId}/vendor/${newVendorId}/answers`, answersWithIds);
             } catch (linkError) {
               console.warn('Failed to link vendor answers to questionnaire:', linkError);
               // Continue anyway, the vendor and questionnaire are created
