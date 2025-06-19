@@ -12,9 +12,18 @@ const CompliancePage = () => {
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [isClient, setIsClient] = useState(false);
+
+  // Mark as client-side after hydration
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Fetch real compliance frameworks from PostgreSQL database
   const fetchFrameworks = async () => {
+    // Only fetch on client side
+    if (typeof window === 'undefined') return;
+    
     setIsLoading(true);
     setError('');
     
@@ -51,20 +60,25 @@ const CompliancePage = () => {
     }
   };
 
-  // Initial fetch on component mount
+  // Initial fetch on component mount (client-side only)
   useEffect(() => {
+    if (!isClient) return;
+    
     const loadComplianceData = async () => {
       await fetchFrameworks();
       await fetchEvidenceItems();
     };
     loadComplianceData();
-  }, []);
+  }, [isClient]);
 
   // Real evidence data fetched from PostgreSQL database
   const [evidenceItems, setEvidenceItems] = useState<any[]>([]);
 
   // Fetch evidence items from database
   const fetchEvidenceItems = async () => {
+    // Only fetch on client side
+    if (typeof window === 'undefined') return;
+    
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/evidence/items`);
       
@@ -81,6 +95,24 @@ const CompliancePage = () => {
       setEvidenceItems([]);
     }
   };
+
+  // Show loading state during SSR
+  if (!isClient) {
+    return (
+      <>
+        <Header />
+        <main id="main-content" className="container mx-auto py-8 px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Compliance Dashboard</h3>
+              <p className="text-gray-600">Please wait while we load your compliance data...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

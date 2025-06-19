@@ -25,8 +25,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  
+  // During SSR/SSG, provide a safe fallback
+  if (!isBrowser && !context) {
+    return {
+      user: null,
+      token: null,
+      isLoading: false,
+      isAuthenticated: false,
+      login: async () => {},
+      logout: () => {},
+      hasAccess: () => false,
+    };
+  }
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
@@ -37,26 +54,37 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Helper function to set cookie
+// Helper function to set cookie (only in browser)
 const setCookie = (name: string, value: string, days: number = 7) => {
+  if (!isBrowser) return;
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
 };
 
-// Helper function to remove cookie
+// Helper function to remove cookie (only in browser)
 const removeCookie = (name: string) => {
+  if (!isBrowser) return;
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    // During SSR, don't show loading state
+    if (!isBrowser) return false;
+    return true;
+  });
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from localStorage (client-side only)
   useEffect(() => {
+    setIsClient(true);
+    
+    if (!isBrowser) return;
+    
     const initializeAuth = () => {
       try {
         const storedToken = localStorage.getItem('authToken');
@@ -83,6 +111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    if (!isBrowser) return;
+    
     try {
       const data = await auth.login({ email, password });
 
@@ -117,6 +147,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = useCallback(() => {
+    if (!isBrowser) return;
+    
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     removeCookie('authToken');
@@ -147,12 +179,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = useMemo(() => ({
     user,
     token,
-    isLoading,
+    isLoading: !isClient ? false : isLoading, // Never show loading during SSR
     isAuthenticated,
     login,
     logout,
     hasAccess,
-  }), [user, token, isLoading, isAuthenticated, logout, hasAccess]);
+  }), [user, token, isLoading, isClient, isAuthenticated, logout, hasAccess]);
 
   return (
     <AuthContext.Provider value={value}>

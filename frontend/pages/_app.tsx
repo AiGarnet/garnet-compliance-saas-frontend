@@ -1,10 +1,17 @@
 import React, { useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { initializeTheme } from '@/lib/design-tokens';
 
 // CSS will be loaded via _document.tsx with the critical CSS inlined
 // and the non-critical CSS loaded asynchronously
+
+// Dynamically import AuthProvider with SSR disabled to prevent SSR issues
+const AuthProvider = dynamic(
+  () => import('@/lib/auth/AuthContext').then(mod => ({ default: mod.AuthProvider })),
+  { ssr: false }
+);
 
 export default function App({ Component, pageProps }: AppProps) {
   // Initialize theme on client side
@@ -26,7 +33,9 @@ export default function App({ Component, pageProps }: AppProps) {
           crossOrigin="anonymous" 
         />
       </Head>
-      <Component {...pageProps} />
+      <AuthProvider>
+        <Component {...pageProps} />
+      </AuthProvider>
     </>
   );
 } 

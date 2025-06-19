@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Disable static export for Netlify deployment with authentication
-  // output: 'export', // Commented out for auth compatibility
+  // Enable static export for Netlify deployment with authentication
+  output: 'export', // Enabled for auth-compatible static export
   trailingSlash: true,
   
   // Images configuration
@@ -15,7 +15,7 @@ const nextConfig = {
   
   // Environment variables
   env: {
-    NEXT_PUBLIC_STATIC_EXPORT: 'false',
+    NEXT_PUBLIC_STATIC_EXPORT: 'true',
   },
   
   // Optimize bundle size

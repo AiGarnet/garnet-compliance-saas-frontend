@@ -1,9 +1,60 @@
 "use client";
 
-import { useAuth } from '@/features/auth/services/AuthContext';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { Shield, AlertTriangle } from 'lucide-react';
+
+// Dynamically import useAuth to prevent SSR issues
+const useAuthSafe = () => {
+  const [authState, setAuthState] = useState<{
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    hasAccess: (requiredRole?: string | string[]) => boolean;
+  }>({
+    isAuthenticated: false,
+    isLoading: true,
+    hasAccess: () => false,
+  });
+
+  useEffect(() => {
+    // Only import and use auth on client side
+    if (typeof window !== 'undefined') {
+      import('@/features/auth/services/AuthContext').then(({ useAuth }) => {
+        try {
+          const auth = useAuth();
+          setAuthState({
+            isAuthenticated: auth.isAuthenticated,
+            isLoading: auth.isLoading,
+            hasAccess: auth.hasAccess,
+          });
+        } catch (error) {
+          // If useAuth fails (no provider), provide safe defaults
+          setAuthState({
+            isAuthenticated: false,
+            isLoading: false,
+            hasAccess: () => false,
+          });
+        }
+      }).catch(() => {
+        // Fallback if import fails
+        setAuthState({
+          isAuthenticated: false,
+          isLoading: false,
+          hasAccess: () => false,
+        });
+      });
+    } else {
+      // SSR fallback
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        hasAccess: () => false,
+      });
+    }
+  }, []);
+
+  return authState;
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +67,7 @@ export default function ProtectedRoute({
   requiredRole,
   fallbackPath = '/auth/login'
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, hasAccess } = useAuth();
+  const { isAuthenticated, isLoading, hasAccess } = useAuthSafe();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
 
@@ -28,6 +79,9 @@ export default function ProtectedRoute({
   // Handle authentication redirects on client side
   useEffect(() => {
     if (!isClient || isLoading) return;
+    
+    // Only perform redirects on client side
+    if (typeof window === 'undefined') return;
 
     if (!isAuthenticated) {
       const currentPath = window.location.pathname + window.location.search;
