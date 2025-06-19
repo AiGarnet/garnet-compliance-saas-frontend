@@ -14,7 +14,7 @@ interface EditVendorModalProps {
 
 export function EditVendorModal({ vendor, isOpen, onClose, onSave, isLoading = false }: EditVendorModalProps) {
   const [formData, setFormData] = useState({
-    name: '',
+    companyName: '',
     contactEmail: '',
     status: VendorStatus.QUESTIONNAIRE_PENDING
   });
@@ -23,7 +23,7 @@ export function EditVendorModal({ vendor, isOpen, onClose, onSave, isLoading = f
   useEffect(() => {
     if (vendor) {
       setFormData({
-        name: vendor.name || '',
+        companyName: vendor.companyName || vendor.name || '',
         contactEmail: vendor.contactEmail || '',
         status: vendor.status || VendorStatus.QUESTIONNAIRE_PENDING
       });
@@ -72,14 +72,14 @@ export function EditVendorModal({ vendor, isOpen, onClose, onSave, isLoading = f
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
                 Client Name *
               </label>
               <input
                 type="text"
-                id="name"
-                name="name"
-                value={formData.name}
+                id="companyName"
+                name="companyName"
+                value={formData.companyName}
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
