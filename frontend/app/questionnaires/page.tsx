@@ -699,8 +699,14 @@ const QuestionnairesPage = () => {
       closeQuestionnaireInput();
       
       // Navigate immediately without timeout - the data is already saved
-      console.log('🚀 Navigating to chat interface...');
-      router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
+      console.log('🚀 Navigating to questionnaire interface...');
+      
+      // If we have a vendor ID, use the vendor-based route
+      if (newQuestionnaire.vendorId) {
+        router.push(`/vendors/${newQuestionnaire.vendorId}/questionnaire`);
+      } else {
+        router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
+      }
       
       // Refresh the questionnaire list in the background for when user returns
       setTimeout(() => {
@@ -1039,7 +1045,12 @@ const QuestionnairesPage = () => {
       }
     }
     
-    router.push(`/questionnaires/${questionnaire.id}/chat`);
+    // Check if questionnaire has a vendor ID to determine correct route
+    if (questionnaire.vendorId) {
+      router.push(`/vendors/${questionnaire.vendorId}/questionnaire`);
+    } else {
+      router.push(`/questionnaires/${questionnaire.id}/chat`);
+    }
   };
   
   // Add handling for editing a questionnaire

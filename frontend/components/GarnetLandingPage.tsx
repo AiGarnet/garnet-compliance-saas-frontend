@@ -491,7 +491,7 @@ const CountdownTimer = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            Join us on our journey to revolutionize AI
+            Join us on our journey to revolutionize enterprise sales operations.
           </motion.p>
         </motion.div>
 

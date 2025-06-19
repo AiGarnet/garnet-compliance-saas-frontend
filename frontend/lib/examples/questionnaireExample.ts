@@ -10,10 +10,10 @@ export async function questionnaireExample() {
   console.log(`Asking: ${singleQuestion}`);
   
   try {
-    const singleResult = await QuestionnaireService.generateAnswer(singleQuestion);
+    const singleResult = await QuestionnaireService.generateAnswers([singleQuestion]);
     
     if (singleResult.success && singleResult.data) {
-      console.log("Answer:", singleResult.data.answer);
+      console.log("Answer:", singleResult.data.answers[0]?.answer);
     } else {
       console.error("Error:", singleResult.error);
     }

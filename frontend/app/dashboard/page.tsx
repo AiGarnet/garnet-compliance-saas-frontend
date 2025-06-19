@@ -14,22 +14,16 @@ import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 
 // Define types locally since they're not exported
-type VendorStatus = "Questionnaire Pending" | "In Review" | "Approved";
+import { Vendor, VendorStatus } from '@/types/vendor';
 
-interface Vendor {
-  id: string;
-  name: string;
-  status: VendorStatus;
-}
-
-// Vendor data
+// Vendor data - using proper enum values and required fields
 const mockVendors: Vendor[] = [
-  { id: "1", name: "Acme Corp", status: "Questionnaire Pending" },
-  { id: "2", name: "Globex Ltd", status: "In Review" },
-  { id: "3", name: "Stark Industries", status: "Approved" },
-  { id: "4", name: "Wayne Enterprises", status: "Questionnaire Pending" },
-  { id: "5", name: "Oscorp Industries", status: "In Review" },
-  { id: "6", name: "Umbrella Corporation", status: "Approved" },
+  { id: "1", name: "Acme Corp", status: VendorStatus.QUESTIONNAIRE_PENDING, riskScore: 75, riskLevel: 'Medium' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: "2", name: "Globex Ltd", status: VendorStatus.IN_REVIEW, riskScore: 85, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: "3", name: "Stark Industries", status: VendorStatus.APPROVED, riskScore: 90, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: "4", name: "Wayne Enterprises", status: VendorStatus.QUESTIONNAIRE_PENDING, riskScore: 65, riskLevel: 'High' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: "5", name: "Oscorp Industries", status: VendorStatus.IN_REVIEW, riskScore: 80, riskLevel: 'Medium' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: "6", name: "Umbrella Corporation", status: VendorStatus.APPROVED, riskScore: 95, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
 ];
 
 function DashboardContent() {

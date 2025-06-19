@@ -9,6 +9,7 @@ import {
   Phone, 
   MapPin, 
   Users, 
+  User,
   Calendar, 
   Award, 
   Shield, 

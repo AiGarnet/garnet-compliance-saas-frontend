@@ -30,6 +30,9 @@ import {
 
 import { Vendor, VendorStatus } from '@/types/vendor';
 
+// Re-export types for components that need them
+export type { Vendor, VendorStatus } from '@/types/vendor';
+
 export interface VendorListProps {
   vendors: Vendor[];
   className?: string;

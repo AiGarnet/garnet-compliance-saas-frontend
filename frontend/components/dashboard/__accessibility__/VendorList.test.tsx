@@ -1,13 +1,14 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { VendorList, Vendor, VendorStatus } from '../VendorList';
+import { VendorList, Vendor } from '../VendorList';
+import { VendorStatus } from '@/types/vendor';
 
 // Sample test data
 const mockVendors: Vendor[] = [
-  { id: '1', name: 'Acme Corp', status: 'Questionnaire Pending' as VendorStatus },
-  { id: '2', name: 'Globex Ltd', status: 'In Review' as VendorStatus },
-  { id: '3', name: 'Stark Industries', status: 'Approved' as VendorStatus },
+  { id: '1', name: 'Acme Corp', status: VendorStatus.QUESTIONNAIRE_PENDING, riskScore: 75, riskLevel: 'Medium' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: '2', name: 'Globex Ltd', status: VendorStatus.IN_REVIEW, riskScore: 85, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
+  { id: '3', name: 'Stark Industries', status: VendorStatus.APPROVED, riskScore: 90, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
 ];
 
 describe('VendorList Accessibility', () => {
