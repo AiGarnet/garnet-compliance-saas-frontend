@@ -15,8 +15,8 @@ export const ROLE_DISPLAY_NAMES = {
 
 // Role descriptions
 export const ROLE_DESCRIPTIONS = {
-  [ROLES.SALES_PROFESSIONAL]: 'Full access to all platform features including dashboard, questionnaires, and compliance tools',
-  [ROLES.FOUNDER]: 'Access to Trust Portal for viewing vendor compliance status and company security information'
+  [ROLES.SALES_PROFESSIONAL]: 'Full access to all platform features with customized dashboard view focused on sales activities',
+  [ROLES.FOUNDER]: 'Full access to all platform features with customized dashboard view focused on high-level insights'
 } as const;
 
 // Role permissions
@@ -33,15 +33,15 @@ export const ROLE_PERMISSIONS = {
     canViewReports: true
   },
   [ROLES.FOUNDER]: {
-    canAccessDashboard: false,
-    canAccessQuestionnaires: false,
-    canAccessVendors: false,
-    canAccessCompliance: false,
-    canAccessAnalytics: false,
+    canAccessDashboard: true,
+    canAccessQuestionnaires: true,
+    canAccessVendors: true,
+    canAccessCompliance: true,
+    canAccessAnalytics: true,
     canAccessTrustPortal: true,
-    canManageVendors: false,
-    canCreateQuestionnaires: false,
-    canViewReports: false
+    canManageVendors: true,
+    canCreateQuestionnaires: true,
+    canViewReports: true
   }
 } as const;
 

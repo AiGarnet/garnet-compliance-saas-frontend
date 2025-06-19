@@ -12,6 +12,8 @@ import Header from "@/components/Header";
 import { DevModeToggle } from "@/components/DevModeToggle";
 import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { ROLES } from "@/lib/auth/roles";
 
 // Define types locally since they're not exported
 type VendorStatus = "Questionnaire Pending" | "In Review" | "Approved";
@@ -33,11 +35,17 @@ const mockVendors: Vendor[] = [
 ];
 
 function DashboardContent() {
+  const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [simulateError, setSimulateError] = useState<boolean>(false);
   const [isDevMode, setIsDevMode] = useState<boolean>(false);
+
+  // Get user role for conditional rendering
+  const userRole = user?.role;
+  const isSalesProfessional = userRole === ROLES.SALES_PROFESSIONAL;
+  const isFounder = userRole === ROLES.FOUNDER;
 
   useEffect(() => {
     // Check developer mode on mount and when it changes
@@ -91,46 +99,59 @@ function DashboardContent() {
       <Header />
       
       <main id="main-content" className="flex flex-col gap-8 px-4 md:px-8 py-8 bg-body-bg dark:bg-body-bg">
-        {/* Top bar with dev mode toggle in top-right corner */}
+        {/* Top bar with conditional dev mode toggle */}
         <div className="flex justify-between items-center">
           <section className="flex flex-col gap-2">
             <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">Welcome back, Sarah</h1>
             <p className="text-gray-600 dark:text-gray-300">Here's an overview of your compliance status</p>
           </section>
-          <DevModeToggle />
+          {/* Dev mode toggle - hidden for both Sales Professional and Founder */}
+          {!isSalesProfessional && !isFounder && (
+            <DevModeToggle />
+          )}
         </div>
         
-        {/* Stat Cards */}
+        {/* Stat Cards - Role-based filtering */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <ComplianceCard percentage={78} change="+12% from last month" />
+          {/* Compliance Card - Hidden for Sales Professional */}
+          {!isSalesProfessional && (
+            <ComplianceCard percentage={78} change="+12% from last month" />
+          )}
           
+          {/* Questionnaire Card - Always visible */}
           <QuestionnaireCard count={5} dueSoon="2 due this week" />
           
-          <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">High-Risk Vendors</h2>
-              <div className="w-12 h-12 rounded-full bg-danger-light dark:bg-danger-light flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-danger dark:text-danger-color" />
+          {/* High-Risk Vendors Card - Hidden for both Sales Professional and Founder */}
+          {!isSalesProfessional && !isFounder && (
+            <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">High-Risk Vendors</h2>
+                <div className="w-12 h-12 rounded-full bg-danger-light dark:bg-danger-light flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-danger dark:text-danger-color" />
+                </div>
               </div>
+              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">3</p>
+              <p className="text-sm text-danger dark:text-danger-color">Requires immediate review</p>
             </div>
-            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">3</p>
-            <p className="text-sm text-danger dark:text-danger-color">Requires immediate review</p>
-          </div>
+          )}
           
-          <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">Trust Portal Views</h2>
-              <div className="w-12 h-12 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center">
-                <Eye className="w-6 h-6 text-success dark:text-success-color" />
+          {/* Trust Portal Views Card - Hidden for both Sales Professional and Founder */}
+          {!isSalesProfessional && !isFounder && (
+            <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">Trust Portal Views</h2>
+                <div className="w-12 h-12 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center">
+                  <Eye className="w-6 h-6 text-success dark:text-success-color" />
+                </div>
               </div>
+              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">127</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">+24% from last week</p>
             </div>
-            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">127</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">+24% from last week</p>
-          </div>
+          )}
         </section>
         
-        {/* Debug controls for testing - only visible in dev mode */}
-        {isDevMode && (
+        {/* Debug controls for testing - only visible in dev mode and not for Sales Professional or Founder */}
+        {isDevMode && !isSalesProfessional && !isFounder && (
           <div className="mb-6 p-4 bg-controls-bg rounded-md">
             <h2 className="text-lg font-semibold mb-2">Vendor List Testing Controls</h2>
             <div className="flex items-center gap-4">
@@ -158,7 +179,7 @@ function DashboardContent() {
           </div>
         )}
         
-        {/* Vendor Section */}
+        {/* Vendor Section - Always visible */}
         <VendorList 
           vendors={vendors}
           className="min-h-[300px]" 
@@ -167,7 +188,7 @@ function DashboardContent() {
           onRetry={fetchVendors}
         />
         
-        {/* Two Column Layout */}
+        {/* Two Column Layout - Always visible */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pending Tasks */}
           <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
