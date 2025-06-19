@@ -7,107 +7,80 @@ import { FrameworkList, Framework, FrameworkStatus } from "@/components/dashboar
 import Header from "@/components/Header";
 
 const CompliancePage = () => {
-  // Sample data for compliance frameworks
-  const mockFrameworks = [
-    { 
-      id: "f1", 
-      name: "SOC 2", 
-      progress: 78, 
-      totalControls: 116,
-      completedControls: 91,
-      status: "In Progress" as FrameworkStatus,
-      lastUpdated: "Aug 10, 2023"
-    },
-    { 
-      id: "f2", 
-      name: "ISO 27001", 
-      progress: 65, 
-      totalControls: 93,
-      completedControls: 61,
-      status: "In Progress" as FrameworkStatus,
-      lastUpdated: "Jul 28, 2023"
-    },
-    { 
-      id: "f3", 
-      name: "GDPR", 
-      progress: 92, 
-      totalControls: 42,
-      completedControls: 39,
-      status: "Near Completion" as FrameworkStatus,
-      lastUpdated: "Aug 15, 2023"
-    },
-    { 
-      id: "f4", 
-      name: "HIPAA", 
-      progress: 100, 
-      totalControls: 75,
-      completedControls: 75,
-      status: "Completed" as FrameworkStatus,
-      lastUpdated: "Jun 30, 2023"
-    },
-  ];
+  // No more mock data - frameworks fetched from PostgreSQL database
 
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  // Simulate API fetch with delay and potential error
+  // Fetch real compliance frameworks from PostgreSQL database
   const fetchFrameworks = async () => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch compliance frameworks from real API endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/compliance/frameworks`);
       
-      // Uncomment to simulate error
-      // if (Math.random() > 0.7) throw new Error("Failed to fetch frameworks");
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Fetched compliance frameworks from database:', data);
+        
+        // Transform API data to frontend format
+        const transformedFrameworks = (data.frameworks || []).map((framework: any) => ({
+          id: framework.id || framework.framework_id,
+          name: framework.name || framework.framework_name,
+          progress: framework.progress || 0,
+          totalControls: framework.total_controls || framework.totalControls || 0,
+          completedControls: framework.completed_controls || framework.completedControls || 0,
+          status: framework.status as FrameworkStatus,
+          lastUpdated: framework.last_updated || framework.lastUpdated || new Date().toISOString()
+        }));
+        
+        setFrameworks(transformedFrameworks);
+      } else {
+        console.warn('⚠️ Compliance frameworks endpoint not available, showing empty state');
+        setFrameworks([]);
+      }
       
-      setFrameworks(mockFrameworks);
       setIsLoading(false);
     } catch (err) {
-      console.error("Error fetching frameworks:", err);
-      setError('Unable to load compliance frameworks. Please try again.');
+      console.error("❌ Error fetching compliance frameworks from database:", err);
+      setError('Unable to load compliance frameworks from database. Please check your connection.');
       setIsLoading(false);
     }
   };
 
   // Initial fetch on component mount
   useEffect(() => {
-    fetchFrameworks();
+    const loadComplianceData = async () => {
+      await fetchFrameworks();
+      await fetchEvidenceItems();
+    };
+    loadComplianceData();
   }, []);
 
-  // Sample evidence data
-  const evidenceItems = [
-    {
-      id: "e1",
-      name: "Security Policy Document",
-      framework: "SOC 2, ISO 27001",
-      uploadDate: "Aug 15, 2023",
-      uploadedBy: "Sarah Adams"
-    },
-    {
-      id: "e2",
-      name: "Vulnerability Scan Report - Q2 2023",
-      framework: "SOC 2, HIPAA",
-      uploadDate: "Jul 12, 2023",
-      uploadedBy: "Michael Rodriguez"
-    },
-    {
-      id: "e3",
-      name: "Employee Training Records",
-      framework: "ISO 27001, GDPR",
-      uploadDate: "Aug 5, 2023",
-      uploadedBy: "Jennifer Wilson"
-    },
-    {
-      id: "e4",
-      name: "Data Processing Agreement",
-      framework: "GDPR",
-      uploadDate: "Jul 28, 2023",
-      uploadedBy: "Daniel Taylor"
-    },
-  ];
+  // Real evidence data fetched from PostgreSQL database
+  const [evidenceItems, setEvidenceItems] = useState<any[]>([]);
+
+  // Fetch evidence items from database
+  const fetchEvidenceItems = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/evidence/items`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Fetched evidence items from database:', data);
+        setEvidenceItems(data.items || []);
+      } else {
+        console.warn('⚠️ Evidence items endpoint not available, showing empty state');
+        setEvidenceItems([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching evidence items:', error);
+      setEvidenceItems([]);
+    }
+  };
 
   return (
     <>

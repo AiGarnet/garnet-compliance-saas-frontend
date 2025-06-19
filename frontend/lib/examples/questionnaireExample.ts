@@ -1,5 +1,5 @@
-import { QuestionnaireService } from '../services/questionnaireService';
-import { Question, QuestionResponseType } from '../types/questionnaire.types';
+import { QuestionnaireService } from '@/features/questionnaires/services/questionnaireService';
+import { Question, QuestionResponseType } from '@/features/questionnaires/types';
 
 /**
  * Example demonstrating how to use the QuestionnaireService

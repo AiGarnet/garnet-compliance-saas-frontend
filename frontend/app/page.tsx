@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
-import GarnetLandingPage from '../components/GarnetLandingPage';
-// import MinimalFooter from '../components/MinimalFooter';
+import GarnetLandingPage from '@/components/GarnetLandingPage';
+// import MinimalFooter from '@/components/MinimalFooter';
 
 const Home = () => {
   return (

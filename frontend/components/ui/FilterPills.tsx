@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils';
 
 // Define option shape for label/value pairs
 export interface FilterOption<T extends string> {

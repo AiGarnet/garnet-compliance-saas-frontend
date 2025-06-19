@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { auth } from "../../../lib/api";
+import { auth } from "@/lib/api";
 
 export default function SignupPage() {
   const router = useRouter();

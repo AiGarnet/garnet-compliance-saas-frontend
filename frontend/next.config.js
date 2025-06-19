@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Enable static export for Netlify deployment
-  output: 'export',
+  // Enable static export for Netlify deployment (temporarily disabled for restructuring)
+  // output: 'export',
   trailingSlash: true,
   distDir: '.next',
   
