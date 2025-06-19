@@ -1,23 +1,28 @@
 [build]
-  # Build command for the frontend Next.js app (no static export)
-  command = "cd frontend && npm install && npm run build"
+  # Set base directory to frontend folder
+  base = "frontend"
   
-  # Directory to publish - standard Next.js build output for Netlify
-  publish = "frontend"
+  # Build command for Next.js static export
+  command = "npm install && npm run build"
   
-  # Functions directory
-  functions = "frontend/.netlify/functions"
+  # Directory to publish - static export output directory
+  publish = "out"
+  
+  # Functions directory (optional for static export)
+  functions = ".netlify/functions"
   
   # Environment variables
   [build.environment]
     NODE_VERSION = "18"
     NEXT_PUBLIC_API_URL = "https://garnet-compliance-saas-production.up.railway.app"
+    # Skip the Next.js plugin since we're using static export
+    NETLIFY_NEXT_PLUGIN_SKIP = "true"
 
-# Enable Next.js runtime for Netlify
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# Disable Next.js runtime plugin for static export
+# [[plugins]]
+#   package = "@netlify/plugin-nextjs"
 
-# Headers to prevent caching issues
+# Headers for security and performance
 [[headers]]
   for = "/*"
   [headers.values]
@@ -37,23 +42,29 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Redirects for API routes to Netlify functions
+# Redirects for API routes to external backend (Railway)
 [[redirects]]
   from = "/api/vendors"
-  to = "/.netlify/functions/vendors"
+  to = "https://garnet-compliance-saas-production.up.railway.app/api/vendors"
   status = 200
 
 [[redirects]]
   from = "/api/vendors/stats"
-  to = "/.netlify/functions/vendor-stats"
+  to = "https://garnet-compliance-saas-production.up.railway.app/api/vendors/stats"
   status = 200
 
 [[redirects]]
   from = "/api/vendors/:id"
-  to = "/.netlify/functions/vendor-by-id?id=:id"
+  to = "https://garnet-compliance-saas-production.up.railway.app/api/vendors/:id"
   status = 200
 
-# Catch-all redirect for client-side routing
+# Catch-all redirect for all other API routes
+[[redirects]]
+  from = "/api/*"
+  to = "https://garnet-compliance-saas-production.up.railway.app/api/:splat"
+  status = 200
+
+# Catch-all redirect for client-side routing (SPA mode)
 [[redirects]]
   from = "/*"
   to = "/index.html"
