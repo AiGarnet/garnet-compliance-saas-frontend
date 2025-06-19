@@ -3,12 +3,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '../api';
+import { getDefaultRoute, UserRole } from './roles';
 
 interface User {
   id: string;
   email: string;
   full_name: string;
-  role: string;
+  role: UserRole;
   organization?: string;
   created_at: string;
 }
@@ -105,11 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         router.push(redirectTo);
       } else {
         // Default redirect based on role
-        if (data.user.role === 'enterprise') {
-          router.push('/trust-portal');
-        } else {
-          router.push('/dashboard');
-        }
+        router.push(getDefaultRoute(data.user.role));
       }
     } catch (error) {
       throw error;

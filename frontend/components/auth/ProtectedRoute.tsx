@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Shield, AlertTriangle } from 'lucide-react';
+import { getDefaultRoute } from '@/lib/auth/roles';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -28,8 +29,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
       if (requiredRole && !hasAccess(requiredRole)) {
         // Redirect based on user role if they don't have access
-        if (user?.role === 'enterprise') {
-          router.push('/trust-portal');
+        if (user?.role) {
+          router.push(getDefaultRoute(user.role));
         } else {
           router.push(fallbackPath);
         }
@@ -69,7 +70,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               }
             </p>
             <button
-              onClick={() => router.push(isAuthenticated ? (user?.role === 'enterprise' ? '/trust-portal' : '/dashboard') : '/auth/login')}
+              onClick={() => router.push(isAuthenticated && user?.role ? getDefaultRoute(user.role) : '/auth/login')}
               className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 transition-colors"
             >
               {isAuthenticated ? 'Go to Dashboard' : 'Sign In'}

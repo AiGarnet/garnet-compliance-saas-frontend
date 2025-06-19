@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
+import { getDefaultRoute } from './roles';
 
 export function useAuthGuard(requiredRole?: string | string[]) {
   const { user, isAuthenticated, isLoading, hasAccess } = useAuth();
@@ -18,8 +19,8 @@ export function useAuthGuard(requiredRole?: string | string[]) {
 
     if (requiredRole && !hasAccess(requiredRole)) {
       // Redirect based on user role if they don't have access
-      if (user?.role === 'enterprise') {
-        router.push('/trust-portal');
+      if (user?.role) {
+        router.push(getDefaultRoute(user.role));
       } else {
         router.push('/dashboard');
       }
