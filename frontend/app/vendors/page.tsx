@@ -11,6 +11,8 @@ import { DeleteVendorModal } from "../../components/vendors/DeleteVendorModal";
 import { EvidenceCount } from "@/components/vendors/EvidenceCount";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { hasPermission } from "@/lib/auth/roles";
 
 // Simple vendor interface for this page
 interface SimpleVendor {
@@ -20,6 +22,7 @@ interface SimpleVendor {
 }
 
 const VendorsPage = () => {
+  const { user } = useAuth();
   const [vendors, setVendors] = useState<SimpleVendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -37,6 +40,19 @@ const VendorsPage = () => {
 
   // Protect this page - redirect to login if not authenticated
   const { isLoading: authLoading } = useAuthGuard();
+
+  // Check if user has permission to access vendors page
+  React.useEffect(() => {
+    if (!authLoading && user && !hasPermission(user.role, 'canAccessVendors')) {
+      // Redirect to dashboard if user doesn't have vendor access
+      router.push('/dashboard');
+    }
+  }, [authLoading, user, router]);
+
+  // Don't render page if user doesn't have access
+  if (!authLoading && user && !hasPermission(user.role, 'canAccessVendors')) {
+    return null;
+  }
 
   // Fetch vendors from API
   const fetchVendors = async () => {

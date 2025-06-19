@@ -15,6 +15,8 @@ import {
   CreditCard, 
   HelpCircle
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { hasPermission } from '@/lib/auth/roles';
 
 interface NavigationItem {
   label: string;
@@ -23,6 +25,7 @@ interface NavigationItem {
 }
 
 export function MobileNavigation() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   
   // Close the menu when clicking outside or on ESC key
@@ -67,48 +70,61 @@ export function MobileNavigation() {
     };
   }, [isOpen]);
 
-  const navigationItems: NavigationItem[] = [
-    { 
-      label: 'Dashboard', 
-      href: '/dashboard', 
-      icon: <LayoutDashboard className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Compliance', 
-      href: '/compliance', 
-      icon: <ShieldCheck className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Documents', 
-      href: '/documents', 
-      icon: <FileText className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Trust Portal', 
-      href: '/trust-portal', 
-      icon: <Globe className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Vendors', 
-      href: '/vendors', 
-      icon: <Users className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Billing', 
-      href: '/billing', 
-      icon: <CreditCard className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Settings', 
-      href: '/settings', 
-      icon: <Settings className="h-5 w-5" /> 
-    },
-    { 
-      label: 'Help', 
-      href: '/help', 
-      icon: <HelpCircle className="h-5 w-5" /> 
-    },
-  ];
+  // Get navigation items based on user permissions
+  const getNavigationItems = (): NavigationItem[] => {
+    const baseItems: NavigationItem[] = [
+      { 
+        label: 'Dashboard', 
+        href: '/dashboard', 
+        icon: <LayoutDashboard className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Compliance', 
+        href: '/compliance', 
+        icon: <ShieldCheck className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Documents', 
+        href: '/documents', 
+        icon: <FileText className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Trust Portal', 
+        href: '/trust-portal', 
+        icon: <Globe className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Billing', 
+        href: '/billing', 
+        icon: <CreditCard className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Settings', 
+        href: '/settings', 
+        icon: <Settings className="h-5 w-5" /> 
+      },
+      { 
+        label: 'Help', 
+        href: '/help', 
+        icon: <HelpCircle className="h-5 w-5" /> 
+      },
+    ];
+
+    // Add vendors link only if user has access
+    if (user && hasPermission(user.role, 'canAccessVendors')) {
+      const vendorItem = { 
+        label: 'Vendors', 
+        href: '/vendors', 
+        icon: <Users className="h-5 w-5" /> 
+      };
+      // Insert vendors after dashboard (index 1)
+      baseItems.splice(1, 0, vendorItem);
+    }
+
+    return baseItems;
+  };
+
+  const navigationItems = getNavigationItems();
 
   return (
     <>

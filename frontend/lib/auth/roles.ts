@@ -24,22 +24,22 @@ export const ROLE_PERMISSIONS = {
   [ROLES.SALES_PROFESSIONAL]: {
     canAccessDashboard: true,
     canAccessQuestionnaires: true,
-    canAccessVendors: true,
+    canAccessVendors: false,
     canAccessCompliance: true,
     canAccessAnalytics: true,
     canAccessTrustPortal: true,
-    canManageVendors: true,
+    canManageVendors: false,
     canCreateQuestionnaires: true,
     canViewReports: true
   },
   [ROLES.FOUNDER]: {
     canAccessDashboard: true,
     canAccessQuestionnaires: true,
-    canAccessVendors: true,
+    canAccessVendors: false,
     canAccessCompliance: true,
     canAccessAnalytics: true,
     canAccessTrustPortal: true,
-    canManageVendors: true,
+    canManageVendors: false,
     canCreateQuestionnaires: true,
     canViewReports: true
   }

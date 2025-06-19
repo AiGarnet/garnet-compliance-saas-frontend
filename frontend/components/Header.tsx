@@ -22,6 +22,7 @@ import { translations } from '@/lib/i18n';
 import { injectCriticalCSS } from './critical-css';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { hasPermission } from '@/lib/auth/roles';
 
 // Remove the hardcoded CSS variables since we're using the ones from critical-css
 // const cssVariables = {
@@ -98,23 +99,22 @@ export default function Header({ locale = 'en' }: HeaderProps) {
 
   // Navigation items based on user role
   const getNavItems = () => {
-    if (!isAuthenticated) return [];
+    if (!isAuthenticated || !user) return [];
     
-    if (user?.role === 'enterprise') {
-      // Enterprise users only have access to Trust Portal
-      return [
-        { href: '/trust-portal', label: t.trustPortal },
-      ];
-    }
-    
-    // Vendor users have access to all features
-    return [
+    // Base navigation items
+    const baseItems = [
       { href: '/dashboard', label: t.dashboard },
-      { href: '/vendors', label: t.vendors },
       { href: '/questionnaires', label: t.questionnaires },
       { href: '/trust-portal', label: t.trustPortal },
       { href: '/compliance', label: t.compliance },
     ];
+    
+    // Add vendors link only if user has access
+    if (hasPermission(user.role, 'canAccessVendors')) {
+      baseItems.splice(1, 0, { href: '/vendors', label: t.vendors });
+    }
+    
+    return baseItems;
   };
 
   const navItems = getNavItems();
