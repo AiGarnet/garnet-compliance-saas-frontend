@@ -1,0 +1,413 @@
+import { createToast, Toast, ToastType } from '../../components/ui/Toast';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  meta?: {
+    timestamp: string;
+    [key: string]: any;
+  };
+}
+
+export interface BackendActivity {
+  id: string;
+  type: string;
+  status: 'success' | 'pending' | 'failed' | 'in_progress';
+  description: string;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  entityId?: string;
+  entityType?: string;
+  entityName?: string;
+  metadata?: Record<string, any>;
+  toastConfig?: {
+    title: string;
+    message: string;
+    type: ToastType;
+    duration?: number;
+    showProgress?: boolean;
+    actions?: Array<{ label: string; action: string; }>;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActivityFilters {
+  userId?: string;
+  type?: string | string[];
+  status?: string;
+  entityType?: string;
+  entityId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+class ActivityApiService {
+  private baseUrl: string;
+  private toastCallbacks: Array<(toast: Omit<Toast, 'id' | 'timestamp'>) => void> = [];
+
+  constructor() {
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  }
+
+  /**
+   * Register a callback to be called when toasts should be shown
+   */
+  onToast(callback: (toast: Omit<Toast, 'id' | 'timestamp'>) => void) {
+    this.toastCallbacks.push(callback);
+  }
+
+  /**
+   * Remove a toast callback
+   */
+  offToast(callback: (toast: Omit<Toast, 'id' | 'timestamp'>) => void) {
+    this.toastCallbacks = this.toastCallbacks.filter(cb => cb !== callback);
+  }
+
+  /**
+   * Trigger toast notifications
+   */
+  private triggerToast(toast: Omit<Toast, 'id' | 'timestamp'>) {
+    this.toastCallbacks.forEach(callback => callback(toast));
+  }
+
+  /**
+   * Handle API response and automatically show toasts if configured
+   */
+  private handleApiResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
+    // Check if response contains activity data with toast config
+    if (response.data && typeof response.data === 'object') {
+      const data = response.data as any;
+      
+      // If this is an activity or contains toast config, show toast
+      if (data.toastConfig || (response.meta && response.meta.operation)) {
+        let toastConfig;
+        
+        if (data.toastConfig) {
+          // Direct toast config from activity
+          toastConfig = data.toastConfig;
+        } else if (response.meta?.operation) {
+          // Generate toast from operation metadata
+          const operation = response.meta.operation;
+          const entityType = response.meta.entityType || 'item';
+          const entityName = data.name || response.meta.entityName || 'item';
+          
+          if (response.success) {
+            switch (operation) {
+              case 'create':
+                toastConfig = createToast.success(
+                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Created`,
+                  `${entityName} has been created successfully`,
+                  {
+                    actions: data.id ? [{ 
+                      label: 'View', 
+                      action: `view_${entityType}_${data.id}`,
+                      onClick: () => {
+                        // Handle view action - this could navigate to the entity
+                        console.log(`View ${entityType}:`, data.id);
+                      }
+                    }] : undefined
+                  }
+                );
+                break;
+              case 'update':
+                toastConfig = createToast.success(
+                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Updated`,
+                  `${entityName} has been updated successfully`,
+                  {
+                    actions: data.id ? [{ 
+                      label: 'View', 
+                      action: `view_${entityType}_${data.id}`,
+                      onClick: () => {
+                        console.log(`View ${entityType}:`, data.id);
+                      }
+                    }] : undefined
+                  }
+                );
+                break;
+              case 'delete':
+                toastConfig = createToast.success(
+                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Deleted`,
+                  `${entityName} has been deleted successfully`
+                );
+                break;
+              default:
+                toastConfig = createToast.success(
+                  'Success',
+                  `${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`
+                );
+            }
+          } else {
+            // Error toast for failed operations
+            const errorMessage = response.error?.message || 'Operation failed';
+            toastConfig = createToast.error(
+              'Error',
+              errorMessage,
+              {
+                duration: 7000,
+                metadata: {
+                  errorCode: response.error?.code,
+                  details: response.error?.details
+                }
+              }
+            );
+          }
+        }
+        
+        if (toastConfig) {
+          this.triggerToast({
+            ...toastConfig,
+            activityId: data.id,
+            metadata: {
+              ...toastConfig.metadata,
+              apiResponse: response.meta,
+              timestamp: response.meta?.timestamp
+            }
+          });
+        }
+      }
+    }
+
+    return response;
+  }
+
+  /**
+   * Make authenticated API request
+   */
+  private async request<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    try {
+      const url = `${this.baseUrl}${endpoint}`;
+      
+      // Add auth token if available
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...options.headers
+      };
+      
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+
+      const data: ApiResponse<T> = await response.json();
+      
+      // Handle the response and show toasts
+      return this.handleApiResponse(data);
+    } catch (error) {
+      const errorResponse: ApiResponse<T> = {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error occurred',
+          details: error
+        },
+        meta: {
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      // Show error toast
+      this.triggerToast(createToast.error(
+        'Network Error',
+        'Failed to connect to server. Please check your connection.',
+        { duration: 7000 }
+      ));
+
+      return errorResponse;
+    }
+  }
+
+  /**
+   * Get recent activities
+   */
+  async getRecentActivities(limit?: number, userId?: string): Promise<ApiResponse<BackendActivity[]>> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (userId) params.append('userId', userId);
+
+    return this.request<BackendActivity[]>(`/api/activities/recent?${params.toString()}`);
+  }
+
+  /**
+   * Get activities with filters
+   */
+  async getActivities(filters: ActivityFilters = {}): Promise<ApiResponse<BackendActivity[]>> {
+    const params = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          params.append(key, value.join(','));
+        } else if (value instanceof Date) {
+          params.append(key, value.toISOString());
+        } else {
+          params.append(key, value.toString());
+        }
+      }
+    });
+
+    return this.request<BackendActivity[]>(`/api/activities?${params.toString()}`);
+  }
+
+  /**
+   * Get activity summary
+   */
+  async getActivitySummary(userId?: string): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+
+    return this.request<any>(`/api/activities/summary?${params.toString()}`);
+  }
+
+  /**
+   * Get activity by ID
+   */
+  async getActivity(id: string): Promise<ApiResponse<BackendActivity>> {
+    return this.request<BackendActivity>(`/api/activities/${id}`);
+  }
+
+  /**
+   * Get activity types for filtering
+   */
+  async getActivityTypes(): Promise<ApiResponse<{ types: string[]; statuses: string[]; }>> {
+    return this.request<{ types: string[]; statuses: string[]; }>('/api/activities/meta/types');
+  }
+
+  /**
+   * Vendor/Client operations with automatic activity logging
+   */
+  
+  async createVendor(vendorData: any): Promise<ApiResponse<any>> {
+    return this.request('/api/vendors', {
+      method: 'POST',
+      body: JSON.stringify(vendorData)
+    });
+  }
+
+  async updateVendor(id: string, vendorData: any): Promise<ApiResponse<any>> {
+    return this.request(`/api/vendors/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(vendorData)
+    });
+  }
+
+  async deleteVendor(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/api/vendors/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getVendors(): Promise<ApiResponse<any[]>> {
+    return this.request('/api/vendors');
+  }
+
+  async getVendor(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/api/vendors/${id}`);
+  }
+
+  /**
+   * Questionnaire operations
+   */
+  
+  async createQuestionnaire(questionnaireData: any): Promise<ApiResponse<any>> {
+    return this.request('/api/questionnaires', {
+      method: 'POST',
+      body: JSON.stringify(questionnaireData)
+    });
+  }
+
+  async submitQuestionnaire(id: string, answers: any): Promise<ApiResponse<any>> {
+    return this.request(`/api/questionnaires/${id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(answers)
+    });
+  }
+
+  /**
+   * Evidence operations
+   */
+  
+  async uploadEvidence(evidenceData: FormData): Promise<ApiResponse<any>> {
+    // Don't set Content-Type for FormData - let browser set it with boundary
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const headers: HeadersInit = {};
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/evidence`, {
+      method: 'POST',
+      headers,
+      body: evidenceData
+    });
+
+    const data = await response.json();
+    return this.handleApiResponse(data);
+  }
+
+  /**
+   * Start polling for real-time activity updates
+   */
+  startActivityPolling(intervalMs: number = 30000, userId?: string) {
+    return setInterval(async () => {
+      try {
+        const response = await this.getRecentActivities(5, userId);
+        
+        // Check for new activities that might have toast configs
+        if (response.success && response.data) {
+          response.data.forEach(activity => {
+            if (activity.toastConfig && activity.status === 'success') {
+              // Only show toasts for recent activities (within last 2 minutes)
+              const activityTime = new Date(activity.createdAt).getTime();
+              const now = new Date().getTime();
+              const twoMinutes = 2 * 60 * 1000;
+              
+              if (now - activityTime < twoMinutes) {
+                this.triggerToast({
+                  ...activity.toastConfig,
+                  activityId: activity.id,
+                  metadata: {
+                    activityData: activity,
+                    isPolled: true
+                  }
+                });
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Activity polling error:', error);
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stop activity polling
+   */
+  stopActivityPolling(intervalId: NodeJS.Timeout) {
+    clearInterval(intervalId);
+  }
+}
+
+// Singleton instance
+export const activityApiService = new ActivityApiService();
+
+// Export for use in components
+export default activityApiService; 

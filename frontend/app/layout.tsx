@@ -3,6 +3,7 @@ import './globals.css'
 import './styles.css'
 import { ThemeInitializer } from '@/components/ThemeInitializer'
 import { AuthProvider } from '@/lib/auth/AuthContext'
+import { ToastProvider } from '@/components/ui/Toast'
 
 export const metadata: Metadata = {
   title: 'GarnetAI - Compliance Platform',
@@ -51,7 +52,9 @@ export default function RootLayout({
         
         <ThemeInitializer />
         <AuthProvider>
-          {children}
+          <ToastProvider maxToasts={5} defaultDuration={5000}>
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

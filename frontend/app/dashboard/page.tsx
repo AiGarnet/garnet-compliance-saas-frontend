@@ -20,6 +20,8 @@ import { EditVendorModal } from "@/components/vendors/EditVendorModal";
 import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { useActivity } from "@/hooks/useActivity";
+import { useToast } from "@/components/ui/Toast";
+import activityApiService from "@/lib/services/activityApiService";
 
 // Vendor data
 const mockVendors: Vendor[] = [
@@ -33,6 +35,7 @@ const mockVendors: Vendor[] = [
 
 function DashboardContent() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -72,7 +75,24 @@ function DashboardContent() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Fetch vendors from API
+  // Setup toast notifications from API service
+  useEffect(() => {
+    const toastCallback = (toast: any) => {
+      addToast(toast);
+    };
+
+    activityApiService.onToast(toastCallback);
+    
+    // Start polling for activity updates
+    const pollingInterval = activityApiService.startActivityPolling(30000, user?.id);
+
+    return () => {
+      activityApiService.offToast(toastCallback);
+      activityApiService.stopActivityPolling(pollingInterval);
+    };
+  }, [user?.id, addToast]);
+
+  // Fetch vendors from API using the new activity-enabled service
   const fetchVendors = async () => {
     setIsLoading(true);
     setError('');
@@ -83,22 +103,26 @@ function DashboardContent() {
         throw new Error("Failed to fetch clients");
       }
       
-      console.log('Dashboard: Fetching clients from API...');
-      const response = await vendorAPI.getAll();
-      console.log('Dashboard: API response:', response);
+      console.log('Dashboard: Fetching clients from backend API...');
+      const response = await activityApiService.getVendors();
+      console.log('Dashboard: Backend API response:', response);
       
-      // Transform API response to match our Vendor type
-      const transformedVendors = response.map((vendor: any) => ({
-        id: vendor.id || vendor.vendorId?.toString() || vendor.uuid,
-        name: vendor.name || vendor.companyName,
-        status: vendor.status || VendorStatus.QUESTIONNAIRE_PENDING,
-        contactEmail: vendor.contactEmail,
-        createdAt: new Date(vendor.createdAt || vendor.created_at),
-        updatedAt: new Date(vendor.updatedAt || vendor.updated_at)
-      }));
-      
-      setVendors(transformedVendors);
-      setIsLoading(false);
+      if (response.success && response.data) {
+        // Transform API response to match our Vendor type
+        const transformedVendors = response.data.map((vendor: any) => ({
+          id: vendor.id || vendor.vendorId?.toString() || vendor.uuid,
+          name: vendor.name || vendor.companyName,
+          status: vendor.status || VendorStatus.QUESTIONNAIRE_PENDING,
+          contactEmail: vendor.contactEmail,
+          createdAt: new Date(vendor.createdAt || vendor.created_at),
+          updatedAt: new Date(vendor.updatedAt || vendor.updated_at)
+        }));
+        
+        setVendors(transformedVendors);
+        setIsLoading(false);
+      } else {
+        throw new Error(response.error?.message || 'Failed to fetch clients');
+      }
     } catch (err: any) {
       console.error("Error fetching clients:", err);
       setError('Unable to load clients.');
@@ -132,7 +156,7 @@ function DashboardContent() {
     setDeleteModalOpen(true);
   };
 
-  // Handler for saving edited vendor
+  // Handler for saving edited vendor using backend API
   const handleSaveVendor = async (vendorData: Partial<Vendor>) => {
     if (!selectedVendor) return;
     
@@ -141,37 +165,46 @@ function DashboardContent() {
       
       // Check if status changed to log activity
       const statusChanged = vendorData.status && vendorData.status !== selectedVendor.status;
+      const previousStatus = selectedVendor.status;
       
-      // TODO: Implement API call to update vendor
-      // await vendorAPI.update(selectedVendor.id, vendorData);
+      // Call backend API with activity logging
+      const response = await activityApiService.updateVendor(selectedVendor.id, {
+        name: vendorData.name,
+        contactEmail: vendorData.contactEmail,
+        status: vendorData.status,
+        previousStatus // Include for activity logging
+      });
       
-      // For now, just update local state
-      setVendors(prev => prev.map(v => 
-        v.id === selectedVendor.id 
-          ? { ...v, ...vendorData }
-          : v
-      ));
+      if (response.success && response.data) {
+        // Update local state with the returned data
+        setVendors(prev => prev.map(v => 
+          v.id === selectedVendor.id 
+            ? { 
+                ...v, 
+                ...vendorData,
+                updatedAt: new Date()
+              }
+            : v
+        ));
 
-      // Log activities
-      logClientUpdated(selectedVendor.name);
-      
-      if (statusChanged) {
-        logClientStatusChanged(
-          selectedVendor.name,
-          selectedVendor.status || 'Unknown',
-          vendorData.status || 'Unknown'
-        );
+        // The backend automatically logs activities and shows toasts
+        setEditModalOpen(false);
+        setSelectedVendor(null);
+      } else {
+        throw new Error(response.error?.message || 'Failed to update client');
       }
-      
-      alert('Client updated successfully!');
-      setEditModalOpen(false);
     } catch (error) {
       console.error('Error updating vendor:', error);
-      throw error;
+      addToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: error instanceof Error ? error.message : 'Failed to update client',
+        duration: 7000
+      });
     }
   };
 
-  // Handler for confirming vendor deletion
+  // Handler for confirming vendor deletion using backend API
   const handleConfirmDelete = async (vendorId: string) => {
     try {
       console.log('Deleting vendor:', vendorId);
@@ -180,21 +213,27 @@ function DashboardContent() {
       const vendorToDeleteData = vendors.find(v => v.id === vendorId);
       const vendorName = vendorToDeleteData?.name || 'Unknown Client';
       
-      // TODO: Implement API call to delete vendor
-      // await vendorAPI.delete(vendorId);
+      // Call backend API with activity logging
+      const response = await activityApiService.deleteVendor(vendorId);
       
-      // For now, just remove from local state
-      setVendors(prev => prev.filter(v => v.id !== vendorId));
+      if (response.success) {
+        // Remove from local state
+        setVendors(prev => prev.filter(v => v.id !== vendorId));
 
-      // Log deletion activity
-      logClientDeleted(vendorName);
-      
-      alert('Client deleted successfully!');
-      setDeleteModalOpen(false);
-      setVendorToDelete(null);
+        // The backend automatically logs activities and shows toasts
+        setDeleteModalOpen(false);
+        setVendorToDelete(null);
+      } else {
+        throw new Error(response.error?.message || 'Failed to delete client');
+      }
     } catch (error) {
       console.error('Error deleting vendor:', error);
-      throw error;
+      addToast({
+        type: 'error',
+        title: 'Delete Failed',
+        message: error instanceof Error ? error.message : 'Failed to delete client',
+        duration: 7000
+      });
     }
   };
 
