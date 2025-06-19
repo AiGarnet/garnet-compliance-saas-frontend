@@ -16,6 +16,9 @@ const nextConfig = {
   // Environment variables
   env: {
     NEXT_PUBLIC_STATIC_EXPORT: 'true',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app',
+    NEXT_PUBLIC_AUTH_DOMAIN: process.env.NEXT_PUBLIC_AUTH_DOMAIN || 'garnetai.net',
+    NEXT_PUBLIC_FRONTEND_URL: process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://testinggarnet.netlify.app',
   },
   
   // Optimize bundle size
