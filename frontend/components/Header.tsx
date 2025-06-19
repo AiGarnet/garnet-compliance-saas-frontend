@@ -16,7 +16,7 @@ import {
   UserPlus,
   LogIn,
 } from 'lucide-react';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { MobileNavigation } from './MobileNavigation';
 import { translations } from '@/lib/i18n';
 import { injectCriticalCSS } from './critical-css';

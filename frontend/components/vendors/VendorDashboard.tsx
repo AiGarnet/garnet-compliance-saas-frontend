@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Building2, 
   CheckCircle, 
@@ -67,89 +67,37 @@ export function VendorDashboard({ vendor, onUpdateVendor }: VendorDashboardProps
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  // Real compliance metrics fetched from PostgreSQL database
-  const [complianceMetrics, setComplianceMetrics] = useState<ComplianceMetric[]>([]);
-
-  // Fetch real vendor dashboard data
-  useEffect(() => {
-    const fetchVendorDashboardData = async () => {
-      if (!vendor?.id) return;
-      
-      try {
-        // Fetch vendor-specific dashboard data from database
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/analytics/vendors/${vendor.id}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Fetched vendor dashboard data from database:', data);
-          
-          // Transform API data to compliance metrics format
-          const metrics: ComplianceMetric[] = [
-            {
-              label: 'Questionnaire Completion',
-              value: data.questionnaireCompletion?.completed || 0,
-              total: data.questionnaireCompletion?.total || 1,
-              color: 'blue',
-              icon: <FileText className="h-5 w-5" />
-            },
-            {
-              label: 'Documents Uploaded',
-              value: data.documentsUploaded || 0,
-              total: data.documentsRequired || 1,
-              color: 'green',
-              icon: <Upload className="h-5 w-5" />
-            },
-            {
-              label: 'Security Controls',
-              value: data.securityControls?.implemented || 0,
-              total: data.securityControls?.total || 1,
-              color: 'purple',
-              icon: <Shield className="h-5 w-5" />
-            },
-            {
-              label: 'Risk Assessment',
-              value: vendor.riskScore || 0,
-              total: 100,
-              color: 'orange',
-              icon: <Target className="h-5 w-5" />
-            }
-          ];
-          
-          setComplianceMetrics(metrics);
-        } else {
-          console.warn('⚠️ Vendor dashboard data not available, using basic calculations');
-          // Fallback: generate basic metrics from vendor data
-          generateBasicMetrics();
-        }
-      } catch (error) {
-        console.error('❌ Error fetching vendor dashboard data:', error);
-        generateBasicMetrics();
-      }
-    };
-
-    const generateBasicMetrics = () => {
-      const basicMetrics: ComplianceMetric[] = [
-        {
-          label: 'Questionnaire Completion',
-          value: vendor?.questionnaireAnswers?.length || 0,
-          total: Math.max(vendor?.questionnaireAnswers?.length || 1, 10),
-          color: 'blue',
-          icon: <FileText className="h-5 w-5" />
-        },
-        {
-          label: 'Risk Score',
-          value: vendor?.riskScore || 0,
-          total: 100,
-          color: vendor?.riskLevel === 'Low' ? 'green' : vendor?.riskLevel === 'Medium' ? 'orange' : 'red',
-          icon: <Target className="h-5 w-5" />
-        }
-      ];
-      
-      setComplianceMetrics(basicMetrics);
-    };
-
-    fetchVendorDashboardData();
-  }, [vendor]);
+  // Mock data - in real app, this would come from API
+  const complianceMetrics: ComplianceMetric[] = [
+    {
+      label: 'Questionnaire Completion',
+      value: 8,
+      total: 12,
+      color: 'blue',
+      icon: <FileText className="h-5 w-5" />
+    },
+    {
+      label: 'Documents Uploaded',
+      value: 15,
+      total: 20,
+      color: 'green',
+      icon: <Upload className="h-5 w-5" />
+    },
+    {
+      label: 'Security Controls',
+      value: 22,
+      total: 30,
+      color: 'purple',
+      icon: <Shield className="h-5 w-5" />
+    },
+    {
+      label: 'Risk Assessment',
+      value: 85,
+      total: 100,
+      color: 'orange',
+      icon: <Target className="h-5 w-5" />
+    }
+  ];
 
   const tasks: TaskItem[] = [
     {

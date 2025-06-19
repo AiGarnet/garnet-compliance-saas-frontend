@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { setDarkMode, isDarkMode } from '@/lib/design-tokens';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { translations } from '@/lib/i18n';
 
 interface ThemeToggleProps {

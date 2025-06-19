@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { PlusCircle, ArrowUpDown, AlertTriangle, Loader2, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { translations } from '@/lib/i18n';
@@ -29,9 +29,6 @@ import {
 } from './utils';
 
 import { Vendor, VendorStatus } from '@/types/vendor';
-
-// Re-export types for components that need them
-export type { Vendor, VendorStatus } from '@/types/vendor';
 
 export interface VendorListProps {
   vendors: Vendor[];

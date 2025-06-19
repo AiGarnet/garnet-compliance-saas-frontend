@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { VendorService } from '@/features/vendors/services/vendorService';
-import { Vendor, QuestionnaireAnswer } from '@/features/vendors/types';
+import { VendorService } from '../services/vendorService';
+import { Vendor, QuestionnaireAnswer } from '../types/vendor.types';
 
 interface VendorDetailProps {
   vendorId: string;

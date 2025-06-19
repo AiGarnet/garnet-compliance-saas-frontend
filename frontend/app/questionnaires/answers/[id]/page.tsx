@@ -17,9 +17,9 @@ export default function QuestionnairesAnswersPage({ params }: { params: { id: st
   // List of known static IDs
   const staticIds = ['demo_1', 'demo_2', 'demo_3'];
   
-  // If this is a dynamically generated ID (not in static params), redirect to chat interface
+  // If this is a dynamically generated ID (not in static params), redirect to query-based route
   if (!staticIds.includes(params.id)) {
-    redirect(`/questionnaires/${params.id}/chat`);
+    redirect(`/questionnaires/answers?id=${params.id}`);
   }
   
   // Server component that passes params to the client component

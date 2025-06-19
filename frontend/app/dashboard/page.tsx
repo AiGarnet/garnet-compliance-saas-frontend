@@ -7,29 +7,33 @@ import { ComplianceCard } from "@/components/dashboard/ComplianceCard";
 import { QuestionnaireCard } from "@/components/dashboard/QuestionnaireCard";
 import { VendorList } from "@/components/dashboard/VendorList";
 import { MobileNavigation } from "@/components/MobileNavigation";
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
 import { DevModeToggle } from "@/components/DevModeToggle";
 import { isDevModeEnabled } from "@/lib/env-config";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 
 // Define types locally since they're not exported
-import { Vendor, VendorStatus } from '@/types/vendor';
+type VendorStatus = "Questionnaire Pending" | "In Review" | "Approved";
 
-// No more mock data - all data fetched from PostgreSQL database via API
-
-interface DashboardAnalytics {
-  totalVendors: number;
-  completedQuestionnaires: number;
-  pendingQuestionnaires: number;
-  highRiskVendors: number;
-  trustPortalViews: number;
-  compliancePercentage: number;
+interface Vendor {
+  id: string;
+  name: string;
+  status: VendorStatus;
 }
+
+// Vendor data
+const mockVendors: Vendor[] = [
+  { id: "1", name: "Acme Corp", status: "Questionnaire Pending" },
+  { id: "2", name: "Globex Ltd", status: "In Review" },
+  { id: "3", name: "Stark Industries", status: "Approved" },
+  { id: "4", name: "Wayne Enterprises", status: "Questionnaire Pending" },
+  { id: "5", name: "Oscorp Industries", status: "In Review" },
+  { id: "6", name: "Umbrella Corporation", status: "Approved" },
+];
 
 function DashboardContent() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [simulateError, setSimulateError] = useState<boolean>(false);
@@ -48,48 +52,25 @@ function DashboardContent() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Fetch real vendors from PostgreSQL database via API
+  // Simulate API fetch with delay
   const fetchVendors = async () => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Simulate error for testing in dev mode
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate error for testing
       if (simulateError) {
         throw new Error("Failed to fetch vendors");
       }
       
-      // Fetch vendors from real API endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/vendors`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Fetched vendors from database:', data);
-      
-      // Transform vendors to match frontend interface
-      const transformedVendors = (data.vendors || []).map((vendor: any) => ({
-        id: vendor.vendor_id || vendor.id,
-        name: vendor.company_name || vendor.name,
-        status: vendor.status,
-        riskScore: vendor.risk_score || 0,
-        riskLevel: vendor.risk_level || 'Medium',
-        createdAt: new Date(vendor.created_at || vendor.createdAt),
-        updatedAt: new Date(vendor.updated_at || vendor.updatedAt),
-        questionnaireAnswers: vendor.questionnaire_answers || [],
-        contactEmail: vendor.contact_email || vendor.contactEmail,
-        contactName: vendor.contact_name || vendor.contactName,
-        website: vendor.website,
-        industry: vendor.industry
-      }));
-      
-      setVendors(transformedVendors);
+      setVendors(mockVendors);
       setIsLoading(false);
     } catch (err) {
-      console.error("❌ Error fetching vendors from database:", err);
-      setError('Unable to load vendors from database. Please check your connection.');
+      console.error("Error fetching vendors:", err);
+      setError('Unable to load vendors.');
       setIsLoading(false);
     }
   };
@@ -100,58 +81,10 @@ function DashboardContent() {
     fetchVendors();
   };
 
-  // Fetch dashboard analytics from PostgreSQL database via API
-  const fetchAnalytics = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/analytics/dashboard`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Fetched dashboard analytics from database:', data);
-        setAnalytics(data);
-      } else {
-        console.warn('⚠️ Analytics endpoint not available, using basic calculations');
-        // Fallback: calculate basic analytics from vendors data
-        const totalVendors = vendors.length;
-        const highRiskVendors = vendors.filter(v => v.riskLevel === 'High').length;
-        setAnalytics({
-          totalVendors,
-          completedQuestionnaires: Math.floor(totalVendors * 0.6),
-          pendingQuestionnaires: Math.floor(totalVendors * 0.4),
-          highRiskVendors,
-          trustPortalViews: 127, // Will be replaced with real data
-          compliancePercentage: Math.floor((totalVendors - highRiskVendors) / totalVendors * 100)
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error fetching analytics:', error);
-      // Provide fallback analytics
-      setAnalytics({
-        totalVendors: vendors.length,
-        completedQuestionnaires: 0,
-        pendingQuestionnaires: 0,
-        highRiskVendors: 0,
-        trustPortalViews: 0,
-        compliancePercentage: 0
-      });
-    }
-  };
-
   // Initial fetch on component mount
   useEffect(() => {
-    const loadDashboardData = async () => {
-      await fetchVendors();
-      await fetchAnalytics();
-    };
-    loadDashboardData();
+    fetchVendors();
   }, []);
-
-  // Fetch analytics when vendors data changes
-  useEffect(() => {
-    if (vendors.length > 0 && !analytics) {
-      fetchAnalytics();
-    }
-  }, [vendors]);
 
   return (
     <>
@@ -167,17 +100,11 @@ function DashboardContent() {
           <DevModeToggle />
         </div>
         
-        {/* Stat Cards - Real Data from PostgreSQL Database */}
+        {/* Stat Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <ComplianceCard 
-            percentage={analytics?.compliancePercentage || 0} 
-            change={analytics ? "+12% from last month" : "Loading..."} 
-          />
+          <ComplianceCard percentage={78} change="+12% from last month" />
           
-          <QuestionnaireCard 
-            count={analytics?.completedQuestionnaires || 0} 
-            dueSoon={analytics?.pendingQuestionnaires ? `${analytics.pendingQuestionnaires} pending` : "Loading..."} 
-          />
+          <QuestionnaireCard count={5} dueSoon="2 due this week" />
           
           <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
             <div className="flex justify-between items-center mb-8">
@@ -186,12 +113,8 @@ function DashboardContent() {
                 <AlertTriangle className="w-6 h-6 text-danger dark:text-danger-color" />
               </div>
             </div>
-            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">
-              {analytics?.highRiskVendors || 0}
-            </p>
-            <p className="text-sm text-danger dark:text-danger-color">
-              {analytics?.highRiskVendors ? 'Requires immediate review' : 'Loading...'}
-            </p>
+            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">3</p>
+            <p className="text-sm text-danger dark:text-danger-color">Requires immediate review</p>
           </div>
           
           <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
@@ -201,10 +124,8 @@ function DashboardContent() {
                 <Eye className="w-6 h-6 text-success dark:text-success-color" />
               </div>
             </div>
-            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">
-              {analytics?.trustPortalViews || 0}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Real-time from database</p>
+            <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">127</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">+24% from last week</p>
           </div>
         </section>
         
@@ -359,9 +280,22 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
+  // Protect this page - redirect to login if not authenticated
+  const { isLoading: authLoading } = useAuthGuard();
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <ProtectedRoute>
-      <DashboardContent />
-    </ProtectedRoute>
+    <DashboardContent />
   );
 }

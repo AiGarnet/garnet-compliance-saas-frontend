@@ -8,7 +8,7 @@ import { QuestionnaireList, Questionnaire, QuestionnaireStatus } from "@/compone
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Header from '@/components/Header';
 import { debounce } from 'lodash';
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { QuestionnaireService } from '@/lib/services/questionnaireService';
 import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
 import { vendors as vendorAPI } from '@/lib/api';
@@ -79,7 +79,7 @@ const QuestionnairesPage = () => {
   const [answerCache, setAnswerCache] = useState<Record<string, string>>({});
 
   // Custom hooks - also must be at top level
-  // Note: Authentication is now handled by ProtectedRoute wrapper
+  const { isLoading: authLoading } = useAuthGuard();
 
   // useCallback hooks - at top level
   const resizeTextarea = useCallback(() => {
@@ -699,14 +699,8 @@ const QuestionnairesPage = () => {
       closeQuestionnaireInput();
       
       // Navigate immediately without timeout - the data is already saved
-      console.log('🚀 Navigating to questionnaire interface...');
-      
-      // If we have a vendor ID, use the vendor-based route
-      if (newQuestionnaire.vendorId) {
-        router.push(`/vendors/${newQuestionnaire.vendorId}/questionnaire`);
-      } else {
-        router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
-      }
+      console.log('🚀 Navigating to chat interface...');
+      router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
       
       // Refresh the questionnaire list in the background for when user returns
       setTimeout(() => {
@@ -1045,12 +1039,7 @@ const QuestionnairesPage = () => {
       }
     }
     
-    // Check if questionnaire has a vendor ID to determine correct route
-    if (questionnaire.vendorId) {
-      router.push(`/vendors/${questionnaire.vendorId}/questionnaire`);
-    } else {
-      router.push(`/questionnaires/${questionnaire.id}/chat`);
-    }
+    router.push(`/questionnaires/answers?id=${questionnaire.id}`);
   };
   
   // Add handling for editing a questionnaire
@@ -1612,13 +1601,4 @@ const QuestionnairesPage = () => {
   );
 };
 
-// Wrap the QuestionnairesPage with ProtectedRoute
-const ProtectedQuestionnairesPage = () => {
-  return (
-    <ProtectedRoute>
-      <QuestionnairesPage />
-    </ProtectedRoute>
-  );
-};
-
-export default ProtectedQuestionnairesPage;
+export default QuestionnairesPage;

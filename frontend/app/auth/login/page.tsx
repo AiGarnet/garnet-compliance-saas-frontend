@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, LogIn, User, Lock, Info } from "lucide-react";
-import { useAuth } from "@/features/auth/services/AuthContext";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,15 +24,9 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      // Check for redirect parameter
-      if (redirectTo) {
-        router.push(redirectTo);
-      } else {
-        // Default redirect
-        router.push('/dashboard');
-      }
+      router.push('/dashboard');
     }
-  }, [isAuthenticated, authLoading, router, redirectTo]);
+  }, [isAuthenticated, authLoading, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info } from "lucide-react";
-import { useAuth } from "@/features/auth/services/AuthContext";
-import { auth } from "@/lib/api";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { auth } from "../../../lib/api";
+import { ROLES, ROLE_DISPLAY_NAMES, isValidRole } from "@/lib/auth/roles";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -66,8 +67,8 @@ export default function SignupPage() {
       return false;
     }
 
-    // Ensure only vendor and enterprise roles are allowed
-    if (!['vendor', 'enterprise'].includes(formData.role)) {
+    // Ensure only valid roles are allowed
+    if (!isValidRole(formData.role)) {
       setError("Please select a valid role");
       return false;
     }
@@ -229,13 +230,10 @@ export default function SignupPage() {
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-white text-gray-900"
                 >
                   <option value="">Select your role</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="enterprise">Enterprise</option>
+                  <option value={ROLES.SALES_PROFESSIONAL}>{ROLE_DISPLAY_NAMES[ROLES.SALES_PROFESSIONAL]}</option>
+                  <option value={ROLES.FOUNDER}>{ROLE_DISPLAY_NAMES[ROLES.FOUNDER]}</option>
                 </select>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Vendors have full access to all features. Enterprise users can only access the Trust Portal.
-              </p>
             </div>
 
             {/* Organization Field */}

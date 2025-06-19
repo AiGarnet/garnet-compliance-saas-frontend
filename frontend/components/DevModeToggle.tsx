@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bug } from 'lucide-react';
 import { isDevModeEnabled, toggleDevMode } from '@/lib/env-config';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 
 export function DevModeToggle({ className }: { className?: string }) {
   const [isEnabled, setIsEnabled] = useState(false);

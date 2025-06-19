@@ -11,7 +11,7 @@ import { EditVendorModal } from '@/components/vendors/EditVendorModal';
 import { VendorEvidenceSection } from '@/components/vendors/VendorEvidenceSection';
 import { VendorRiskAssessment } from '@/components/vendors/VendorRiskAssessment';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { AlertCircle, ArrowLeft, MessageSquare } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -279,31 +279,6 @@ export function VendorDetailView({ vendorId }: VendorDetailViewProps) {
             {/* Left column */}
             <div className="lg:col-span-2 space-y-6">
               <QuestionnaireStatus vendor={vendor} />
-              
-              {/* Questionnaire Chat Button */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">Questionnaire Chat</h3>
-                      <p className="text-sm text-gray-600">
-                        Interactive AI-powered questionnaire completion and review
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/vendors/${vendor.id}/questionnaire`)}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center space-x-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Open Chat</span>
-                  </button>
-                </div>
-              </div>
-              
               <VendorQuestionnaireAnswers vendor={vendor} />
               <VendorEvidenceSection vendor={vendor} />
               <VendorActivityFeed vendor={vendor} />

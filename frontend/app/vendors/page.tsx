@@ -6,10 +6,10 @@ import { MobileNavigation } from "@/components/MobileNavigation";
 import { VendorFormData } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
 import Header from "@/components/Header";
-import { AddVendorModal } from "@/features/vendors/components/AddVendorModal";
-import { DeleteVendorModal } from "@/features/vendors/components/DeleteVendorModal";
+import { AddVendorModal } from "../../components/vendors/AddVendorModal";
+import { DeleteVendorModal } from "../../components/vendors/DeleteVendorModal";
 import { EvidenceCount } from "@/components/vendors/EvidenceCount";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useRouter } from "next/navigation";
 
 // Simple vendor interface for this page
@@ -35,7 +35,8 @@ const VendorsPage = () => {
   });
   const router = useRouter();
 
-
+  // Protect this page - redirect to login if not authenticated
+  const { isLoading: authLoading } = useAuthGuard();
 
   // Fetch vendors from API
   const fetchVendors = async () => {
@@ -198,6 +199,18 @@ const VendorsPage = () => {
     fetchVendors();
   }, []); // Empty dependency array to run only once
 
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Header />
@@ -358,13 +371,4 @@ const VendorsPage = () => {
   );
 };
 
-// Wrap the VendorsPage with ProtectedRoute
-const ProtectedVendorsPage = () => {
-  return (
-    <ProtectedRoute>
-      <VendorsPage />
-    </ProtectedRoute>
-  );
-};
-
-export default ProtectedVendorsPage; 
+export default VendorsPage; 

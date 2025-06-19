@@ -1,19 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { VendorList } from '../VendorList';
-import { Vendor } from '@/types/vendor';
-import { VendorStatus } from '@/types/vendor';
+import { VendorList, Vendor, VendorStatus } from '../VendorList';
 
 // Add jest-axe custom matcher
 expect.extend(toHaveNoViolations);
 
 // Sample test data
-  const mockVendors: Vendor[] = [
-    { id: '1', name: 'Acme Corp', status: VendorStatus.QUESTIONNAIRE_PENDING, riskScore: 75, riskLevel: 'Medium' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
-    { id: '2', name: 'Globex Ltd', status: VendorStatus.IN_REVIEW, riskScore: 85, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
-    { id: '3', name: 'Stark Industries', status: VendorStatus.APPROVED, riskScore: 90, riskLevel: 'Low' as any, createdAt: new Date(), updatedAt: new Date(), questionnaireAnswers: [] },
-  ];
+const mockVendors: Vendor[] = [
+  { id: '1', name: 'Acme Corp', status: 'Questionnaire Pending' as VendorStatus },
+  { id: '2', name: 'Globex Ltd', status: 'In Review' as VendorStatus },
+  { id: '3', name: 'Stark Industries', status: 'Approved' as VendorStatus },
+];
 
 describe('VendorList', () => {
   it('renders the list of vendors correctly', () => {

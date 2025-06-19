@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import VendorForm from './VendorForm';
-import { VendorService } from '@/features/vendors/services/vendorService';
+import { VendorService } from '../lib/services/vendorService';
 
 interface AddVendorModalProps {
   isOpen: boolean;

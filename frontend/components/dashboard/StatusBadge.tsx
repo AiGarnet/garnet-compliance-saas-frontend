@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { VendorStatus } from './VendorList';
 import { translations } from '@/lib/i18n';
 

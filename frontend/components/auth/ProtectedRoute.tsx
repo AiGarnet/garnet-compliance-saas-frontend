@@ -1,118 +1,99 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-
-// Dynamic import of useAuth to prevent SSR issues
-const useAuthDynamic = () => {
-  if (typeof window === 'undefined') {
-    return {
-      user: null,
-      token: null,
-      isLoading: false,
-      isAuthenticated: false,
-      login: async () => {},
-      logout: () => {},
-      hasAccess: () => false,
-    };
-  }
-  
-  // Dynamic import only on client side
-  const { useAuth } = require('@/lib/auth/AuthContext');
-  return useAuth();
-};
+import { useAuth } from '@/lib/auth/AuthContext';
+import { Shield, AlertTriangle } from 'lucide-react';
+import { getDefaultRoute } from '@/lib/auth/roles';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: string | string[];
-  fallback?: React.ReactNode;
+  fallbackPath?: string;
 }
 
-function ProtectedRouteComponent({ 
-  children, 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
   requiredRole,
-  fallback = (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    </div>
-  )
-}: ProtectedRouteProps) {
+  fallbackPath = '/auth/login'
+}) => {
+  const { user, isLoading, isAuthenticated, hasAccess } = useAuth();
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
-  const [redirected, setRedirected] = useState(false);
-
-  // Mark client-side
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Get auth state dynamically
-  const { user, token, isLoading, isAuthenticated, hasAccess } = useAuthDynamic();
 
   useEffect(() => {
-    // Only handle redirects on client side and prevent multiple redirects
-    if (!isClient || isLoading || redirected) return;
-
-    // If not authenticated, redirect to login
-    if (!isAuthenticated) {
-      const currentPath = window.location.pathname + window.location.search;
-      setRedirected(true);
-      router.replace(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
-      return;
-    }
-
-    // If authenticated but doesn't have required role access
-    if (requiredRole && !hasAccess(requiredRole)) {
-      setRedirected(true);
-      // Redirect based on user role
-      if (user?.role === 'enterprise') {
-        router.replace('/trust-portal');
-      } else {
-        router.replace('/dashboard');
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push('/auth/login');
+        return;
       }
-      return;
+
+      if (requiredRole && !hasAccess(requiredRole)) {
+        // Redirect based on user role if they don't have access
+        if (user?.role) {
+          router.push(getDefaultRoute(user.role));
+        } else {
+          router.push(fallbackPath);
+        }
+        return;
+      }
     }
-  }, [isClient, isLoading, isAuthenticated, requiredRole, user?.role, hasAccess, router, redirected]);
+  }, [isLoading, isAuthenticated, hasAccess, requiredRole, router, user, fallbackPath]);
 
-  // Show loading during SSR/initial load or when auth is loading
-  if (!isClient || isLoading) {
-    return <>{fallback}</>;
-  }
-
-  // If redirected, show loading to prevent flash
-  if (redirected) {
-    return <>{fallback}</>;
-  }
-
-  // If not authenticated, don't render children (will redirect)
-  if (!isAuthenticated) {
-    return <>{fallback}</>;
-  }
-
-  // If role required and user doesn't have access, don't render children
-  if (requiredRole && !hasAccess(requiredRole)) {
-    return <>{fallback}</>;
-  }
-
-  // All checks passed, render children
-  return <>{children}</>;
-}
-
-// Export with dynamic loading to prevent SSR issues
-const ProtectedRoute = dynamic(() => Promise.resolve(ProtectedRouteComponent), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading...</p>
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
-    </div>
-  ),
-});
+    );
+  }
 
-export default ProtectedRoute; 
+  // Show unauthorized message if user doesn't have access
+  if (!isAuthenticated || (requiredRole && !hasAccess(requiredRole))) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Access Denied
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {!isAuthenticated 
+                ? "You need to sign in to access this page."
+                : "You don't have permission to access this page."
+              }
+            </p>
+            <button
+              onClick={() => router.push(isAuthenticated && user?.role ? getDefaultRoute(user.role) : '/auth/login')}
+              className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 transition-colors"
+            >
+              {isAuthenticated ? 'Go to Dashboard' : 'Sign In'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// Higher-order component for easier usage
+export const withAuth = (
+  WrappedComponent: React.ComponentType<any>,
+  requiredRole?: string | string[]
+) => {
+  return function AuthenticatedComponent(props: any) {
+    return (
+      <ProtectedRoute requiredRole={requiredRole}>
+        <WrappedComponent {...props} />
+      </ProtectedRoute>
+    );
+  };
+}; 

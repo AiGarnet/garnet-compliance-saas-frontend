@@ -9,7 +9,6 @@ import {
   Phone, 
   MapPin, 
   Users, 
-  User,
   Calendar, 
   Award, 
   Shield, 
@@ -77,104 +76,106 @@ export function EnhancedVendorProfile({ vendor, onEdit, onMessage, onScheduleCal
   const [securityMetrics, setSecurityMetrics] = useState<SecurityMetric[]>([]);
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetric[]>([]);
 
-  // Fetch real vendor analytics and compliance data from PostgreSQL database
+  // Mock data - in real app, this would come from API
   useEffect(() => {
-    const fetchVendorAnalytics = async () => {
-      if (!vendor?.id) return;
-      
-      try {
-        // Fetch vendor-specific analytics from database
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/analytics/vendors/${vendor.id}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Fetched vendor analytics from database:', data);
-          
-          // Transform API data to component format
-          if (data.complianceScores) {
-            setComplianceScores(data.complianceScores);
-          }
-          if (data.securityMetrics) {
-            setSecurityMetrics(data.securityMetrics.map((metric: any) => ({
-              ...metric,
-              icon: getSecurityIcon(metric.name)
-            })));
-          }
-          if (data.businessMetrics) {
-            setBusinessMetrics(data.businessMetrics.map((metric: any) => ({
-              ...metric,
-              icon: getBusinessIcon(metric.label)
-            })));
-          }
-        } else {
-          console.warn('⚠️ Vendor analytics not available, using basic data from vendor profile');
-          // Fallback: generate basic metrics from vendor data
-          generateBasicMetrics();
-        }
-      } catch (error) {
-        console.error('❌ Error fetching vendor analytics:', error);
-        generateBasicMetrics();
+    const mockComplianceScores: ComplianceScore[] = [
+      {
+        category: 'Data Security',
+        score: 85,
+        maxScore: 100,
+        status: 'good',
+        details: ['Encryption at rest implemented', 'Access controls in place', 'Regular security audits']
+      },
+      {
+        category: 'Privacy Controls',
+        score: 92,
+        maxScore: 100,
+        status: 'excellent',
+        details: ['GDPR compliant', 'Privacy policy updated', 'Data retention policies defined']
+      },
+      {
+        category: 'Risk Management',
+        score: 78,
+        maxScore: 100,
+        status: 'good',
+        details: ['Risk assessment completed', 'Incident response plan exists', 'Business continuity planning']
+      },
+      {
+        category: 'Compliance Documentation',
+        score: 65,
+        maxScore: 100,
+        status: 'needs-improvement',
+        details: ['SOC 2 report pending', 'Some policies need updates', 'Evidence collection in progress']
       }
-    };
+    ];
 
-    const generateBasicMetrics = () => {
-      // Generate basic compliance scores based on vendor data
-      const basicComplianceScores: ComplianceScore[] = [
-        {
-          category: 'Data Security',
-          score: vendor?.riskScore ? 100 - vendor.riskScore : 75,
-          maxScore: 100,
-          status: vendor?.riskLevel === 'Low' ? 'excellent' : vendor?.riskLevel === 'Medium' ? 'good' : 'needs-improvement',
-          details: ['Assessment based on questionnaire responses']
-        }
-      ];
+    const mockSecurityMetrics: SecurityMetric[] = [
+      {
+        name: 'Multi-Factor Authentication',
+        value: 'Enabled',
+        status: 'compliant',
+        lastUpdated: '2024-01-15',
+        icon: <Lock className="h-4 w-4" />
+      },
+      {
+        name: 'Data Encryption',
+        value: 'AES-256',
+        status: 'compliant',
+        lastUpdated: '2024-01-10',
+        icon: <Shield className="h-4 w-4" />
+      },
+      {
+        name: 'Vulnerability Scanning',
+        value: 'Monthly',
+        status: 'compliant',
+        lastUpdated: '2024-01-20',
+        icon: <Eye className="h-4 w-4" />
+      },
+      {
+        name: 'Backup & Recovery',
+        value: 'Daily',
+        status: 'compliant',
+        lastUpdated: '2024-01-18',
+        icon: <Database className="h-4 w-4" />
+      },
+      {
+        name: 'Security Training',
+        value: 'Quarterly',
+        status: 'partial',
+        lastUpdated: '2023-12-15',
+        icon: <Users className="h-4 w-4" />
+      }
+    ];
 
-      const basicSecurityMetrics: SecurityMetric[] = [
-        {
-          name: 'Risk Assessment',
-          value: vendor?.riskLevel || 'Unknown',
-          status: vendor?.riskLevel === 'Low' ? 'compliant' : vendor?.riskLevel === 'Medium' ? 'partial' : 'non-compliant',
-          lastUpdated: vendor?.updatedAt?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          icon: <Shield className="h-4 w-4" />
-        }
-      ];
+    const mockBusinessMetrics: BusinessMetric[] = [
+      {
+        label: 'Company Size',
+        value: '250-500 employees',
+        icon: <Users className="h-4 w-4" />
+      },
+      {
+        label: 'Annual Revenue',
+        value: '$10M - $50M',
+        icon: <DollarSign className="h-4 w-4" />
+      },
+      {
+        label: 'Years in Business',
+        value: '8 years',
+        icon: <Calendar className="h-4 w-4" />
+      },
+      {
+        label: 'Client Base',
+        value: '500+ customers',
+        change: '+15%',
+        trend: 'up',
+        icon: <TrendingUp className="h-4 w-4" />
+      }
+    ];
 
-      const basicBusinessMetrics: BusinessMetric[] = [
-        {
-          label: 'Onboarding Status',
-          value: vendor?.status || 'Unknown',
-          icon: <Calendar className="h-4 w-4" />
-        },
-        {
-          label: 'Industry',
-          value: vendor?.industry || 'Not specified',
-          icon: <Building2 className="h-4 w-4" />
-        }
-      ];
-
-      setComplianceScores(basicComplianceScores);
-      setSecurityMetrics(basicSecurityMetrics);
-      setBusinessMetrics(basicBusinessMetrics);
-    };
-
-    const getSecurityIcon = (name: string) => {
-      if (name.toLowerCase().includes('auth')) return <Lock className="h-4 w-4" />;
-      if (name.toLowerCase().includes('encrypt')) return <Shield className="h-4 w-4" />;
-      if (name.toLowerCase().includes('scan')) return <Eye className="h-4 w-4" />;
-      if (name.toLowerCase().includes('backup')) return <Database className="h-4 w-4" />;
-      return <Shield className="h-4 w-4" />;
-    };
-
-    const getBusinessIcon = (label: string) => {
-      if (label.toLowerCase().includes('size') || label.toLowerCase().includes('employee')) return <Users className="h-4 w-4" />;
-      if (label.toLowerCase().includes('revenue') || label.toLowerCase().includes('financial')) return <DollarSign className="h-4 w-4" />;
-      if (label.toLowerCase().includes('year') || label.toLowerCase().includes('age')) return <Calendar className="h-4 w-4" />;
-      if (label.toLowerCase().includes('client') || label.toLowerCase().includes('customer')) return <TrendingUp className="h-4 w-4" />;
-      return <Building2 className="h-4 w-4" />;
-    };
-
-    fetchVendorAnalytics();
-  }, [vendor]);
+    setComplianceScores(mockComplianceScores);
+    setSecurityMetrics(mockSecurityMetrics);
+    setBusinessMetrics(mockBusinessMetrics);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

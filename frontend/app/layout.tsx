@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import '@/styles/globals.css'
-import '@/styles/styles.css'
+import './globals.css'
+import './styles.css'
 import { ThemeInitializer } from '@/components/ThemeInitializer'
-import { AuthProvider } from '@/features/auth/services/AuthContext'
+import { AuthProvider } from '@/lib/auth/AuthContext'
 
 export const metadata: Metadata = {
   title: 'GarnetAI - Compliance Platform',

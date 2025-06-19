@@ -110,46 +110,77 @@ export function VendorCommunicationCenter({ vendor, isOpen, onClose }: VendorCom
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch real communication data from PostgreSQL database
+  // Mock data - in real app, this would come from API
   useEffect(() => {
-    const fetchCommunications = async () => {
-      if (!vendor?.id) return;
-      
-      try {
-        // Fetch conversations from database (this endpoint would need to be implemented)
-        const conversationsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/vendors/${vendor.id}/communications`);
-        
-        if (conversationsResponse.ok) {
-          const conversationsData = await conversationsResponse.json();
-          console.log('✅ Fetched vendor communications from database:', conversationsData);
-          setConversations(conversationsData.conversations || []);
-          
-          if (conversationsData.conversations?.length > 0) {
-            setActiveConversation(conversationsData.conversations[0].id);
-            
-            // Fetch messages for the first conversation
-            const messagesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/vendors/${vendor.id}/communications/${conversationsData.conversations[0].id}/messages`);
-            if (messagesResponse.ok) {
-              const messagesData = await messagesResponse.json();
-              setMessages(messagesData.messages || []);
-            }
-          }
-        } else {
-          console.warn('⚠️ Communications endpoint not available, showing empty state');
-          // Show empty state - no mock data
-          setConversations([]);
-          setMessages([]);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching vendor communications:', error);
-        // Show empty state on error - no mock data
-        setConversations([]);
-        setMessages([]);
+    const mockConversations: Conversation[] = [
+      {
+        id: '1',
+        title: 'SOC 2 Documentation Review',
+        lastMessage: 'We\'ve reviewed your SOC 2 report and have a few questions...',
+        lastMessageTime: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        unreadCount: 2,
+        participants: [
+          { name: 'Sarah Johnson', role: 'Compliance Manager' },
+          { name: 'You', role: 'Vendor' }
+        ],
+        status: 'active',
+        priority: 'high',
+        category: 'compliance'
+      },
+      {
+        id: '2',
+        title: 'General Onboarding Questions',
+        lastMessage: 'Thank you for the clarification!',
+        lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        unreadCount: 0,
+        participants: [
+          { name: 'Mike Chen', role: 'Technical Reviewer' },
+          { name: 'You', role: 'Vendor' }
+        ],
+        status: 'resolved',
+        priority: 'medium',
+        category: 'general'
       }
-    };
+    ];
 
-    fetchCommunications();
-  }, [vendor]);
+    const mockMessages: Message[] = [
+      {
+        id: '1',
+        content: 'Welcome to the GarnetAI compliance platform! We\'re here to help you through the onboarding process.',
+        sender: 'system',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        type: 'system'
+      },
+      {
+        id: '2',
+        content: 'Hi! I have a question about the SOC 2 requirements. What specific controls do you need to see documented?',
+        sender: 'vendor',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        type: 'text',
+        status: 'read'
+      },
+      {
+        id: '3',
+        content: 'Great question! We need to see documentation for the following SOC 2 Type II controls: CC6.1 (Logical Access), CC6.2 (Authentication), and CC6.3 (Authorization). I\'ll send you a detailed checklist.',
+        sender: 'admin',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+        type: 'text'
+      },
+      {
+        id: '4',
+        content: 'I can help you understand the SOC 2 requirements better. Based on your company profile, here are the key areas you should focus on...',
+        sender: 'ai',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        type: 'ai-response'
+      }
+    ];
+
+    setConversations(mockConversations);
+    setMessages(mockMessages);
+    if (mockConversations.length > 0) {
+      setActiveConversation(mockConversations[0].id);
+    }
+  }, []);
 
   useEffect(() => {
     scrollToBottom();

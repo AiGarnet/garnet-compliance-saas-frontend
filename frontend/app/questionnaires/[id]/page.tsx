@@ -1,30 +1,26 @@
-import { QuestionnaireRedirectClient } from './QuestionnaireRedirectClient';
+import { redirect } from 'next/navigation';
 
-// Generate static params for common questionnaire IDs
 export async function generateStaticParams() {
-  // For static export, provide some common questionnaire IDs
-  // These will be generated at build time
-  const commonIds = [
-    'demo_1',
-    'demo_2', 
-    'demo_3',
+  // For static export, we provide common questionnaire IDs
+  const staticIds = [
+    'demo_1', 'demo_2', 'demo_3',
     'q_security_assessment',
-    'q_risk_assessment',
-    'q_compliance_review',
-    'q_data_protection',
     'q_vendor_onboarding',
+    'q_compliance_review',
+    'q_risk_assessment',
+    'q_data_protection',
     'q_2023_audit',
     'q_2024_audit'
   ];
-
-  return commonIds.map((id) => ({
-    id: id,
-  }));
+  
+  return staticIds.map(id => ({ id }));
 }
 
-// Enable dynamic params for questionnaire IDs not in static params
+// Allow dynamic params that aren't in generateStaticParams
 export const dynamicParams = true;
 
 export default function QuestionnairePage({ params }: { params: { id: string } }) {
-  return <QuestionnaireRedirectClient params={params} />;
+  // For questionnaire pages, redirect to the chat interface
+  // This provides a clean URL structure
+  redirect(`/questionnaires/${params.id}/chat`);
 } 

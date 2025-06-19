@@ -1,5 +1,5 @@
-import { QuestionnaireService } from '@/features/questionnaires/services/questionnaireService';
-import { Question, QuestionResponseType } from '@/features/questionnaires/types';
+import { QuestionnaireService } from '../services/questionnaireService';
+import { Question, QuestionResponseType } from '../types/questionnaire.types';
 
 /**
  * Example demonstrating how to use the QuestionnaireService
@@ -10,10 +10,10 @@ export async function questionnaireExample() {
   console.log(`Asking: ${singleQuestion}`);
   
   try {
-    const singleResult = await QuestionnaireService.generateAnswers([singleQuestion]);
+    const singleResult = await QuestionnaireService.generateAnswer(singleQuestion);
     
     if (singleResult.success && singleResult.data) {
-      console.log("Answer:", singleResult.data.answers[0]?.answer);
+      console.log("Answer:", singleResult.data.answer);
     } else {
       console.error("Error:", singleResult.error);
     }

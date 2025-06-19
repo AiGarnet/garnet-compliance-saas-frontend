@@ -4,7 +4,7 @@ import React from 'react';
 import { VendorDetail } from '@/hooks/useVendor';
 import { Building2, Mail, Globe, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 
 interface VendorInfoCardProps {
   vendor: VendorDetail;

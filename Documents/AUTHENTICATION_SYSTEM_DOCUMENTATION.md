@@ -58,7 +58,7 @@ Frontend (Next.js) ↔ Backend API (Express.js) ↔ PostgreSQL Database
 
 - **Email**: Must be valid email format (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`)
 - **Password**: Minimum 8 characters
-- **Role**: Must be either `"vendor"` or `"enterprise"`
+- **Role**: Must be either `"sales_professional"` or `"founder"`
 - **Full Name**: Required, non-empty string
 - **Organization**: Optional string
 
@@ -84,7 +84,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   localStorage.setItem("userData", JSON.stringify(data.user));
   
   // Role-based redirect
-  if (data.user.role === "enterprise") {
+  if (data.user.role === "founder") {
     router.push("/trust-portal");
   } else {
     router.push("/dashboard");
@@ -106,7 +106,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   localStorage.setItem("authToken", data.token);
   localStorage.setItem("userData", JSON.stringify(data.user));
   
-  if (data.user.role === "enterprise") {
+  if (data.user.role === "founder") {
     router.push("/trust-portal");
   } else {
     router.push("/dashboard");
@@ -120,12 +120,12 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 ### User Roles
 
-1. **Vendor** (`"vendor"`)
+1. **Sales Professional** (`"sales_professional"`)
    - Full access to all platform features
    - Access to dashboard, questionnaires, compliance tools
    - Can manage vendor onboarding processes
 
-2. **Enterprise** (`"enterprise"`)
+2. **Founder** (`"founder"`)
    - Limited access to Trust Portal only
    - Can view vendor compliance status
    - Cannot access full dashboard features

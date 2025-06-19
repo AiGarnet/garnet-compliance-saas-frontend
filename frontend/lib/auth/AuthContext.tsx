@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/api';
+import { auth } from '../api';
+import { getDefaultRoute, UserRole } from './roles';
 
 interface User {
   id: string;
   email: string;
   full_name: string;
-  role: string;
+  role: UserRole;
   organization?: string;
   created_at: string;
 }
@@ -25,25 +26,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined';
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
-  // During SSR/SSG, provide a safe fallback
-  if (!isBrowser && !context) {
-    return {
-      user: null,
-      token: null,
-      isLoading: false,
-      isAuthenticated: false,
-      login: async () => {},
-      logout: () => {},
-      hasAccess: () => false,
-    };
-  }
-  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
@@ -54,38 +38,27 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Helper function to set cookie (only in browser)
+// Helper function to set cookie
 const setCookie = (name: string, value: string, days: number = 7) => {
-  if (!isBrowser) return;
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
 };
 
-// Helper function to remove cookie (only in browser)
+// Helper function to remove cookie
 const removeCookie = (name: string) => {
-  if (!isBrowser) return;
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(() => {
-    // During SSR, don't show loading state
-    if (!isBrowser) return false;
-    return true;
-  });
-  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Initialize auth state from localStorage (client-side only)
+  // Initialize auth state from localStorage
   useEffect(() => {
-    setIsClient(true);
-    
-    if (!isBrowser) return;
-    
-    const initializeAuth = async () => {
+    const initializeAuth = () => {
       try {
         const storedToken = localStorage.getItem('authToken');
         const storedUser = localStorage.getItem('userData');
@@ -93,36 +66,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
+          // Also set cookie for middleware access
           setCookie('authToken', storedToken);
-          
-          // Verify token is still valid by calling profile endpoint
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/auth/profile`, {
-              headers: {
-                'Authorization': `Bearer ${storedToken}`
-              }
-            });
-            
-            if (!response.ok) {
-              // Token is invalid, clear everything
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('userData');
-              removeCookie('authToken');
-              setToken(null);
-              setUser(null);
-            } else {
-              const userData = await response.json();
-              setUser(userData.user || userData);
-            }
-          } catch (error) {
-            console.error('Token validation failed:', error);
-            // Clear invalid data on validation error
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            removeCookie('authToken');
-            setToken(null);
-            setUser(null);
-          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -139,8 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    if (!isBrowser) return;
-    
     try {
       const data = await auth.login({ email, password });
 
@@ -163,11 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         router.push(redirectTo);
       } else {
         // Default redirect based on role
-        if (data.user.role === 'enterprise') {
-          router.push('/trust-portal');
-        } else {
-          router.push('/dashboard');
-        }
+        router.push(getDefaultRoute(data.user.role));
       }
     } catch (error) {
       throw error;
@@ -175,8 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = useCallback(() => {
-    if (!isBrowser) return;
-    
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     removeCookie('authToken');
@@ -207,12 +144,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = useMemo(() => ({
     user,
     token,
-    isLoading: !isClient ? false : isLoading, // Never show loading during SSR
+    isLoading,
     isAuthenticated,
     login,
     logout,
     hasAccess,
-  }), [user, token, isLoading, isClient, isAuthenticated, logout, hasAccess]);
+  }), [user, token, isLoading, isAuthenticated, logout, hasAccess]);
 
   return (
     <AuthContext.Provider value={value}>

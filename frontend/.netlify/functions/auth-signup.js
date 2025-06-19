@@ -70,11 +70,12 @@ const handler = async (event, context) => {
     }
 
     // Validate role
-    if (!['vendor', 'enterprise'].includes(role)) {
+    const validRoles = ['sales_professional', 'founder'];
+    if (!validRoles.includes(role)) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Role must be either "vendor" or "enterprise"' })
+        body: JSON.stringify({ error: 'Role must be either "Sales Professional" or "Founder"' })
       };
     }
 

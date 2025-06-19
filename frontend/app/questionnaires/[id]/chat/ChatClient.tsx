@@ -177,34 +177,13 @@ export function ChatClient({ params }: { params: { id: string } }) {
         // First, try to load from backend API
         console.log('🔍 Loading questionnaire from backend API:', params.id);
         
-        // Check if this ID might be a vendor ID instead of questionnaire ID
         try {
-          console.log('🔍 Checking if ID is actually a vendor ID:', params.id);
-          const vendorResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/vendors/${params.id}`);
-          
-          if (vendorResponse.ok) {
-            console.log('✅ Found vendor with this ID, redirecting to vendor questionnaire route');
-            router.replace(`/vendors/${params.id}/questionnaire`);
-            return;
-          }
-        } catch (vendorError) {
-          console.log('⚠️ Not a vendor ID, continuing with questionnaire lookup');
-        }
-        
-        try {
-          const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/questionnaires/${params.id}`);
+          const backendResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${params.id}`);
           
           if (backendResponse.ok) {
             const backendData = await backendResponse.json();
             const backendQuestionnaire = backendData.questionnaire || backendData;
             console.log('✅ Loaded from backend:', backendQuestionnaire);
-            
-            // Check if this questionnaire has a vendor ID and redirect to vendor route
-            if (backendQuestionnaire.vendorId) {
-              console.log('🔄 Redirecting to vendor-based questionnaire route');
-              router.replace(`/vendors/${backendQuestionnaire.vendorId}/questionnaire`);
-              return;
-            }
             
             // Transform backend format to frontend format
             const transformedQuestionnaire = {

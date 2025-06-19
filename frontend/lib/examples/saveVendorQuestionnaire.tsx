@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { QuestionnaireService } from '@/features/questionnaires/services/questionnaireService';
-import { VendorService } from '@/features/vendors/services/vendorService';
-import { Vendor } from '@/features/vendors/types';
+import { QuestionnaireService } from '../services/questionnaireService';
+import { VendorService } from '../services/vendorService';
+import { Vendor } from '../types/vendor.types';
 
 /**
  * Component that demonstrates how to generate answers to questions

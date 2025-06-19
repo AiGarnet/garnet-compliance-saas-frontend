@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
+import { isValidRole, ROLE_DISPLAY_NAMES } from '@/lib/auth/roles';
 
 // Database connection
 const pool = new Pool({
@@ -45,9 +46,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    if (!['vendor', 'enterprise'].includes(role)) {
+    if (!isValidRole(role)) {
+      const validRoles = Object.values(ROLE_DISPLAY_NAMES).join(' or ');
       return NextResponse.json(
-        { error: 'Role must be either "vendor" or "enterprise"' },
+        { error: `Role must be either ${validRoles}` },
         { status: 400 }
       );
     }

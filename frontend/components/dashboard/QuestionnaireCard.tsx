@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { ClipboardList } from 'lucide-react';
 
 interface QuestionnaireCardProps {

@@ -1,4 +1,4 @@
-import { SecurityQuestionnaire } from '@/components/SecurityQuestionnaire';
+import { SecurityQuestionnaire } from '../components/SecurityQuestionnaire';
 import { NextPage } from 'next';
 
 const SecurityQuestionnairePage: NextPage = () => {

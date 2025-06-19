@@ -1,4 +1,4 @@
-import { Vendor, RiskLevel, VendorStatus, QuestionnaireAnswer } from '@/features/vendors/types';
+import { Vendor, RiskLevel, VendorStatus, QuestionnaireAnswer } from '../types/vendor.types';
 import { apiClient } from './api';
 import { v4 as uuidv4 } from 'uuid';
 

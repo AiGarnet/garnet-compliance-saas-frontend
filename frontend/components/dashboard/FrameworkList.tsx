@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { PlusCircle, ArrowUpDown, AlertTriangle, Loader2 } from 'lucide-react';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { FilterPills } from '@/components/ui/FilterPills';

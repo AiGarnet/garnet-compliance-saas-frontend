@@ -1,23 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
+import { getDefaultRoute } from './roles';
 
 export function useAuthGuard(requiredRole?: string | string[]) {
   const { user, isAuthenticated, isLoading, hasAccess } = useAuth();
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
-
-  // Mark as client-side after hydration
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
-    // Only check after loading is complete and we're on client side
-    if (!isClient || isLoading) return;
-
-    // Only perform auth checks on client side
-    if (typeof window === 'undefined') return;
+    // Only check after loading is complete
+    if (isLoading) return;
 
     if (!isAuthenticated) {
       const currentPath = window.location.pathname;
@@ -27,19 +19,19 @@ export function useAuthGuard(requiredRole?: string | string[]) {
 
     if (requiredRole && !hasAccess(requiredRole)) {
       // Redirect based on user role if they don't have access
-      if (user?.role === 'enterprise') {
-        router.push('/trust-portal');
+      if (user?.role) {
+        router.push(getDefaultRoute(user.role));
       } else {
         router.push('/dashboard');
       }
       return;
     }
-  }, [isClient, isLoading, isAuthenticated, requiredRole, router, user?.role, hasAccess]);
+  }, [isLoading, isAuthenticated, requiredRole, router, user?.role, hasAccess]);
 
   return {
-    isLoading: !isClient ? false : isLoading, // Never show loading during SSR
-    isAuthenticated: !isClient ? false : isAuthenticated,
-    user: !isClient ? null : user,
-    hasAccess: !isClient ? () => false : hasAccess
+    isLoading,
+    isAuthenticated,
+    user,
+    hasAccess
   };
 } 

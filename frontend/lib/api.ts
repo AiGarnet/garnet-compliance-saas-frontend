@@ -9,7 +9,7 @@ export function getApiEndpoint(path: string): string {
   // For vendor API calls AND auth calls, always use Railway backend (even on Netlify)
   // This ensures JWT token compatibility between auth and vendor endpoints
   if (path.startsWith('/api/vendors') || path.startsWith('/api/auth/')) {
-    const RAILWAY_URL = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+    const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
     return `${RAILWAY_URL}${path}`;
   }
   
@@ -22,8 +22,8 @@ export function getApiEndpoint(path: string): string {
   // For local development, use the backend server URL
   const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const BACKEND_URL = isDevelopment 
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
-    : (process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app');
+    ? (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080')
+    : (process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app');
   
   return `${BACKEND_URL}${path}`;
 }

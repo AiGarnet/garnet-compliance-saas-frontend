@@ -78,7 +78,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         }
         
         // If not found in localStorage, try backend API
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/questionnaires/${id}`);
+        const response = await fetch(`http://localhost:8080/api/questionnaires/${id}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch questionnaire: ${response.status}`);
