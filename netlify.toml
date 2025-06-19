@@ -11,6 +11,7 @@
   # Environment variables
   [build.environment]
     NODE_VERSION = "18"
+    NEXT_PUBLIC_API_URL = "https://garnet-compliance-saas-production.up.railway.app"
 
 # Disable Netlify's automatic optimizations that interfere with React hydration
 [build.processing]

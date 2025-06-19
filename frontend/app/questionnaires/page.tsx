@@ -1039,7 +1039,7 @@ const QuestionnairesPage = () => {
       }
     }
     
-    router.push(`/questionnaires/answers?id=${questionnaire.id}`);
+    router.push(`/questionnaires/${questionnaire.id}/chat`);
   };
   
   // Add handling for editing a questionnaire
