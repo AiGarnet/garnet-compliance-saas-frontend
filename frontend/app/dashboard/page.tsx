@@ -188,10 +188,14 @@ function DashboardContent() {
           onRetry={fetchVendors}
         />
         
-        {/* Two Column Layout - Always visible */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Pending Tasks */}
-          <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
+        {/* Two Column Layout - Conditional based on role */}
+        <div className={cn(
+          "grid gap-6",
+          isFounder ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
+        )}>
+          {/* Pending Tasks - Hidden for Founder */}
+          {!isFounder && (
+            <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Pending Tasks</h2>
               <a href="#" className="text-sm text-primary font-medium hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md px-2 py-1">
@@ -234,6 +238,7 @@ function DashboardContent() {
               </li>
             </ul>
           </section>
+          )}
           
           {/* Recent Activity */}
           <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
