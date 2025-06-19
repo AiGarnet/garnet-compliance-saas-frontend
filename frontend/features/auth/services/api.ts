@@ -1,21 +1,8 @@
-import { apiCall } from '@/services/api';
+import { apiCall } from '@/lib/api';
 
 interface LoginRequest {
   email: string;
   password: string;
-}
-
-interface LoginResponse {
-  access_token: string;
-  token?: string; // For compatibility
-  user: {
-    id: string;
-    email: string;
-    full_name: string;
-    role: string;
-    organization?: string;
-    created_at: string;
-  };
 }
 
 interface SignupRequest {
@@ -25,16 +12,19 @@ interface SignupRequest {
   organization?: string;
 }
 
-interface SignupResponse {
-  message: string;
-  user: {
-    id: string;
-    email: string;
-    full_name: string;
-    role: string;
-    organization?: string;
-    created_at: string;
-  };
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  organization?: string;
+  created_at: string;
+}
+
+interface AuthResponse {
+  user: User;
+  access_token: string;
+  token?: string; // For backward compatibility
 }
 
 /**
@@ -42,34 +32,68 @@ interface SignupResponse {
  */
 export const auth = {
   /**
-   * Login user
+   * User login
    */
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
+    return apiCall('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  /**
+   * User signup
+   */
+  async signup(userData: SignupRequest): Promise<AuthResponse> {
+    return apiCall('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  /**
+   * Get user profile (replaces verifyToken)
+   */
+  async getProfile(token: string): Promise<{ user: User }> {
+    return apiCall('/api/auth/profile', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  /**
+   * Verify token validity using profile endpoint
+   */
+  async verifyToken(token: string): Promise<boolean> {
     try {
-      const response = await apiCall('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      });
-      return response;
+      await this.getProfile(token);
+      return true;
     } catch (error) {
-      console.error('Login failed:', error);
-      throw new Error(error instanceof Error ? error.message : 'Login failed');
+      console.error('Token verification failed:', error);
+      return false;
     }
   },
 
   /**
-   * Sign up new user
+   * Get current user profile from localStorage token
    */
-  async signup(userData: SignupRequest): Promise<SignupResponse> {
+  async getCurrentUser(): Promise<User | null> {
+    if (typeof window === 'undefined') return null;
+    
+    const token = localStorage.getItem('authToken');
+    if (!token) return null;
+
     try {
-      const response = await apiCall('/api/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-      return response;
+      const response = await this.getProfile(token);
+      return response.user;
     } catch (error) {
-      console.error('Signup failed:', error);
-      throw new Error(error instanceof Error ? error.message : 'Signup failed');
+      console.error('Failed to get current user:', error);
+      // Clear invalid token
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      return null;
     }
   },
 
@@ -87,27 +111,9 @@ export const auth = {
   },
 
   /**
-   * Verify token validity
-   */
-  async verifyToken(token: string): Promise<boolean> {
-    try {
-      await apiCall('/api/auth/verify', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      return true;
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return false;
-    }
-  },
-
-  /**
    * Refresh token
    */
-  async refreshToken(refreshToken: string): Promise<LoginResponse> {
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const response = await apiCall('/api/auth/refresh', {
         method: 'POST',

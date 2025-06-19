@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     if (!isBrowser) return;
     
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
         const storedToken = localStorage.getItem('authToken');
         const storedUser = localStorage.getItem('userData');
@@ -93,8 +93,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
-          // Also set cookie for middleware access
           setCookie('authToken', storedToken);
+          
+          // Verify token is still valid by calling profile endpoint
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/auth/profile`, {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`
+              }
+            });
+            
+            if (!response.ok) {
+              // Token is invalid, clear everything
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('userData');
+              removeCookie('authToken');
+              setToken(null);
+              setUser(null);
+            } else {
+              const userData = await response.json();
+              setUser(userData.user || userData);
+            }
+          } catch (error) {
+            console.error('Token validation failed:', error);
+            // Clear invalid data on validation error
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            removeCookie('authToken');
+            setToken(null);
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

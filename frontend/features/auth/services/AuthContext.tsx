@@ -52,12 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing auth on client side only
     const checkAuth = async () => {
       try {
-        const savedToken = localStorage.getItem('auth_token');
+        // Use consistent localStorage key
+        const savedToken = localStorage.getItem('authToken');
         if (savedToken) {
           setToken(savedToken);
           
-          // Verify token validity
-          const response = await fetch('/api/auth/verify', {
+          // Use the correct API endpoint - /api/auth/profile instead of /api/auth/verify
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${savedToken}`
             }
@@ -65,18 +66,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (response.ok) {
             const userData = await response.json();
-            setUser(userData.user);
+            setUser(userData.user || userData);
           } else {
             // Token is invalid, clear it
-            localStorage.removeItem('auth_token');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData'); // Clear any cached user data
             setToken(null);
+            setUser(null);
           }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
         // Clear invalid auth
         if (isBrowser) {
-          localStorage.removeItem('auth_token');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
         }
         setToken(null);
         setUser(null);
@@ -97,12 +101,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const token = response.access_token || response.token;
       if (token && response.user) {
-        localStorage.setItem('auth_token', token);
+        // Use consistent localStorage keys
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userData', JSON.stringify(response.user));
         setToken(token);
         setUser(response.user);
         
-        // Redirect to dashboard after successful login
-        router.push('/dashboard');
+        // Handle redirect parameter from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect');
+        
+        if (redirectTo) {
+          router.push(redirectTo);
+        } else {
+          // Default redirect based on role
+          if (response.user.role === 'enterprise') {
+            router.push('/trust-portal');
+          } else {
+            router.push('/dashboard');
+          }
+        }
       } else {
         throw new Error('Invalid login response');
       }
@@ -117,7 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     if (!isBrowser) return;
     
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
     setToken(null);
     setUser(null);
     router.push('/auth/login');
