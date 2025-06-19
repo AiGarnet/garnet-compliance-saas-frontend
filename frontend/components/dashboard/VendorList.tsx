@@ -89,7 +89,7 @@ export function VendorList({
   // Announce changes to screen readers
   useEffect(() => {
     if (statusUpdateRef.current) {
-      const message = `Showing ${filteredAndSortedVendors.length} vendors`;
+      const message = `Showing ${filteredAndSortedVendors.length} clients`;
       statusUpdateRef.current.textContent = message;
     }
   }, [filteredAndSortedVendors.length]);
@@ -246,7 +246,7 @@ export function VendorList({
               className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors font-medium inline-flex items-center"
             >
               <PlusCircle className="w-5 h-5 mr-2" />
-              Add Your First Vendor
+              Add Your First Client
             </Link>
           </div>
         );
@@ -287,7 +287,7 @@ export function VendorList({
         {/* Desktop Table View */}
         <div className="hidden md:block">
           <Table className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-            <caption className="sr-only">List of vendors and their current status</caption>
+            <caption className="sr-only">List of clients and their current status</caption>
             <TableHeader className="bg-gray-50">
               <TableRow className="border-b border-gray-200">
                 <TableHead 
@@ -322,7 +322,7 @@ export function VendorList({
                 <TableRow 
                   key={vendor.id}
                   id={`vendor-row-${index}`}
-                  className="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                   tabIndex={0}
                   onKeyDown={(e) => handleTableKeyDown(e, vendor, index)}
                   aria-label={`${vendor.name}, Status: ${getStatusI18nKey(vendor.status as VendorStatus)}`}
@@ -388,12 +388,12 @@ export function VendorList({
         
         {/* Mobile Card View */}
         <div className="md:hidden">
-          <ul className="space-y-4" aria-label="Vendor list">
+                      <ul className="space-y-4" aria-label="Client list">
             {filteredAndSortedVendors.map((vendor, index) => (
               <li 
                 key={vendor.id}
                 id={`vendor-card-${index}`}
-                className="flex flex-col p-5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm bg-white"
+                className="flex flex-col p-5 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors shadow-sm bg-white"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown' && index < filteredAndSortedVendors.length - 1) {

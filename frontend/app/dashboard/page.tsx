@@ -15,6 +15,7 @@ import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ROLES } from "@/lib/auth/roles";
 import { VendorStatus, Vendor } from "@/types/vendor";
+import { vendors as vendorAPI } from "@/lib/api";
 
 // Vendor data
 const mockVendors: Vendor[] = [
@@ -52,25 +53,36 @@ function DashboardContent() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Simulate API fetch with delay
+  // Fetch vendors from API
   const fetchVendors = async () => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate error for testing
+      // Simulate error for testing in dev mode
       if (simulateError) {
-        throw new Error("Failed to fetch vendors");
+        throw new Error("Failed to fetch clients");
       }
       
-      setVendors(mockVendors);
+      console.log('Dashboard: Fetching clients from API...');
+      const response = await vendorAPI.getAll();
+      console.log('Dashboard: API response:', response);
+      
+      // Transform API response to match our Vendor type
+      const transformedVendors = response.map((vendor: any) => ({
+        id: vendor.id || vendor.vendorId?.toString() || vendor.uuid,
+        name: vendor.name || vendor.companyName,
+        status: vendor.status || VendorStatus.QUESTIONNAIRE_PENDING,
+        contactEmail: vendor.contactEmail,
+        createdAt: new Date(vendor.createdAt || vendor.created_at),
+        updatedAt: new Date(vendor.updatedAt || vendor.updated_at)
+      }));
+      
+      setVendors(transformedVendors);
       setIsLoading(false);
-    } catch (err) {
-      console.error("Error fetching vendors:", err);
-      setError('Unable to load vendors.');
+    } catch (err: any) {
+      console.error("Error fetching clients:", err);
+      setError('Unable to load clients.');
       setIsLoading(false);
     }
   };
@@ -94,7 +106,7 @@ function DashboardContent() {
         {/* Top bar with conditional dev mode toggle */}
         <div className="flex justify-between items-center">
           <section className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">Welcome back, Sarah</h1>
+            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">Welcome back, {user?.full_name || user?.email || 'User'}</h1>
             <p className="text-gray-600 dark:text-gray-300">Here's an overview of your compliance status</p>
           </section>
           {/* Dev mode toggle - hidden for both Sales Professional and Founder */}
@@ -145,7 +157,7 @@ function DashboardContent() {
         {/* Debug controls for testing - only visible in dev mode and not for Sales Professional or Founder */}
         {isDevMode && !isSalesProfessional && !isFounder && (
           <div className="mb-6 p-4 bg-controls-bg rounded-md">
-            <h2 className="text-lg font-semibold mb-2">Vendor List Testing Controls</h2>
+            <h2 className="text-lg font-semibold mb-2">Client List Testing Controls</h2>
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleErrorSimulation}
@@ -162,16 +174,16 @@ function DashboardContent() {
                 onClick={fetchVendors}
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                Reload Vendors
+                Reload Clients
               </button>
             </div>
             <p className="mt-2 text-sm">
-              Use these controls to test the error handling and retry functionality of the vendor list.
+              Use these controls to test the error handling and retry functionality of the client list.
             </p>
           </div>
         )}
         
-        {/* Vendor Section - Always visible */}
+        {/* Client Section - Always visible */}
         <VendorList 
           vendors={vendors}
           className="min-h-[300px]" 
