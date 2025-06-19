@@ -169,7 +169,7 @@ function DashboardContent() {
       
       // Call backend API with activity logging
       const response = await activityApiService.updateVendor(selectedVendor.id, {
-        name: vendorData.name,
+        companyName: vendorData.companyName,
         contactEmail: vendorData.contactEmail,
         status: vendorData.status,
         previousStatus // Include for activity logging
