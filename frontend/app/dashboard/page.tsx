@@ -16,6 +16,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { ROLES } from "@/lib/auth/roles";
 import { VendorStatus, Vendor } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
+import { EditVendorModal } from "@/components/vendors/EditVendorModal";
+import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
 
 // Vendor data
 const mockVendors: Vendor[] = [
@@ -34,6 +36,12 @@ function DashboardContent() {
   const [error, setError] = useState<string>('');
   const [simulateError, setSimulateError] = useState<boolean>(false);
   const [isDevMode, setIsDevMode] = useState<boolean>(false);
+  
+  // Modal states
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [vendorToDelete, setVendorToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Get user role for conditional rendering
   const userRole = user?.role;
@@ -97,6 +105,64 @@ function DashboardContent() {
   useEffect(() => {
     fetchVendors();
   }, []);
+
+  // Handler for editing a vendor
+  const handleEditVendor = (vendorId: string) => {
+    const vendor = vendors.find(v => v.id === vendorId);
+    if (vendor) {
+      setSelectedVendor(vendor);
+      setEditModalOpen(true);
+    }
+  };
+
+  // Handler for deleting a vendor
+  const handleDeleteVendor = (vendorId: string, vendorName: string) => {
+    setVendorToDelete({ id: vendorId, name: vendorName });
+    setDeleteModalOpen(true);
+  };
+
+  // Handler for saving edited vendor
+  const handleSaveVendor = async (vendorData: Partial<Vendor>) => {
+    if (!selectedVendor) return;
+    
+    try {
+      console.log('Saving vendor data:', vendorData);
+      // TODO: Implement API call to update vendor
+      // await vendorAPI.update(selectedVendor.id, vendorData);
+      
+      // For now, just update local state
+      setVendors(prev => prev.map(v => 
+        v.id === selectedVendor.id 
+          ? { ...v, ...vendorData }
+          : v
+      ));
+      
+      alert('Client updated successfully!');
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating vendor:', error);
+      throw error;
+    }
+  };
+
+  // Handler for confirming vendor deletion
+  const handleConfirmDelete = async (vendorId: string) => {
+    try {
+      console.log('Deleting vendor:', vendorId);
+      // TODO: Implement API call to delete vendor
+      // await vendorAPI.delete(vendorId);
+      
+      // For now, just remove from local state
+      setVendors(prev => prev.filter(v => v.id !== vendorId));
+      
+      alert('Client deleted successfully!');
+      setDeleteModalOpen(false);
+      setVendorToDelete(null);
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      throw error;
+    }
+  };
 
   return (
     <>
@@ -190,6 +256,8 @@ function DashboardContent() {
           isLoading={isLoading}
           error={error}
           onRetry={fetchVendors}
+          onEditVendor={handleEditVendor}
+          onDeleteVendor={handleDeleteVendor}
         />
         
         {/* Two Column Layout - Conditional based on role */}
@@ -305,6 +373,29 @@ function DashboardContent() {
           </section>
         </div>
       </main>
+
+      {/* Edit Vendor Modal */}
+      <EditVendorModal
+        vendor={selectedVendor}
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedVendor(null);
+        }}
+        onSave={handleSaveVendor}
+      />
+
+      {/* Delete Vendor Modal */}
+      <DeleteVendorModal
+        vendorName={vendorToDelete?.name || null}
+        vendorId={vendorToDelete?.id || null}
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setVendorToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

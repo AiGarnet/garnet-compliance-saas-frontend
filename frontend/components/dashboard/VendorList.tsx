@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { PlusCircle, ArrowUpDown, AlertTriangle, Loader2, User, LogOut } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, AlertTriangle, Loader2, User, LogOut, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { translations } from '@/lib/i18n';
 
@@ -29,6 +29,8 @@ import {
 } from './utils';
 
 import { Vendor, VendorStatus } from '@/types/vendor';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { ROLES } from '@/lib/auth/roles';
 
 export interface VendorListProps {
   vendors: Vendor[];
@@ -38,6 +40,8 @@ export interface VendorListProps {
   onRetry?: () => void;
   locale?: string;
   onViewQuestionnaire?: (vendorId: string) => void;
+  onEditVendor?: (vendorId: string) => void;
+  onDeleteVendor?: (vendorId: string, vendorName: string) => void;
 }
 
 export function VendorList({ 
@@ -47,10 +51,18 @@ export function VendorList({
   error = '',
   onRetry,
   locale = 'en',
-  onViewQuestionnaire
+  onViewQuestionnaire,
+  onEditVendor,
+  onDeleteVendor
 }: VendorListProps) {
   // Access translations based on locale
   const t = translations[locale as keyof typeof translations]?.vendorList || translations.en.vendorList;
+  
+  // Get user role for permissions
+  const { user } = useAuth();
+  const userRole = user?.role;
+  const isFounder = userRole === ROLES.FOUNDER;
+  const isSalesProfessional = userRole === ROLES.SALES_PROFESSIONAL;
   
   // State for sorting
   const [sortField, setSortField] = useState<SortField>('name');
@@ -291,7 +303,7 @@ export function VendorList({
             <TableHeader className="bg-gray-50">
               <TableRow className="border-b border-gray-200">
                 <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors w-2/5 py-4"
+                  className="cursor-pointer hover:bg-gray-100 transition-colors w-1/2 py-4"
                   onClick={() => handleSort('name')}
                   aria-sort={sortField === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                   scope="col"
@@ -302,7 +314,7 @@ export function VendorList({
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors w-1/5 py-4"
+                  className="cursor-pointer hover:bg-gray-100 transition-colors w-1/6 py-4"
                   onClick={() => handleSort('status')}
                   aria-sort={sortField === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                   scope="col"
@@ -312,7 +324,7 @@ export function VendorList({
                     <ArrowUpDown className={`ml-2 h-4 w-4 ${sortField === 'status' ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true" />
                   </div>
                 </TableHead>
-                <TableHead className="w-2/5 text-right py-4" scope="col">
+                <TableHead className="w-1/3 text-right py-4" scope="col">
                   <span className="font-semibold text-gray-700">{t.table.actions}</span>
                 </TableHead>
               </TableRow>
@@ -339,42 +351,44 @@ export function VendorList({
                     <StatusBadge status={vendor.status} />
                   </TableCell>
                   <TableCell className="text-right py-4">
-                    <div className="flex justify-end items-center gap-3">
-                      <Link 
-                        href={`/vendors/${vendor.id}`}
-                        className="text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 py-2 px-4 rounded-md w-[120px] text-center border border-gray-300 shadow-sm hover:shadow transition-all inline-flex items-center justify-center h-[40px]"
-                        aria-label={`${t.table.viewDetails} ${vendor.name}`}
-                      >
-                        <User className="w-4 h-4 mr-2 text-gray-500" />
-                        {t.table.viewDetails}
-                      </Link>
+                    <div className="flex justify-end items-center gap-2">
+                      {/* Edit Button - Available for both Sales Professional and Founder */}
+                      {onEditVendor && (isSalesProfessional || isFounder) && (
+                        <button
+                          onClick={() => onEditVendor(vendor.id)}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 hover:scale-105"
+                          aria-label={`Edit ${vendor.name}`}
+                          title="Edit client"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Delete Button - Only available for Founder */}
+                      {onDeleteVendor && isFounder && (
+                        <button
+                          onClick={() => onDeleteVendor(vendor.id, vendor.name)}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 hover:scale-105"
+                          aria-label={`Delete ${vendor.name}`}
+                          title="Delete client"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Questionnaire Button */}
                       {onViewQuestionnaire && (
                         <button
                           onClick={() => onViewQuestionnaire(vendor.id)}
-                          className={`text-sm font-medium text-white py-2 px-4 rounded-md w-[180px] text-center shadow-sm hover:shadow transition-all inline-flex items-center justify-center h-[40px] ${
+                          className={`inline-flex items-center justify-center px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 hover:scale-105 min-w-0 whitespace-nowrap ${
                             vendor.status === 'Questionnaire Pending' 
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600' 
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500' 
                               : vendor.status === 'In Review' 
-                                ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600' 
-                                : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600'
+                                ? 'bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500' 
+                                : 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
                           }`}
                           aria-label={`${getQuestionnaireActionText(vendor.status as VendorStatus)} for ${vendor.name}`}
                         >
-                          {vendor.status === 'Questionnaire Pending' && (
-                            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {vendor.status === 'In Review' && (
-                            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {vendor.status === 'Approved' && (
-                            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
                           {getQuestionnaireActionText(vendor.status as VendorStatus)}
                         </button>
                       )}
@@ -415,42 +429,47 @@ export function VendorList({
                   </div>
                   <StatusBadge status={vendor.status} />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                  <Link
-                    href={`/vendors/${vendor.id}`}
-                    className="text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 py-2 px-4 rounded-md text-center border border-gray-300 shadow-sm hover:shadow transition-all flex items-center justify-center h-[40px] flex-1"
-                    aria-label={`${t.table.viewDetails} ${vendor.name}`}
-                  >
-                    <User className="w-4 h-4 mr-2 text-gray-500" />
-                    {t.table.viewDetails}
-                  </Link>
+                <div className="flex items-center justify-between gap-3 mt-2">
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* Edit Button - Available for both Sales Professional and Founder */}
+                    {onEditVendor && (isSalesProfessional || isFounder) && (
+                      <button
+                        onClick={() => onEditVendor(vendor.id)}
+                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                        aria-label={`Edit ${vendor.name}`}
+                        title="Edit client"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                    )}
+                    
+                    {/* Delete Button - Only available for Founder */}
+                    {onDeleteVendor && isFounder && (
+                      <button
+                        onClick={() => onDeleteVendor(vendor.id, vendor.name)}
+                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        aria-label={`Delete ${vendor.name}`}
+                        title="Delete client"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Questionnaire Button */}
                   {onViewQuestionnaire && (
                     <button
                       onClick={() => onViewQuestionnaire(vendor.id)}
-                      className={`text-sm font-medium text-white py-2 px-4 rounded-md text-center shadow-sm hover:shadow transition-all flex items-center justify-center h-[40px] flex-1 ${
+                      className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 ${
                         vendor.status === 'Questionnaire Pending' 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600' 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500' 
                           : vendor.status === 'In Review' 
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600' 
-                            : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600'
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500' 
+                            : 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
                       }`}
                       aria-label={`${getQuestionnaireActionText(vendor.status as VendorStatus)} for ${vendor.name}`}
                     >
-                      {vendor.status === 'Questionnaire Pending' && (
-                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                      {vendor.status === 'In Review' && (
-                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                      {vendor.status === 'Approved' && (
-                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
                       {getQuestionnaireActionText(vendor.status as VendorStatus)}
                     </button>
                   )}
@@ -478,15 +497,15 @@ export function VendorList({
               <path d="M17 20H22V18C22 16.3431 20.6569 15 19 15C18.0444 15 17.1931 15.4468 16.6438 16.1429M17 20H7M17 20V18C17 17.3438 16.8736 16.717 16.6438 16.1429M7 20H2V18C2 16.3431 3.34315 15 5 15C5.95561 15 6.80686 15.4468 7.35625 16.1429M7 20V18C7 17.3438 7.12642 16.717 7.35625 16.1429M7.35625 16.1429C8.0935 14.301 9.89482 13 12 13C14.1052 13 15.9065 14.301 16.6438 16.1429M15 7C15 9.20914 13.2091 11 11 11C8.79086 11 7 9.20914 7 7C7 4.79086 8.79086 3 11 3C13.2091 3 15 4.79086 15 7ZM5 9C5 10.1046 4.10457 11 3 11C1.89543 11 1 10.1046 1 9C1 7.89543 1.89543 7 3 7C4.10457 7 5 7.89543 5 9ZM23 9C23 10.1046 22.1046 11 21 11C19.8954 11 19 10.1046 19 9C19 7.89543 19.8954 7 21 7C22.1046 7 23 7.89543 23 9Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-700">Your Vendors</span>
+          <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-700">Your Clients</span>
         </h2>
-        <Link 
-          href="/vendors/new" 
-          className="bg-white hover:bg-gray-50 text-gray-800 font-medium py-2 px-4 rounded-md shadow-sm border border-gray-300 inline-flex items-center transition-all hover:shadow"
-        >
-          <PlusCircle className="w-4 h-4 mr-2 text-primary" />
-          Add New Vendor
-        </Link>
+                  <Link 
+            href="/vendors/new" 
+            className="bg-white hover:bg-gray-50 text-gray-800 font-medium py-2 px-4 rounded-md shadow-sm border border-gray-300 inline-flex items-center transition-all hover:shadow"
+          >
+            <PlusCircle className="w-4 h-4 mr-2 text-primary" />
+            Add New Client
+          </Link>
       </div>
 
       {renderSearchBar()}
