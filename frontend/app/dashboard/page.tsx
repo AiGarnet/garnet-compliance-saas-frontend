@@ -18,6 +18,8 @@ import { VendorStatus, Vendor } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
 import { EditVendorModal } from "@/components/vendors/EditVendorModal";
 import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { useActivity } from "@/hooks/useActivity";
 
 // Vendor data
 const mockVendors: Vendor[] = [
@@ -47,6 +49,15 @@ function DashboardContent() {
   const userRole = user?.role;
   const isSalesProfessional = userRole === ROLES.SALES_PROFESSIONAL;
   const isFounder = userRole === ROLES.FOUNDER;
+
+  // Activity tracking
+  const { 
+    logClientCreated, 
+    logClientUpdated, 
+    logClientDeleted, 
+    logClientStatusChanged,
+    addSampleActivities: addSampleActivitiesToService 
+  } = useActivity();
 
   useEffect(() => {
     // Check developer mode on mount and when it changes
@@ -127,6 +138,10 @@ function DashboardContent() {
     
     try {
       console.log('Saving vendor data:', vendorData);
+      
+      // Check if status changed to log activity
+      const statusChanged = vendorData.status && vendorData.status !== selectedVendor.status;
+      
       // TODO: Implement API call to update vendor
       // await vendorAPI.update(selectedVendor.id, vendorData);
       
@@ -136,6 +151,17 @@ function DashboardContent() {
           ? { ...v, ...vendorData }
           : v
       ));
+
+      // Log activities
+      logClientUpdated(selectedVendor.name);
+      
+      if (statusChanged) {
+        logClientStatusChanged(
+          selectedVendor.name,
+          selectedVendor.status || 'Unknown',
+          vendorData.status || 'Unknown'
+        );
+      }
       
       alert('Client updated successfully!');
       setEditModalOpen(false);
@@ -149,11 +175,19 @@ function DashboardContent() {
   const handleConfirmDelete = async (vendorId: string) => {
     try {
       console.log('Deleting vendor:', vendorId);
+      
+      // Find the vendor to get its name for logging
+      const vendorToDeleteData = vendors.find(v => v.id === vendorId);
+      const vendorName = vendorToDeleteData?.name || 'Unknown Client';
+      
       // TODO: Implement API call to delete vendor
       // await vendorAPI.delete(vendorId);
       
       // For now, just remove from local state
       setVendors(prev => prev.filter(v => v.id !== vendorId));
+
+      // Log deletion activity
+      logClientDeleted(vendorName);
       
       alert('Client deleted successfully!');
       setDeleteModalOpen(false);
@@ -242,9 +276,15 @@ function DashboardContent() {
               >
                 Reload Clients
               </button>
+              <button
+                onClick={addSampleActivitiesToService}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+              >
+                Add Sample Activities
+              </button>
             </div>
             <p className="mt-2 text-sm">
-              Use these controls to test the error handling and retry functionality of the client list.
+              Use these controls to test the error handling and retry functionality of the client list, and activity tracking system.
             </p>
           </div>
         )}
@@ -312,65 +352,8 @@ function DashboardContent() {
           </section>
           )}
           
-          {/* Recent Activity */}
-          <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Recent Activity</h2>
-              <a href="#" className="text-sm text-primary font-medium hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md px-2 py-1">
-                View All
-              </a>
-            </div>
-            
-            <ul className="space-y-4" role="list">
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex items-start">
-                  <div className="w-10 h-10 rounded-full bg-secondary-light dark:bg-secondary-light flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-5 h-5 text-secondary dark:text-secondary-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">
-                      <span className="font-semibold">Michael Rodriguez</span> uploaded a new evidence document for ISO 27001
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Today, 10:45 AM</p>
-                  </div>
-                </div>
-              </li>
-              
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex items-start">
-                  <div className="w-10 h-10 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-5 h-5 text-success dark:text-success-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">
-                      <span className="font-semibold">You</span> completed the GDPR compliance assessment
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yesterday, 3:20 PM</p>
-                  </div>
-                </div>
-              </li>
-              
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex items-start">
-                  <div className="w-10 h-10 rounded-full bg-primary-light dark:bg-primary-dark flex items-center justify-center mr-3 flex-shrink-0">
-                    <svg className="w-5 h-5 text-primary dark:text-primary-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">
-                      <span className="font-semibold">Jennifer Wilson</span> created a new vendor questionnaire
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yesterday, 11:35 AM</p>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </section>
+          {/* Recent Activity - Dynamic */}
+          <RecentActivity limit={5} />
         </div>
       </main>
 
