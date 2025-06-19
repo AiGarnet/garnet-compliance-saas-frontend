@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Eye, PlusCircle, LogOut, User } from "lucide-react";
+import { AlertTriangle, Eye, PlusCircle, LogOut, User, CheckCircle } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ComplianceCard } from "@/components/dashboard/ComplianceCard";
 import { QuestionnaireCard } from "@/components/dashboard/QuestionnaireCard";
@@ -14,24 +14,16 @@ import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ROLES } from "@/lib/auth/roles";
-
-// Define types locally since they're not exported
-type VendorStatus = "Questionnaire Pending" | "In Review" | "Approved";
-
-interface Vendor {
-  id: string;
-  name: string;
-  status: VendorStatus;
-}
+import { VendorStatus, Vendor } from "@/types/vendor";
 
 // Vendor data
 const mockVendors: Vendor[] = [
-  { id: "1", name: "Acme Corp", status: "Questionnaire Pending" },
-  { id: "2", name: "Globex Ltd", status: "In Review" },
-  { id: "3", name: "Stark Industries", status: "Approved" },
-  { id: "4", name: "Wayne Enterprises", status: "Questionnaire Pending" },
-  { id: "5", name: "Oscorp Industries", status: "In Review" },
-  { id: "6", name: "Umbrella Corporation", status: "Approved" },
+  { id: "1", name: "Acme Corp", status: VendorStatus.QUESTIONNAIRE_PENDING, contactEmail: "acme@acme.com", createdAt: new Date(), updatedAt: new Date() },
+  { id: "2", name: "Globex Ltd", status: VendorStatus.IN_REVIEW, contactEmail: "globex@globex.com", createdAt: new Date(), updatedAt: new Date() },
+  { id: "3", name: "Stark Industries", status: VendorStatus.APPROVED, contactEmail: "stark@stark.com", createdAt: new Date(), updatedAt: new Date() },
+  { id: "4", name: "Wayne Enterprises", status: VendorStatus.QUESTIONNAIRE_PENDING, contactEmail: "wayne@wayne.com", createdAt: new Date(), updatedAt: new Date() },
+  { id: "5", name: "Oscorp Industries", status: VendorStatus.IN_REVIEW, contactEmail: "oscorp@oscorp.com", createdAt: new Date(), updatedAt: new Date() },
+  { id: "6", name: "Umbrella Corporation", status: VendorStatus.APPROVED, contactEmail: "umbrella@umbrella.com", createdAt: new Date(), updatedAt: new Date() },
 ];
 
 function DashboardContent() {
@@ -125,13 +117,13 @@ function DashboardContent() {
           {!isSalesProfessional && !isFounder && (
             <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">High-Risk Vendors</h2>
-                <div className="w-12 h-12 rounded-full bg-danger-light dark:bg-danger-light flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6 text-danger dark:text-danger-color" />
+                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">Compliance Status</h2>
+                <div className="w-12 h-12 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-success dark:text-success-color" />
                 </div>
               </div>
-              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">3</p>
-              <p className="text-sm text-danger dark:text-danger-color">Requires immediate review</p>
+              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">85%</p>
+              <p className="text-sm text-success dark:text-success-color">Overall compliance score</p>
             </div>
           )}
           
@@ -217,7 +209,7 @@ function DashboardContent() {
               
               <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
                 <div className="flex justify-between mb-2">
-                  <span className="font-medium text-gray-800 dark:text-white">Update vendor risk assessments</span>
+                  <span className="font-medium text-gray-800 dark:text-white">Review vendor documentation</span>
                   <span className="bg-warning-light text-warning dark:bg-warning-light dark:text-warning-color text-xs px-2 py-1 rounded-full">Medium</span>
                 </div>
                 <div className="flex justify-between text-sm">

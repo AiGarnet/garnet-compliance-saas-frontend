@@ -11,93 +11,71 @@ import { vendors } from '@/lib/api';
 interface VendorDetailHeaderProps {
   vendor: VendorDetail;
   onEdit?: () => void;
-  riskAssessment?: any;
-  isCalculatingRisk?: boolean;
 }
 
-export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculatingRisk }: VendorDetailHeaderProps) {
+export function VendorDetailHeader({ vendor, onEdit }: VendorDetailHeaderProps) {
   const router = useRouter();
-  const [inviteLink, setInviteLink] = useState<string>('');
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
+  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const shareDropdownRef = useRef<HTMLDivElement>(null);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (shareDropdownRef.current && !shareDropdownRef.current.contains(event.target as Node)) {
+        setIsShareDropdownOpen(false);
       }
-    }
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setIsMoreDropdownOpen(false);
+      }
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleManageWorks = () => {
-    router.push(`/vendor-works?id=${vendor.id}`);
+  const getVendorStatus = () => {
+    if (!vendor) return { status: 'Unknown', color: 'bg-gray-50 text-gray-600 border-gray-200' };
+    
+    switch (vendor.status) {
+      case 'Questionnaire Pending':
+        return { status: 'Questionnaire Pending', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
+      case 'In Review':
+        return { status: 'In Review', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+      case 'Pending Review':
+        return { status: 'Pending Review', color: 'bg-orange-50 text-orange-700 border-orange-200' };
+      case 'Approved':
+        return { status: 'Approved', color: 'bg-green-50 text-green-700 border-green-200' };
+      default:
+        return { status: vendor.status || 'Unknown', color: 'bg-gray-50 text-gray-600 border-gray-200' };
+    }
+  };
+
+  const handleShareVendor = () => {
+    const vendorUrl = `${window.location.origin}/vendors/${vendor.id}`;
+    navigator.clipboard.writeText(vendorUrl);
+    setShareSuccess(true);
+    setTimeout(() => setShareSuccess(false), 2000);
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      setIsGeneratingReport(true);
+      // TODO: Implement report generation
+      console.log('Report generation not yet implemented');
+      alert('Report generation feature is coming soon!');
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   const handleViewTrustPortal = () => {
-    router.push('/trust-portal');
-  };
-
-  const generateInviteLink = async () => {
-    try {
-      setIsGeneratingLink(true);
-      const response = await vendors.trustPortal.generateInviteLink(vendor.id);
-      setInviteLink(response.inviteLink);
-      setShowInviteModal(true);
-      setShowDropdown(false);
-    } catch (err: any) {
-      console.error('Failed to generate invite link:', err);
-      alert('Failed to generate invite link. Please try again.');
-    } finally {
-      setIsGeneratingLink(false);
-    }
-  };
-
-  const copyInviteLink = async () => {
-    if (inviteLink) {
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy link:', err);
-      }
-    }
-  };
-
-  const openPublicView = () => {
-    if (inviteLink) {
-      window.open(inviteLink, '_blank');
-    }
-  };
-
-  // Calculate dynamic status based on questionnaire completion
-  const getVendorStatus = () => {
-    const questionnaireAnswers = vendor.questionnaireAnswers || [];
-    const totalQuestions = questionnaireAnswers.length;
-    const completedQuestions = questionnaireAnswers.filter(qa => qa.status === 'Completed').length;
-    
-    if (totalQuestions === 0) {
-      return { status: 'No Questionnaire', color: 'bg-gray-50 text-gray-700 border-gray-200' };
-    }
-    
-    if (completedQuestions === totalQuestions) {
-      return { status: 'Questionnaire Completed', color: 'bg-green-50 text-green-700 border-green-200' };
-    }
-    
-    if (completedQuestions > 0) {
-      return { status: 'Questionnaire In Progress', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' };
-    }
-    
-    return { status: 'Questionnaire Pending', color: 'bg-red-50 text-red-700 border-red-200' };
+    router.push(`/trust-portal?vendor=${vendor.id}`);
   };
 
   return (
@@ -119,7 +97,7 @@ export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculati
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">{vendor.name}</h1>
-                    <div className="mt-2 flex items-center gap-3">
+                    <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-3 py-1 rounded-full font-medium border ${getVendorStatus().color}`}>
                         {getVendorStatus().status}
                       </span>
@@ -127,17 +105,6 @@ export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculati
                       {vendor.industry && (
                         <span className="text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded">
                           {vendor.industry}
-                        </span>
-                      )}
-                      
-                      {(riskAssessment?.riskLevel || vendor.riskLevel) && (
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium
-                          ${(riskAssessment?.riskLevel || vendor.riskLevel) === 'Low' ? 'bg-green-50 text-green-700' : 
-                            (riskAssessment?.riskLevel || vendor.riskLevel) === 'Medium' ? 'bg-yellow-50 text-yellow-700' : 
-                            'bg-red-50 text-red-700'}`}
-                        >
-                          {isCalculatingRisk ? 'Calculating...' : `${riskAssessment?.riskLevel || vendor.riskLevel} Risk`}
-                          {riskAssessment?.overallScore && ` (${riskAssessment.overallScore})`}
                         </span>
                       )}
                     </div>
@@ -151,90 +118,79 @@ export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculati
           <div className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* Primary Actions */}
                 <button
-                  onClick={generateInviteLink}
-                  disabled={isGeneratingLink}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm"
+                  onClick={onEdit}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {isGeneratingLink ? 'Generating...' : 'Share Trust Portal'}
+                  <Edit className="h-4 w-4" />
+                  Edit Vendor
                 </button>
 
-                <button
-                  onClick={handleManageWorks}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Manage Works
-                </button>
+                <div className="relative" ref={shareDropdownRef}>
+                  <button
+                    onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </button>
+
+                  {isShareDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={handleShareVendor}
+                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          {shareSuccess ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                          {shareSuccess ? 'Copied!' : 'Copy Link'}
+                        </button>
+                        <button
+                          onClick={() => window.open(`/vendors/${vendor.id}`, '_blank')}
+                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open in New Tab
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <button
-                  onClick={handleViewTrustPortal}
-                  className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                  onClick={handleGenerateReport}
+                  disabled={isGeneratingReport}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Trust Portal
+                  <FileDown className="h-4 w-4" />
+                  {isGeneratingReport ? 'Generating...' : 'Generate Report'}
                 </button>
               </div>
 
-              {/* More Actions Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative" ref={moreDropdownRef}>
                 <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="h-5 w-5" />
                 </button>
 
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                {isMoreDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                     <div className="py-1">
-                      {onEdit ? (
-                        <button
-                          onClick={() => {
-                            onEdit();
-                            setShowDropdown(false);
-                          }}
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          <Edit className="h-4 w-4 mr-3" />
-                          Edit Vendor
-                        </button>
-                      ) : (
-                        <button
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                          disabled
-                        >
-                          <Edit className="h-4 w-4 mr-3" />
-                          Edit Vendor (Coming Soon)
-                        </button>
-                      )}
-                      
                       <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                        disabled
+                        onClick={handleViewTrustPortal}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        <Download className="h-4 w-4 mr-3" />
-                        Download Report (Coming Soon)
+                        <Eye className="h-4 w-4" />
+                        View in Trust Portal
                       </button>
-                      
                       <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                        disabled
+                        onClick={() => router.push(`/vendors/${vendor.id}/settings`)}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        <FileDown className="h-4 w-4 mr-3" />
-                        Export Answers (Coming Soon)
-                      </button>
-                      
-                      <hr className="my-1" />
-                      
-                      <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                        disabled
-                      >
-                        <Settings className="h-4 w-4 mr-3" />
-                        Settings (Coming Soon)
+                        <Settings className="h-4 w-4" />
+                        Vendor Settings
                       </button>
                     </div>
                   </div>
@@ -244,68 +200,6 @@ export function VendorDetailHeader({ vendor, onEdit, riskAssessment, isCalculati
           </div>
         </div>
       </div>
-
-      {/* Invite Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <div className="flex items-center mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                <Share2 className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900">Trust Portal Invite Link</h3>
-            </div>
-            
-            <p className="text-gray-600 mb-6">
-              Share this link with external parties to showcase <strong>{vendor.name}'s</strong> compliance portfolio. 
-              No registration required for viewers.
-            </p>
-            
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Shareable Link:
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inviteLink}
-                  readOnly
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={copyInviteLink}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={openPublicView}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Preview Trust Portal
-              </button>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-            
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-700">
-                💡 <strong>Tip:</strong> This link expires in 30 days. You can generate a new one anytime.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 } 

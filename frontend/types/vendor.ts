@@ -9,25 +9,18 @@ export enum VendorStatus {
 }
 
 /**
- * Risk level classification for vendors
- */
-export enum RiskLevel {
-  LOW = 'Low',
-  MEDIUM = 'Medium',
-  HIGH = 'High'
-}
-
-/**
  * Represents an answer to a specific questionnaire question
  */
 export interface QuestionnaireAnswer {
   id: string;
-  vendorId: string;
   questionId: string;
   question: string;
   answer: string;
-  createdAt: Date;
-  updatedAt: Date;
+  status: AnswerStatus;
+  shareToTrustPortal: boolean;
+  workId?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 /**
@@ -36,31 +29,60 @@ export interface QuestionnaireAnswer {
 export interface Vendor {
   id: string;
   name: string;
-  status: VendorStatus;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  createdAt: Date;
-  updatedAt: Date;
-  questionnaireAnswers: QuestionnaireAnswer[];
-  contactName?: string;
-  contactEmail?: string;
+  contactEmail: string;
   website?: string;
+  region?: string;
+  status: VendorStatus;
   industry?: string;
   description?: string;
+  contactName?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  questionnaireAnswers?: QuestionnaireAnswer[];
 }
 
 /**
  * Form data for creating/updating a vendor
  */
 export interface VendorFormData {
-  name: string;
-  region?: string;
-  contactName?: string;
+  companyName: string;
   contactEmail: string;
   website?: string;
+  region?: string;
+  status?: VendorStatus;
   industry?: string;
   description?: string;
-  status?: VendorStatus;
-  riskScore?: number;
-  riskLevel?: RiskLevel;
+  contactName?: string;
+}
+
+export enum AnswerStatus {
+  PENDING = 'Pending',
+  COMPLETED = 'Completed', 
+  REVIEWED = 'Reviewed'
+}
+
+export interface VendorWork {
+  id: string;
+  vendorId: number;
+  projectName: string;
+  description?: string;
+  status: WorkStatus;
+  startDate?: Date;
+  endDate?: Date;
+  clientName?: string;
+  technologies?: string[];
+  category?: string;
+  shareToTrustPortal: boolean;
+  evidenceFiles?: string[];
+  questionnaireAnswers?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  isDraft: boolean;
+  lastSavedAt?: Date;
+}
+
+export enum WorkStatus {
+  COMPLETED = 'Completed',
+  IN_PROGRESS = 'In Progress',
+  PLANNED = 'Planned'
 } 
