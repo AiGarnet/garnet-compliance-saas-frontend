@@ -1,9 +1,9 @@
 [build]
-  # Build command for the frontend Next.js app with static export
+  # Build command for the frontend Next.js app (no static export)
   command = "cd frontend && npm install && npm run build"
   
-  # Directory to publish (Next.js static export automatically outputs to 'out')
-  publish = "frontend/out"
+  # Directory to publish - standard Next.js build output for Netlify
+  publish = "frontend"
   
   # Functions directory
   functions = "frontend/.netlify/functions"
@@ -13,20 +13,9 @@
     NODE_VERSION = "18"
     NEXT_PUBLIC_API_URL = "https://garnet-compliance-saas-production.up.railway.app"
 
-# Disable Netlify's automatic optimizations that interfere with React hydration
-[build.processing]
-  skip_processing = false
-
-[build.processing.css]
-  bundle = false
-  minify = false
-
-[build.processing.js]
-  bundle = false
-  minify = false
-
-[build.processing.html]
-  pretty_urls = true
+# Enable Next.js runtime for Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # Headers to prevent caching issues
 [[headers]]
@@ -37,7 +26,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Disable Pretty URLs and optimize for React
+# Cache optimization for static assets
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
@@ -47,18 +36,6 @@
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-[context.production]
-  command = "cd frontend && npm install && npm run build"
-  publish = "frontend/out"
-
-[context.deploy-preview]
-  command = "cd frontend && npm install && npm run build"
-  publish = "frontend/out"
-
-[context.branch-deploy]
-  command = "cd frontend && npm install && npm run build"
-  publish = "frontend/out"
 
 # Redirects for API routes to Netlify functions
 [[redirects]]
@@ -76,7 +53,7 @@
   to = "/.netlify/functions/vendor-by-id?id=:id"
   status = 200
 
-# Redirects for SPA routing (must be last)
+# Catch-all redirect for client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"

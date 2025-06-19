@@ -2,21 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Enable static export for Netlify deployment
-  output: 'export',
+  // Disable static export for Netlify deployment with authentication
+  // output: 'export', // Commented out for auth compatibility
   trailingSlash: true,
-  distDir: '.next',
   
-  // Static export requires unoptimized images
+  // Images configuration
   images: {
     unoptimized: true,
   },
   
   swcMinify: true,
   
-  // Environment variables for static export
+  // Environment variables
   env: {
-    NEXT_PUBLIC_STATIC_EXPORT: 'true',
+    NEXT_PUBLIC_STATIC_EXPORT: 'false',
   },
   
   // Optimize bundle size
@@ -36,35 +35,63 @@ const nextConfig = {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
     // your project has type errors.
-    // !! WARN !!
     ignoreBuildErrors: true,
   },
   
-  // Configure static generation behavior
-  generateBuildId: () => {
-    return `build-${Date.now()}`;
-  },
-  
-  // Experimental features for better Netlify compatibility
+  // Experimental features to skip failing prerender
   experimental: {
-    // Enable server components
-    serverComponentsExternalPackages: ['lodash', 'uuid'],
-    // Allow missing generate static params in development
     missingSuspenseWithCSRBailout: false,
   },
-
-  // Configure webpack to properly handle lodash
+  
+  // Custom generateBuildId to fix build issues
+  generateBuildId: async () => {
+    return 'static-build';
+  },
+  
+  // Redirect configuration for Netlify
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/dashboard/',
+        permanent: true,
+      },
+    ];
+  },
+  
+  // Headers for security
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
+  
+  // Webpack configuration for Netlify
   webpack: (config, { isServer }) => {
-    // This ensures lodash is properly bundled
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        lodash: require.resolve('lodash'),
-        uuid: require.resolve('uuid'),
+        fs: false,
       };
     }
     return config;
   },
-}
+};
 
-module.exports = nextConfig 
+module.exports = nextConfig; 
