@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import { useAuth } from '@/features/auth/services/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useEffect, useState } from 'react';
 import { Shield, AlertTriangle } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -11,77 +11,67 @@ interface ProtectedRouteProps {
   fallbackPath?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+export default function ProtectedRoute({
   children,
   requiredRole,
   fallbackPath = '/auth/login'
-}) => {
-  const { user, isLoading, isAuthenticated, hasAccess } = useAuth();
+}: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, hasAccess } = useAuth();
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
 
+  // Ensure this only runs on client side
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push('/auth/login');
-        return;
-      }
+    setIsClient(true);
+  }, []);
 
-      if (requiredRole && !hasAccess(requiredRole)) {
-        // Redirect based on user role if they don't have access
-        if (user?.role === 'enterprise') {
-          router.push('/trust-portal');
-        } else {
-          router.push(fallbackPath);
-        }
-        return;
-      }
+  // Handle authentication redirects on client side
+  useEffect(() => {
+    if (!isClient || isLoading) return;
+
+    if (!isAuthenticated) {
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl = `${fallbackPath}?redirect=${encodeURIComponent(currentPath)}`;
+      router.push(redirectUrl);
+      return;
     }
-  }, [isLoading, isAuthenticated, hasAccess, requiredRole, router, user, fallbackPath]);
 
-  // Show loading spinner while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+    if (requiredRole && !hasAccess(requiredRole)) {
+      router.push('/dashboard'); // Redirect to dashboard if no access
+      return;
+    }
+  }, [isAuthenticated, isLoading, hasAccess, requiredRole, router, fallbackPath, isClient]);
 
-  // Show unauthorized message if user doesn't have access
-  if (!isAuthenticated || (requiredRole && !hasAccess(requiredRole))) {
+  // Show loading state during SSR and while checking auth
+  if (!isClient || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Access Denied
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full space-y-8 p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="mt-6 text-2xl font-bold text-gray-900">
+              Loading...
             </h2>
-            <p className="text-gray-600 mb-6">
-              {!isAuthenticated 
-                ? "You need to sign in to access this page."
-                : "You don't have permission to access this page."
-              }
+            <p className="mt-2 text-sm text-gray-600">
+              Please wait while we verify your authentication.
             </p>
-            <button
-              onClick={() => router.push(isAuthenticated ? (user?.role === 'enterprise' ? '/trust-portal' : '/dashboard') : '/auth/login')}
-              className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 transition-colors"
-            >
-              {isAuthenticated ? 'Go to Dashboard' : 'Sign In'}
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
+  // Don't render children until we've verified auth on client side
+  if (!isAuthenticated) {
+    return null; // Router.push will handle redirect
+  }
+
+  if (requiredRole && !hasAccess(requiredRole)) {
+    return null; // Router.push will handle redirect
+  }
+
   return <>{children}</>;
-};
+}
 
 // Higher-order component for easier usage
 export const withAuth = (

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info } from "lucide-react";
-import { useAuth } from "@/lib/auth/AuthContext";
+import { useAuth } from "@/features/auth/services/AuthContext";
 import { auth } from "@/lib/api";
 
 export default function SignupPage() {

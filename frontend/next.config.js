@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Enable static export for Netlify deployment (temporarily disabled for restructuring)
-  // output: 'export',
+  // Enable static export for Netlify deployment
+  output: 'export',
   trailingSlash: true,
   distDir: '.next',
   
@@ -38,6 +38,11 @@ const nextConfig = {
     // your project has type errors.
     // !! WARN !!
     ignoreBuildErrors: true,
+  },
+  
+  // Configure static generation behavior
+  generateBuildId: () => {
+    return `build-${Date.now()}`;
   },
   
   // Experimental features for better Netlify compatibility

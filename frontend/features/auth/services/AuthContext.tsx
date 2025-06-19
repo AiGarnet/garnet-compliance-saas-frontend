@@ -37,8 +37,13 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper function to check if we're in browser environment
+const isBrowser = () => typeof window !== 'undefined';
+
 // Helper function to set cookie
 const setCookie = (name: string, value: string, days: number = 7) => {
+  if (!isBrowser()) return;
+  
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
@@ -46,7 +51,43 @@ const setCookie = (name: string, value: string, days: number = 7) => {
 
 // Helper function to remove cookie
 const removeCookie = (name: string) => {
+  if (!isBrowser()) return;
+  
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+};
+
+// Helper function to safely access localStorage
+const getLocalStorageItem = (key: string): string | null => {
+  if (!isBrowser()) return null;
+  
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.error(`Error accessing localStorage for key ${key}:`, error);
+    return null;
+  }
+};
+
+// Helper function to safely set localStorage
+const setLocalStorageItem = (key: string, value: string): void => {
+  if (!isBrowser()) return;
+  
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.error(`Error setting localStorage for key ${key}:`, error);
+  }
+};
+
+// Helper function to safely remove localStorage
+const removeLocalStorageItem = (key: string): void => {
+  if (!isBrowser()) return;
+  
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error(`Error removing localStorage for key ${key}:`, error);
+  }
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -59,8 +100,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('userData');
+        const storedToken = getLocalStorageItem('authToken');
+        const storedUser = getLocalStorageItem('userData');
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -71,15 +112,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error('Error initializing auth:', error);
         // Clear invalid data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+        removeLocalStorageItem('authToken');
+        removeLocalStorageItem('userData');
         removeCookie('authToken');
       } finally {
         setIsLoading(false);
       }
     };
 
-    initializeAuth();
+    // Only initialize auth in browser environment
+    if (isBrowser()) {
+      initializeAuth();
+    } else {
+      // In SSR environment, just set loading to false
+      setIsLoading(false);
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -94,25 +141,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       // Store auth data in both localStorage and cookies
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
+      setLocalStorageItem('authToken', token);
+      setLocalStorageItem('userData', JSON.stringify(data.user));
       setCookie('authToken', token);
       
       setToken(token);
       setUser(data.user);
 
-      // Check for redirect parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const redirectTo = urlParams.get('redirect');
-      
-      if (redirectTo) {
-        router.push(redirectTo);
-      } else {
-        // Default redirect based on role
-        if (data.user.role === 'enterprise') {
-          router.push('/trust-portal');
+      // Check for redirect parameter (only in browser)
+      if (isBrowser()) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect');
+        
+        if (redirectTo) {
+          router.push(redirectTo);
         } else {
-          router.push('/dashboard');
+          // Default redirect based on role
+          if (data.user.role === 'enterprise') {
+            router.push('/trust-portal');
+          } else {
+            router.push('/dashboard');
+          }
         }
       }
     } catch (error) {
@@ -121,8 +170,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = useCallback(() => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
+    removeLocalStorageItem('authToken');
+    removeLocalStorageItem('userData');
     removeCookie('authToken');
     setToken(null);
     setUser(null);

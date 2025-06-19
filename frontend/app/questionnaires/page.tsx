@@ -8,7 +8,7 @@ import { QuestionnaireList, Questionnaire, QuestionnaireStatus } from "@/compone
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Header from '@/components/Header';
 import { debounce } from 'lodash';
-import { useAuthGuard } from "@/lib/auth/useAuthGuard";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { QuestionnaireService } from '@/lib/services/questionnaireService';
 import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
 import { vendors as vendorAPI } from '@/lib/api';
@@ -79,7 +79,7 @@ const QuestionnairesPage = () => {
   const [answerCache, setAnswerCache] = useState<Record<string, string>>({});
 
   // Custom hooks - also must be at top level
-  const { isLoading: authLoading } = useAuthGuard();
+  // Note: Authentication is now handled by ProtectedRoute wrapper
 
   // useCallback hooks - at top level
   const resizeTextarea = useCallback(() => {
@@ -1612,4 +1612,13 @@ const QuestionnairesPage = () => {
   );
 };
 
-export default QuestionnairesPage;
+// Wrap the QuestionnairesPage with ProtectedRoute
+const ProtectedQuestionnairesPage = () => {
+  return (
+    <ProtectedRoute>
+      <QuestionnairesPage />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedQuestionnairesPage;

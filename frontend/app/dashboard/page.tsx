@@ -11,7 +11,7 @@ import { cn } from "@/utils";
 import Header from "@/components/Header";
 import { DevModeToggle } from "@/components/DevModeToggle";
 import { isDevModeEnabled } from "@/lib/env-config";
-import { useAuthGuard } from "@/lib/auth/useAuthGuard";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Define types locally since they're not exported
 import { Vendor, VendorStatus } from '@/types/vendor';
@@ -359,22 +359,9 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  // Protect this page - redirect to login if not authenticated
-  const { isLoading: authLoading } = useAuthGuard();
-
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <DashboardContent />
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

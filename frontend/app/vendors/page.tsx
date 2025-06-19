@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import { AddVendorModal } from "@/features/vendors/components/AddVendorModal";
 import { DeleteVendorModal } from "@/features/vendors/components/DeleteVendorModal";
 import { EvidenceCount } from "@/components/vendors/EvidenceCount";
-import { useAuthGuard } from "@/lib/auth/useAuthGuard";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useRouter } from "next/navigation";
 
 // Simple vendor interface for this page
@@ -35,8 +35,7 @@ const VendorsPage = () => {
   });
   const router = useRouter();
 
-  // Protect this page - redirect to login if not authenticated
-  const { isLoading: authLoading } = useAuthGuard();
+
 
   // Fetch vendors from API
   const fetchVendors = async () => {
@@ -199,18 +198,6 @@ const VendorsPage = () => {
     fetchVendors();
   }, []); // Empty dependency array to run only once
 
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <Header />
@@ -371,4 +358,13 @@ const VendorsPage = () => {
   );
 };
 
-export default VendorsPage; 
+// Wrap the VendorsPage with ProtectedRoute
+const ProtectedVendorsPage = () => {
+  return (
+    <ProtectedRoute>
+      <VendorsPage />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedVendorsPage; 
