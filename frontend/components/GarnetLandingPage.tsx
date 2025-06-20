@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import WaitlistForm from './WaitlistForm';
 import IndustryRequestForm from './IndustryRequestForm';
@@ -712,6 +713,18 @@ const GarnetLandingPage = () => {
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Link 
+                  href="/contact" 
+                  className="text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base font-medium px-3 py-2 rounded-md hover:bg-purple-50"
+                >
+                  Contact
+                </Link>
+              </motion.div>
               <motion.button 
                 className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:shadow-lg transition-all text-sm lg:text-base font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                 whileHover={{ 
@@ -729,7 +742,19 @@ const GarnetLandingPage = () => {
               </motion.button>
             </div>
             {/* Mobile menu button */}
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center space-x-3">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Link 
+                  href="/contact" 
+                  className="text-gray-700 hover:text-purple-600 transition-colors text-sm font-medium px-3 py-2 rounded-md hover:bg-purple-50"
+                >
+                  Contact
+                </Link>
+              </motion.div>
               <motion.button 
                 className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                 whileHover={{ 
@@ -1690,16 +1715,7 @@ const GarnetLandingPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.8 }}
           >
-            <p className="text-gray-600 mb-6">Still have questions? We are here to help!</p>
-            <motion.a 
-              href="mailto:rusha@garnetai.net"
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 sm:px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-all inline-flex items-center group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Contact Support
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </motion.a>
+            <p className="text-gray-600 mb-6">Still have questions? Check out our comprehensive FAQ above!</p>
           </motion.div>
         </div>
       </section>
@@ -1787,19 +1803,8 @@ const GarnetLandingPage = () => {
 
             {/* Support */}
             <div className="md:justify-self-end md:text-right">
-              <h3 className="text-lg font-semibold mb-4">Support</h3>
+              <h3 className="text-lg font-semibold mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li>
-                  <a 
-                    href="mailto:rusha@garnetai.net" 
-                    className="text-gray-300 hover:text-purple-400 transition-colors flex items-center md:justify-end"
-                  >
-                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Contact Us
-                  </a>
-                </li>
                 <li className="md:text-right"><a href="/privacy-policy" className="text-gray-300 hover:text-purple-400 transition-colors">Privacy Policy</a></li>
                 <li className="md:text-right"><a href="/terms-of-service" className="text-gray-300 hover:text-purple-400 transition-colors">Terms and Conditions</a></li>
                 <li>
