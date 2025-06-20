@@ -44,7 +44,8 @@ import {
   Sliders,
   Network,
   Gauge,
-  Home
+  Home,
+  FileText
 } from 'lucide-react';
 
 // Counter component for animated statistics
@@ -131,38 +132,32 @@ const LoadingAnimation = () => {
   );
 };
 
-// Dynamic Navigation Hook
-const useDynamicNavbar = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
+// Hook to track if user has scrolled past hero section with smooth debouncing
+const useScrollPastHero = () => {
+  const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const controlNavbar = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Show navbar when scrolling down past 100px
-      if (currentScrollY > 100) {
-        // Show navbar when scrolling up or when past threshold
-        if (currentScrollY < lastScrollY || currentScrollY > 200) {
-          setIsVisible(true);
-        }
-        // Hide navbar when scrolling down fast
-        else if (currentScrollY > lastScrollY && currentScrollY > 300) {
-          setIsVisible(false);
-        }
-      } else {
-        // Hide navbar when at top
-        setIsVisible(false);
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          // Show button after scrolling past roughly the hero section
+          const scrollPosition = window.scrollY;
+          const heroHeight = window.innerHeight * 0.75; // 75% of viewport height for earlier trigger
+          
+          setShowButton(scrollPosition > heroHeight);
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', controlNavbar);
-    return () => window.removeEventListener('scroll', controlNavbar);
-  }, [lastScrollY]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  return isVisible;
+  return showButton;
 };
 
 // Security Trust Section
@@ -539,8 +534,8 @@ const GarnetLandingPage = () => {
   const [isIndustryFormOpen, setIsIndustryFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Use the dynamic navbar hook
-  const isNavVisible = useDynamicNavbar();
+  // Track if user has scrolled past hero section
+  const showNavButton = useScrollPastHero();
 
   // Loading animation effect
   useEffect(() => {
@@ -673,18 +668,9 @@ const GarnetLandingPage = () => {
         `}</style>
         {/* Navigation */}
       <motion.nav 
-        className={`fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 transition-shadow duration-300 ${
-          isNavVisible ? 'shadow-lg' : ''
-        }`}
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ 
-          y: isNavVisible ? 0 : -100, 
-          opacity: isNavVisible ? 1 : 0 
-        }}
-        transition={{ 
-          duration: 0.3, 
-          ease: "easeInOut" 
-        }}
+        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-lg"
+        initial={{ y: 0, opacity: 1 }}
+        animate={{ y: 0, opacity: 1 }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -725,21 +711,73 @@ const GarnetLandingPage = () => {
                   Contact
                 </Link>
               </motion.div>
-              <motion.button 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:shadow-lg transition-all text-sm lg:text-base font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                whileHover={{ 
-                  scale: 1.05, 
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
-                  background: "linear-gradient(to right, #8b5cf6, #ec4899)"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={openWaitlist}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                Join Waitlist
-              </motion.button>
+              
+              {/* Dynamic Join Waitlist Button */}
+              <AnimatePresence>
+                {showNavButton && (
+                  <motion.button 
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:shadow-lg transition-all text-sm lg:text-base font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    whileHover={{ 
+                      scale: 1.05, 
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
+                      background: "linear-gradient(to right, #8b5cf6, #ec4899)",
+                      transition: { duration: 0.2, ease: "easeOut" }
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={openWaitlist}
+                    initial={{ opacity: 0, x: 30, scale: 0.95 }}
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0, 
+                      scale: 1,
+                      transition: { 
+                        duration: 0.7,
+                        ease: [0.25, 0.46, 0.45, 0.94], // Ultra smooth cubic-bezier
+                        opacity: { 
+                          duration: 0.5, 
+                          ease: [0.25, 0.46, 0.45, 0.94] 
+                        },
+                        x: { 
+                          type: "spring", 
+                          stiffness: 180, 
+                          damping: 22,
+                          mass: 0.8
+                        },
+                        scale: { 
+                          type: "spring", 
+                          stiffness: 200, 
+                          damping: 20, 
+                          delay: 0.15,
+                          mass: 0.6
+                        }
+                      }
+                    }}
+                    exit={{ 
+                      opacity: 0, 
+                      x: 30, 
+                      scale: 0.95,
+                      transition: { 
+                        duration: 0.5,
+                        ease: [0.55, 0.06, 0.68, 0.19], // Smooth exit curve
+                        opacity: { 
+                          duration: 0.4, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        },
+                        x: { 
+                          duration: 0.5, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        },
+                        scale: { 
+                          duration: 0.4, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        }
+                      }
+                    }}
+                  >
+                    Join Waitlist
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center space-x-3">
@@ -755,21 +793,73 @@ const GarnetLandingPage = () => {
                   Contact
                 </Link>
               </motion.div>
-              <motion.button 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                whileHover={{ 
-                  scale: 1.05,
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
-                  background: "linear-gradient(to right, #8b5cf6, #ec4899)"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={openWaitlist}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                Join Waitlist
-              </motion.button>
+              
+              {/* Dynamic Join Waitlist Button - Mobile */}
+              <AnimatePresence>
+                {showNavButton && (
+                  <motion.button 
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    whileHover={{ 
+                      scale: 1.05,
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
+                      background: "linear-gradient(to right, #8b5cf6, #ec4899)",
+                      transition: { duration: 0.2, ease: "easeOut" }
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={openWaitlist}
+                    initial={{ opacity: 0, x: 30, scale: 0.95 }}
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0, 
+                      scale: 1,
+                      transition: { 
+                        duration: 0.7,
+                        ease: [0.25, 0.46, 0.45, 0.94], // Ultra smooth cubic-bezier
+                        opacity: { 
+                          duration: 0.5, 
+                          ease: [0.25, 0.46, 0.45, 0.94] 
+                        },
+                        x: { 
+                          type: "spring", 
+                          stiffness: 180, 
+                          damping: 22,
+                          mass: 0.8
+                        },
+                        scale: { 
+                          type: "spring", 
+                          stiffness: 200, 
+                          damping: 20, 
+                          delay: 0.15,
+                          mass: 0.6
+                        }
+                      }
+                    }}
+                    exit={{ 
+                      opacity: 0, 
+                      x: 30, 
+                      scale: 0.95,
+                      transition: { 
+                        duration: 0.5,
+                        ease: [0.55, 0.06, 0.68, 0.19], // Smooth exit curve
+                        opacity: { 
+                          duration: 0.4, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        },
+                        x: { 
+                          duration: 0.5, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        },
+                        scale: { 
+                          duration: 0.4, 
+                          ease: [0.4, 0.0, 0.2, 1]
+                        }
+                      }
+                    }}
+                  >
+                    Join Waitlist
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -917,63 +1007,44 @@ const GarnetLandingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.6 }}
           >
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-2xl border border-purple-100">
-                <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 shadow-lg">
+              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 shadow-lg border-0">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-800">Vendor Onboarding Dashboard Live</h3>
                     <span className="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">Live</span>
                 </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <motion.div 
-                    className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-lg cursor-pointer"
-                    whileHover={{ 
-                      scale: 1.02, 
-                      y: -2,
-                      boxShadow: "0 8px 25px -8px rgba(59, 130, 246, 0.3)"
-                    }}
-                    whileTap={{ scale: 0.98 }}
+                    className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-lg"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.7 }}
                   >
                     <div className="flex items-center justify-between">
-                        <motion.div
-                          whileHover={{ rotate: 10 }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                        >
-                          <FileCheck className="h-5 sm:h-6 lg:h-8 w-5 sm:w-6 lg:w-8 text-blue-600" />
-                        </motion.div>
+                        <div>
+                          <Users className="h-5 sm:h-6 lg:h-8 w-5 sm:w-6 lg:w-8 text-blue-600" />
+                        </div>
                         <motion.span 
                           className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800"
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.5, delay: 1, type: "spring" }}
                         >
-                          24
+                          150+
                         </motion.span>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-2">Active Vendor Assessments</p>
-                    <p className="text-xs text-blue-600 mt-1">→ No more waiting on legal teams</p>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-2">Compliance Frameworks</p>
+                    <p className="text-xs text-blue-600 mt-1">→ Global compliance coverage</p>
                   </motion.div>
                   <motion.div 
-                    className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-lg cursor-pointer"
-                    whileHover={{ 
-                      scale: 1.02, 
-                      y: -2,
-                      boxShadow: "0 8px 25px -8px rgba(147, 51, 234, 0.3)"
-                    }}
-                    whileTap={{ scale: 0.98 }}
+                    className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-lg"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.8 }}
                   >
                     <div className="flex items-center justify-between">
-                        <motion.div
-                          whileHover={{ rotate: 10 }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                        >
-                          <Shield className="h-5 sm:h-6 lg:h-8 w-5 sm:w-6 lg:w-8 text-purple-600" />
-                        </motion.div>
+                        <div>
+                          <Gauge className="h-5 sm:h-6 lg:h-8 w-5 sm:w-6 lg:w-8 text-purple-600" />
+                        </div>
                         <motion.span 
                           className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800"
                           initial={{ scale: 0 }}
@@ -987,24 +1058,15 @@ const GarnetLandingPage = () => {
                     <p className="text-xs text-purple-600 mt-1">→ Stay audit-ready, reduce back-and-forth</p>
                   </motion.div>
                     <motion.div 
-                      className="bg-gradient-to-br from-pink-50 to-pink-100 p-3 sm:p-4 rounded-lg sm:col-span-2 lg:col-span-1 cursor-pointer"
-                      whileHover={{ 
-                        scale: 1.02, 
-                        y: -2,
-                        boxShadow: "0 8px 25px -8px rgba(236, 72, 153, 0.3)"
-                      }}
-                      whileTap={{ scale: 0.98 }}
+                      className="bg-gradient-to-br from-pink-50 to-pink-100 p-3 sm:p-4 rounded-lg sm:col-span-2 lg:col-span-1"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.9 }}
                     >
                     <div className="flex items-center justify-between">
-                        <motion.div
-                          whileHover={{ rotate: 10 }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                        >
+                        <div>
                           <Clock className="h-5 sm:h-6 lg:h-8 w-5 sm:w-6 lg:w-8 text-pink-600" />
-                        </motion.div>
+                        </div>
                         <motion.span 
                           className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800"
                           initial={{ scale: 0 }}
@@ -1019,7 +1081,6 @@ const GarnetLandingPage = () => {
                   </motion.div>
                 </div>
               </div>
-            </div>
           </motion.div>
           </div>
         </div>
@@ -1133,45 +1194,311 @@ const GarnetLandingPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Enhanced Workflow Cards */}
+          <div className="space-y-12">
             {[
               {
                 step: "1",
                 title: "Upload Questionnaire",
-                description: "Simply upload your vendor security questionnaire in any format",
-                icon: <Upload className="h-8 w-8" />
+                description: "Simply upload your vendor security questionnaire in any format - PDF, Word, Excel, or even images. Our AI handles them all.",
+                icon: <Upload className="h-6 w-6" />,
+                gifUrl: "/gifs/upload-questionnaire.gif",
+                color: "from-blue-500 to-purple-600",
+                bgColor: "from-blue-50 to-purple-50",
+                features: ["Drag & Drop Interface", "Multiple File Formats", "Instant Processing"]
               },
               {
                 step: "2", 
                 title: "AI Analysis & Response",
-                description: "Our AI analyzes requirements and generates accurate responses instantly",
-                icon: <Cpu className="h-8 w-8" />
+                description: "Our advanced AI analyzes each question, understands context, and generates accurate, compliant responses in seconds.",
+                icon: <Cpu className="h-6 w-6" />,
+                gifUrl: "/gifs/ai-analysis.gif",
+                color: "from-purple-500 to-pink-600",
+                bgColor: "from-purple-50 to-pink-50",
+                features: ["Smart Context Analysis", "Compliance Mapping", "Instant Generation"]
               },
               {
                 step: "3",
                 title: "Review & Submit",
-                description: "Review, customize if needed, and submit with complete confidence",
-                icon: <CheckCircle className="h-8 w-8" />
+                description: "Review AI-generated responses, make any customizations, and submit with complete confidence and audit trails.",
+                icon: <CheckCircle className="h-6 w-6" />,
+                gifUrl: "/gifs/review-submit.gif",
+                color: "from-pink-500 to-red-600",
+                bgColor: "from-pink-50 to-red-50",
+                features: ["Smart Review Interface", "Custom Edits", "Audit Trail"]
               }
             ].map((workflow, index) => (
               <motion.div
                 key={index}
-                className="text-center"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${workflow.bgColor} p-8 shadow-xl hover:shadow-2xl transition-all duration-500 group`}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
+                transition={{ duration: 0.8, delay: index * 0.2 }}
+                whileHover={{ scale: 1.02, y: -5 }}
               >
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                    {workflow.icon}
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.8),transparent_70%)]"></div>
+                </div>
+
+                <div className={`grid grid-cols-1 ${index % 2 === 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-2'} gap-8 items-center`}>
+                  {/* Content Side */}
+                  <div className={`${index % 2 === 0 ? 'lg:order-1' : 'lg:order-2'} space-y-6`}>
+                    {/* Step Badge */}
+                    <motion.div 
+                      className={`inline-flex items-center space-x-3 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg`}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${workflow.color} flex items-center justify-center text-white font-bold text-sm`}>
+                        {workflow.step}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Step {workflow.step}</span>
+                    </motion.div>
+
+                    {/* Title & Description */}
+                    <div>
+                      <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:bg-clip-text group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-300">
+                        {workflow.title}
+                      </h3>
+                      <p className="text-gray-600 text-lg leading-relaxed">
+                        {workflow.description}
+                      </p>
+                    </div>
+
+                    {/* Features List */}
+                    <div className="space-y-2">
+                      {workflow.features.map((feature, fIndex) => (
+                        <motion.div
+                          key={fIndex}
+                          className="flex items-center space-x-3"
+                          initial={{ opacity: 0, x: -20 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: index * 0.2 + fIndex * 0.1 }}
+                        >
+                          <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${workflow.color}`}></div>
+                          <span className="text-gray-700 font-medium">{feature}</span>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-purple-600 font-bold text-sm shadow-md">
-                    {workflow.step}
+
+                  {/* GIF/Visual Side */}
+                  <div className={`${index % 2 === 0 ? 'lg:order-2' : 'lg:order-1'} relative`}>
+                    <motion.div 
+                      className="relative rounded-2xl overflow-hidden shadow-2xl bg-white/50 backdrop-blur-sm border border-white/60"
+                      whileHover={{ rotateY: 5, rotateX: 5 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    >
+                      {/* Interactive Prototype Container */}
+                      <div className="aspect-video relative bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        {/* Step 1: Upload Questionnaire */}
+                        {workflow.step === "1" && (
+                          <div className="w-full h-full p-4 bg-gradient-to-br from-gray-50 to-white">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-semibold text-gray-700">Upload Questionnaire</h4>
+                              <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                              </div>
+                            </div>
+                            
+                            {/* Upload Zone */}
+                            <motion.div 
+                              className="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center bg-purple-50/50 h-32 flex flex-col items-center justify-center"
+                              animate={{ 
+                                borderColor: ["#a855f7", "#ec4899", "#a855f7"],
+                                scale: [1, 1.02, 1]
+                              }}
+                              transition={{ 
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            >
+                              <Upload className="h-8 w-8 text-purple-500 mb-2" />
+                              <p className="text-sm text-gray-600">Drag & drop your questionnaire here</p>
+                              <p className="text-xs text-gray-400">PDF, Word, Excel supported</p>
+                            </motion.div>
+                            
+                            {/* File List */}
+                            <div className="mt-3 space-y-2">
+                              <motion.div 
+                                className="flex items-center space-x-2 p-2 bg-green-50 rounded-md"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1, duration: 0.5 }}
+                              >
+                                <FileText className="h-4 w-4 text-green-600" />
+                                <span className="text-xs text-green-700 flex-1">security-questionnaire.pdf</span>
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </motion.div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Step 2: AI Analysis */}
+                        {workflow.step === "2" && (
+                          <div className="w-full h-full p-4 bg-gradient-to-br from-purple-50 to-pink-50">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-semibold text-gray-700">AI Analysis in Progress</h4>
+                              <div className="flex items-center space-x-2">
+                                <motion.div 
+                                  className="w-2 h-2 bg-purple-500 rounded-full"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                  transition={{ duration: 1, repeat: Infinity }}
+                                />
+                                <motion.div 
+                                  className="w-2 h-2 bg-purple-500 rounded-full"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                  transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                                />
+                                <motion.div 
+                                  className="w-2 h-2 bg-purple-500 rounded-full"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                  transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Analysis Content */}
+                            <div className="space-y-3">
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <div className="flex items-start space-x-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                                  <div className="flex-1">
+                                    <p className="text-xs text-gray-600 mb-1">Question 1 of 25</p>
+                                    <p className="text-sm text-gray-800">Do you have SOC 2 Type II certification?</p>
+                                    <motion.div 
+                                      className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: "100%" }}
+                                      transition={{ duration: 2, repeat: Infinity }}
+                                    >
+                                      <motion.div 
+                                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                                        initial={{ width: "0%" }}
+                                        animate={{ width: "85%" }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                      />
+                                    </motion.div>
+                                  </div>
+                                  <Cpu className="h-4 w-4 text-purple-500 animate-pulse" />
+                                </div>
+                              </div>
+                              
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <div className="flex items-center space-x-2 text-green-600">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="text-xs">Response generated</span>
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">Yes, we maintain SOC 2 Type II certification...</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Step 3: Review & Submit */}
+                        {workflow.step === "3" && (
+                          <div className="w-full h-full p-4 bg-gradient-to-br from-green-50 to-blue-50">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-semibold text-gray-700">Review Responses</h4>
+                              <div className="text-xs text-green-600 flex items-center space-x-1">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>25/25 Complete</span>
+                              </div>
+                            </div>
+                            
+                            {/* Response Cards */}
+                            <div className="space-y-2">
+                              <div className="bg-white rounded-lg p-3 shadow-sm border-l-4 border-green-500">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-xs text-gray-500 mb-1">Security Controls</p>
+                                    <p className="text-sm text-gray-800">Do you encrypt data at rest?</p>
+                                    <p className="text-xs text-green-700 mt-1">✓ Yes, using AES-256 encryption...</p>
+                                  </div>
+                                  <button className="text-xs text-purple-600 hover:text-purple-800">Edit</button>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-white rounded-lg p-3 shadow-sm border-l-4 border-green-500">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-xs text-gray-500 mb-1">Compliance</p>
+                                    <p className="text-sm text-gray-800">GDPR compliance status?</p>
+                                    <p className="text-xs text-green-700 mt-1">✓ Fully compliant with GDPR...</p>
+                                  </div>
+                                  <button className="text-xs text-purple-600 hover:text-purple-800">Edit</button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Submit Button */}
+                            <motion.button 
+                              className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded-lg text-sm font-medium"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              animate={{ 
+                                boxShadow: [
+                                  "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                                  "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                                  "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                                ]
+                              }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            >
+                              Submit Questionnaire
+                            </motion.button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Floating elements */}
+                      <motion.div
+                        className={`absolute -top-4 -right-4 w-8 h-8 rounded-full bg-gradient-to-r ${workflow.color} shadow-lg`}
+                        animate={{ 
+                          y: [0, -10, 0],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ 
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
+                      <motion.div
+                        className={`absolute -bottom-4 -left-4 w-6 h-6 rounded-full bg-gradient-to-r ${workflow.color} shadow-lg opacity-70`}
+                        animate={{ 
+                          y: [0, 10, 0],
+                          scale: [1, 0.9, 1]
+                        }}
+                        transition={{ 
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: 1
+                        }}
+                      />
+                    </motion.div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{workflow.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{workflow.description}</p>
+
+                {/* Connecting Line (except for last item) */}
+                {index < 2 && (
+                  <motion.div
+                    className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-px h-12 bg-gradient-to-b from-purple-300 to-transparent"
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.2 + 0.5, duration: 0.8 }}
+                  />
+                )}
               </motion.div>
             ))}
           </div>
@@ -1273,140 +1600,7 @@ const GarnetLandingPage = () => {
             ))}
           </motion.div>
 
-          {/* Comprehensive World Coverage */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-            {/* Americas */}
-            <motion.div
-              className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/60"
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white mr-4">
-                  🌎
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">Americas</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { country: "🇺🇸 USA", frameworks: ["SOC 2", "NIST", "CCPA"] },
-                    { country: "🇨🇦 Canada", frameworks: ["PIPEDA", "SOC 2"] }
-                  ].map((item, idx) => (
-                    <motion.div 
-                      key={idx}
-                      className="p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <div className="text-sm font-semibold text-gray-800 mb-1">{item.country}</div>
-                      <div className="flex flex-wrap gap-1">
-                        {item.frameworks.map((fw, fIdx) => (
-                          <span key={fIdx} className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                            {fw}
-                          </span>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="text-center">
-                  <span className="text-sm text-gray-500">+15 more countries</span>
-                </div>
-              </div>
-            </motion.div>
 
-            {/* Europe & Africa */}
-            <motion.div
-              className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/60"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white mr-4">
-                  🌍
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">Europe & Africa</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { country: "🇬🇧 UK", frameworks: ["GDPR"] },
-                    { country: "🇮🇪 Ireland", frameworks: ["GDPR", "BSI"] }
-                  ].map((item, idx) => (
-                    <motion.div 
-                      key={idx}
-                      className="p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <div className="text-sm font-semibold text-gray-800 mb-1">{item.country}</div>
-                      <div className="flex flex-wrap gap-1">
-                        {item.frameworks.map((fw, fIdx) => (
-                          <span key={fIdx} className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
-                            {fw}
-                          </span>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="text-center">
-                  <span className="text-sm text-gray-500">+40 more countries</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Asia Pacific */}
-            <motion.div
-              className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/60"
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center text-white mr-4">
-                  🌏
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">Asia Pacific</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { country: "🇸🇬 Singapore", frameworks: ["PDPA", "ISO 27001"] },
-                    { country: "🇦🇺 Australia", frameworks: ["Privacy Act", "ISO 27001"] }
-                  ].map((item, idx) => (
-                    <motion.div 
-                      key={idx}
-                      className="p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <div className="text-sm font-semibold text-gray-800 mb-1">{item.country}</div>
-                      <div className="flex flex-wrap gap-1">
-                        {item.frameworks.map((fw, fIdx) => (
-                          <span key={fIdx} className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                            {fw}
-                          </span>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="text-center">
-                  <span className="text-sm text-gray-500">+25 more countries</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
 
           {/* Global Trust Indicators - REMOVED */}
         </div>
@@ -1448,7 +1642,7 @@ const GarnetLandingPage = () => {
                 { country: "🇯🇵 Japan", frameworks: ["APPI", "ISO 27001"] },
                 { country: "🇿🇦 South Africa", frameworks: ["POPIA", "ISO 27001"] },
                 { country: "🇫🇷 France", frameworks: ["GDPR", "ISO 27001"] },
-                { country: "🇰🇪 Kenya", frameworks: ["DPA", "Privacy Laws"] },
+                { country: "🇮🇪 Ireland", frameworks: ["GDPR", "DPA"] },
                 { country: "🇳🇬 Nigeria", frameworks: ["DPA", "ISO 27001"] }
               ].map((item, idx) => (
                 <motion.div 
@@ -1708,15 +1902,7 @@ const GarnetLandingPage = () => {
             ))}
           </div>
 
-          <motion.div 
-            className="text-center mt-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-          >
-            <p className="text-gray-600 mb-6">Still have questions? Check out our comprehensive FAQ above!</p>
-          </motion.div>
+
         </div>
       </section>
 

@@ -14,6 +14,7 @@ import {
   Heart
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast, ToastProvider } from '@/components/ui/Toast';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -25,6 +26,8 @@ const ContactPage = () => {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { showToast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -32,17 +35,91 @@ const ContactPage = () => {
       ...prev,
       [name]: value
     }));
+    
+    // Clear validation error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
+
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.message.trim()) {
+      errors.message = 'Message is required';
+    } else if (formData.message.trim().length < 10) {
+      errors.message = 'Message must be at least 10 characters long';
+    }
+    
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitted(true);
-    setIsSubmitting(false);
+    try {
+      // Submit to Formspree - Replace YOUR_FORM_ID with your actual Formspree form ID
+      const response = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          subject: formData.subject,
+          message: formData.message,
+          _replyto: formData.email
+        }),
+      });
+
+      if (response.ok) {
+        setIsSubmitted(true);
+        showToast({
+          type: 'success',
+          title: 'Message Sent!',
+          message: 'Thank you for contacting us. We\'ll get back to you within 1 business day.',
+          duration: 5000
+        });
+      } else {
+        throw new Error('Failed to send message');
+      }
+    } catch (err) {
+      console.error('Form submission error:', err);
+      showToast({
+        type: 'error',
+        title: 'Failed to Send Message',
+        message: 'Please try again or contact us directly at rusha@garnetai.net',
+        duration: 7000
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -57,7 +134,8 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <ToastProvider>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       {/* Header with Back Navigation */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,6 +201,7 @@ const ContactPage = () => {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -135,9 +214,14 @@ const ContactPage = () => {
                         required
                         value={formData.name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                          validationErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
                         placeholder="Your full name"
                       />
+                      {validationErrors.name && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+                      )}
                     </div>
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -150,9 +234,14 @@ const ContactPage = () => {
                         required
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                          validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
                         placeholder="your@email.com"
                       />
+                      {validationErrors.email && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -189,7 +278,7 @@ const ContactPage = () => {
                   
                   <div>
                     <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                      Message *
+                      Message/Query *
                     </label>
                     <textarea
                       id="message"
@@ -198,9 +287,14 @@ const ContactPage = () => {
                       rows={5}
                       value={formData.message}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors resize-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors resize-none ${
+                        validationErrors.message ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="Tell us more about your requirements..."
                     />
+                    {validationErrors.message && (
+                      <p className="mt-1 text-sm text-red-600">{validationErrors.message}</p>
+                    )}
                   </div>
                   
                   <motion.button
@@ -323,6 +417,7 @@ const ContactPage = () => {
         )}
       </main>
     </div>
+    </ToastProvider>
   );
 };
 
