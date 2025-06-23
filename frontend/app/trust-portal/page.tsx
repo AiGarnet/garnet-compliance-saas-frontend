@@ -16,16 +16,16 @@ export default function TrustPortalPage() {
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch vendors that have trust portal content
+  // Fetch all vendors that have trust portal content
   const fetchVendors = async () => {
     try {
       setIsLoadingVendors(true);
       setError('');
       
-      console.log('Fetching vendors for trust portal...');
+      console.log('Fetching all vendors for trust portal...');
       const response = await vendorAPI.getAll();
       
-      // Transform vendors for trust portal view - only show vendors with data
+      // Transform ALL vendors for trust portal view - show all vendors, not just filtered ones
       const transformedVendors = response.vendors?.map((vendor: any) => ({
         id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
         name: vendor.companyName || vendor.name || 'Unknown Vendor',
@@ -34,13 +34,10 @@ export default function TrustPortalPage() {
         region: vendor.region,
         description: vendor.description,
         website: vendor.website
-      })).filter((vendor: TrustPortalVendor) => 
-        // Only show vendors that are not in "Questionnaire Pending" status
-        vendor.status !== 'Questionnaire Pending' || vendor.description || vendor.website
-      ) || [];
+      })) || [];
       
       setVendors(transformedVendors);
-      console.log('Loaded vendors for trust portal:', transformedVendors);
+      console.log('Loaded all vendors for trust portal:', transformedVendors);
     } catch (err: any) {
       console.error('Error fetching vendors:', err);
       setError('Failed to load vendors. Please try again.');
@@ -124,7 +121,7 @@ export default function TrustPortalPage() {
               <Shield className="h-8 w-8 text-primary mr-3" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Trust Portal</h1>
-                <p className="text-gray-600">Explore vendor compliance portfolios and certifications</p>
+                <p className="text-gray-600">Browse all vendors and explore their compliance portfolios, certifications, and trust information</p>
               </div>
             </div>
 
@@ -272,6 +269,24 @@ export default function TrustPortalPage() {
                           </p>
                         )}
 
+                        {/* Trust Portal Content Indicators */}
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Shield className="h-3 w-3 mr-1" />
+                            <span>Compliance Data</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <FileText className="h-3 w-3 mr-1" />
+                            <span>Portfolio</span>
+                          </div>
+                          {vendor.website && (
+                            <div className="flex items-center text-xs text-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <span>Verified</span>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                           {vendor.region && (
                             <span className="flex items-center">
@@ -298,7 +313,7 @@ export default function TrustPortalPage() {
                             className="flex-1 bg-primary text-white text-center py-2 px-4 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
                           >
                             <Eye className="h-4 w-4 inline mr-2" />
-                            View Portfolio
+                            View Trust Portal
                           </Link>
                         </div>
                       </div>

@@ -200,6 +200,9 @@ export const vendors = {
 
   // Trust Portal Management
   trustPortal: {
+    // Get all vendors that have trust portal content
+    getVendorsWithItems: () => apiCall('/api/trust-portal/vendors'),
+    
     // Generate invite link for a vendor
     generateInviteLink: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/trust-portal/invite`, {
       method: 'POST',
