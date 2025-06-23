@@ -25,22 +25,46 @@ export default function TrustPortalPage() {
       console.log('Fetching all vendors for trust portal...');
       const response = await vendorAPI.trustPortal.getVendorsWithItems();
       
-      // Transform ALL vendors for trust portal view - show all vendors, not just filtered ones
-      const transformedVendors = response.vendors?.map((vendor: any) => ({
-        id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
-        name: vendor.companyName || vendor.name || 'Unknown Vendor',
-        status: vendor.status || 'Questionnaire Pending',
-        industry: vendor.industry,
-        region: vendor.region,
-        description: vendor.description,
-        website: vendor.website
-      })) || [];
+      console.log('Trust portal API response:', response);
       
-      setVendors(transformedVendors);
-      console.log('Loaded all vendors for trust portal:', transformedVendors);
+      // Handle the API response structure properly (same as vendors page)
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const transformedVendors = response.data.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Questionnaire Pending',
+          industry: vendor.industry,
+          region: vendor.region,
+          description: vendor.description,
+          website: vendor.website
+        }));
+        setVendors(transformedVendors);
+        console.log('Loaded all vendors for trust portal:', transformedVendors);
+      } else if (response.vendors && Array.isArray(response.vendors)) {
+        // Handle legacy format if still returned
+        const transformedVendors = response.vendors.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Questionnaire Pending',
+          industry: vendor.industry,
+          region: vendor.region,
+          description: vendor.description,
+          website: vendor.website
+        }));
+        setVendors(transformedVendors);
+        console.log('Loaded all vendors for trust portal (legacy format):', transformedVendors);
+      } else {
+        // No vendors found or error
+        console.log('No vendors found or API error:', response);
+        setVendors([]);
+        if (!response.success) {
+          setError(response.error?.message || 'Failed to load vendors');
+        }
+      }
     } catch (err: any) {
       console.error('Error fetching vendors:', err);
       setError('Failed to load vendors. Please try again.');
+      setVendors([]);
     } finally {
       setIsLoadingVendors(false);
     }
