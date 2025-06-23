@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Disable static export temporarily to allow dynamic routes
-  // output: 'export',
+  // Enable static export for Netlify deployment
+  output: 'export',
   trailingSlash: true,
   distDir: '.next',
   

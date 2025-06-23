@@ -294,7 +294,7 @@ export default function TrustPortalPage() {
 
                         <div className="flex space-x-2">
                           <Link
-                            href={`/trust-portal/vendor/${vendor.id}`}
+                            href={`/trust-portal/vendor?id=${vendor.id}`}
                             className="flex-1 bg-primary text-white text-center py-2 px-4 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
                           >
                             <Eye className="h-4 w-4 inline mr-2" />

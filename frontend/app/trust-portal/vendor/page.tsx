@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { 
   Building2, 
   Shield, 
@@ -26,6 +26,7 @@ import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Header from '@/components/Header';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { 
   VendorTrustPortalData, 
   CreateFeedbackDto, 
@@ -36,14 +37,11 @@ import {
   ResponderType
 } from '@/types/trustPortal';
 
-interface VendorTrustPortalPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageProps) {
+function VendorTrustPortalContent() {
+  const searchParams = useSearchParams();
+  const vendorId = searchParams?.get('id') || null;
   const { user, isAuthenticated } = useAuth();
+  
   const [vendorData, setVendorData] = useState<VendorTrustPortalData | null>(null);
   const [feedback, setFeedback] = useState<TrustPortalFeedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,12 +61,18 @@ export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageP
 
   // Fetch vendor trust portal data
   const fetchVendorData = async () => {
+    if (!vendorId) {
+      setError('Vendor ID is required');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError('');
       
-      console.log('Fetching trust portal data for vendor:', params.id);
-      const data = await vendorAPI.trustPortal.getData(params.id);
+      console.log('Fetching trust portal data for vendor:', vendorId);
+      const data = await vendorAPI.trustPortal.getData(vendorId);
       setVendorData(data);
 
       // Set vendor ID for feedback form
@@ -80,7 +84,7 @@ export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageP
       // Fetch feedback if authenticated as vendor
       if (isAuthenticated) {
         try {
-          const feedbackData = await vendorAPI.trustPortal.getVendorFeedback(params.id);
+          const feedbackData = await vendorAPI.trustPortal.getVendorFeedback(vendorId);
           setFeedback(feedbackData);
         } catch (feedbackError) {
           console.log('Could not fetch feedback - user may not have permission');
@@ -134,7 +138,7 @@ export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageP
 
   useEffect(() => {
     fetchVendorData();
-  }, [params.id]);
+  }, [vendorId]);
 
   if (isLoading) {
     return (
@@ -147,13 +151,13 @@ export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageP
     );
   }
 
-  if (error || !vendorData) {
+  if (error || !vendorData || !vendorId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Trust Portal</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{error || 'Vendor ID is required'}</p>
           <Link
             href="/trust-portal"
             className="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -600,5 +604,20 @@ export default function VendorTrustPortalPage({ params }: VendorTrustPortalPageP
         </div>
       )}
     </>
+  );
+}
+
+export default function VendorTrustPortalPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading trust portal...</p>
+        </div>
+      </div>
+    }>
+      <VendorTrustPortalContent />
+    </Suspense>
   );
 } 
