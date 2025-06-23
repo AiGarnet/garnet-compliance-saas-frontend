@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Building2, User, Mail, Globe, Briefcase, FileText } from 'lucide-react';
-import { VendorFormData, VendorStatus, RiskLevel } from '@/types/vendor';
+import { VendorFormData, VendorStatus } from '@/types/vendor';
 
 interface AddVendorModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface AddVendorModalProps {
 
 export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProps) {
   const [formData, setFormData] = useState<VendorFormData>({
-    name: '',
+    companyName: '',
     region: '', // Add region field
     contactName: '',
     contactEmail: '', // Now required
@@ -20,8 +20,6 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
     industry: '',
     description: '',
     status: VendorStatus.QUESTIONNAIRE_PENDING,
-    riskScore: 50,
-    riskLevel: RiskLevel.MEDIUM,
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +38,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
+    if (!formData.companyName.trim()) {
       setError('Vendor name is required');
       return;
     }
@@ -62,7 +60,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
       await onSubmit(formData);
       // Reset form
       setFormData({
-        name: '',
+        companyName: '',
         region: '',
         contactName: '',
         contactEmail: '',
@@ -70,8 +68,6 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
         industry: '',
         description: '',
         status: VendorStatus.QUESTIONNAIRE_PENDING,
-        riskScore: 50,
-        riskLevel: RiskLevel.MEDIUM,
       });
     } catch (err: any) {
       setError(err.message || 'Failed to create vendor');
@@ -118,7 +114,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
 
           {/* Vendor Name */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
               Vendor Name *
             </label>
             <div className="relative">
@@ -126,11 +122,11 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
                 <Building2 className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                id="name"
-                name="name"
+                id="companyName"
+                name="companyName"
                 type="text"
                 required
-                value={formData.name}
+                value={formData.companyName}
                 onChange={handleInputChange}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="Enter vendor name"

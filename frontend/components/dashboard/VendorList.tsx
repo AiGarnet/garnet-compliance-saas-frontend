@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { PlusCircle, ArrowUpDown, AlertTriangle, Loader2, User, LogOut, Edit, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+
 import { translations } from '@/lib/i18n';
 
 // Components
@@ -42,6 +42,7 @@ export interface VendorListProps {
   onViewQuestionnaire?: (vendorId: string) => void;
   onEditVendor?: (vendorId: string) => void;
   onDeleteVendor?: (vendorId: string, vendorName: string) => void;
+  onAddVendor?: () => void;
 }
 
 export function VendorList({ 
@@ -53,7 +54,8 @@ export function VendorList({
   locale = 'en',
   onViewQuestionnaire,
   onEditVendor,
-  onDeleteVendor
+  onDeleteVendor,
+  onAddVendor
 }: VendorListProps) {
   // Access translations based on locale
   const t = translations[locale as keyof typeof translations]?.vendorList || translations.en.vendorList;
@@ -253,13 +255,15 @@ export function VendorList({
             </div>
             <h3 className="text-xl font-bold text-gray-700 mb-2">{t.emptyState.noVendors}</h3>
             <p className="text-gray-500 text-center max-w-md mb-6">{t.emptyState.invite}</p>
-            <Link 
-              href="/vendors/new" 
-              className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors font-medium inline-flex items-center"
-            >
-              <PlusCircle className="w-5 h-5 mr-2" />
-              Add Your First Client
-            </Link>
+            {onAddVendor && (
+              <button
+                onClick={onAddVendor}
+                className="px-6 py-3 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors font-medium inline-flex items-center"
+              >
+                <PlusCircle className="w-5 h-5 mr-2" />
+                Add Your First Client
+              </button>
+            )}
           </div>
         );
       }
@@ -499,13 +503,15 @@ export function VendorList({
           </div>
           <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-700">Your Clients</span>
         </h2>
-                  <Link 
-            href="/vendors/new" 
+        {onAddVendor && (isSalesProfessional || isFounder) && (
+          <button
+            onClick={onAddVendor}
             className="bg-white hover:bg-gray-50 text-gray-800 font-medium py-2 px-4 rounded-md shadow-sm border border-gray-300 inline-flex items-center transition-all hover:shadow"
           >
             <PlusCircle className="w-4 h-4 mr-2 text-primary" />
             Add New Client
-          </Link>
+          </button>
+        )}
       </div>
 
       {renderSearchBar()}

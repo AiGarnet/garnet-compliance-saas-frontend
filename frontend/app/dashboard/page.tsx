@@ -18,6 +18,7 @@ import { VendorStatus, Vendor } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
 import { EditVendorModal } from "@/components/vendors/EditVendorModal";
 import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
+import { AddVendorModal } from "@/components/vendors/AddVendorModal";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { useActivity } from "@/hooks/useActivity";
 import { useToast } from "@/components/ui/Toast";
@@ -45,6 +46,7 @@ function DashboardContent() {
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [vendorToDelete, setVendorToDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -169,7 +171,7 @@ function DashboardContent() {
       
       // Call backend API with activity logging
       const response = await activityApiService.updateVendor(selectedVendor.id, {
-        companyName: vendorData.companyName,
+        companyName: vendorData.name, // Frontend uses 'name', backend uses 'companyName'
         contactEmail: vendorData.contactEmail,
         status: vendorData.status,
         previousStatus // Include for activity logging
@@ -234,6 +236,50 @@ function DashboardContent() {
         message: error instanceof Error ? error.message : 'Failed to delete client',
         duration: 7000
       });
+    }
+  };
+
+  const handleAddVendor = async (vendorData: any) => {
+    try {
+      console.log('Creating vendor with data:', vendorData);
+      
+      // Map form data to API format
+      const apiData = {
+        companyName: vendorData.companyName,
+        region: vendorData.region,
+        contactEmail: vendorData.contactEmail,
+        contactName: vendorData.contactName,
+        website: vendorData.website,
+        industry: vendorData.industry,
+        description: vendorData.description,
+        status: vendorData.status || 'Questionnaire Pending'
+      };
+      
+      const result = await vendorAPI.create(apiData);
+      
+      if (result.success && result.data) {
+        addToast({
+          type: 'success',
+          title: 'Client Added',
+          message: `Client "${result.data.companyName || result.data.name}" has been added successfully!`,
+          duration: 5000
+        });
+        
+        // Refresh the vendor list
+        await fetchVendors();
+        setAddModalOpen(false);
+      } else {
+        throw new Error(result.error?.message || 'Failed to create vendor');
+      }
+    } catch (error: any) {
+      console.error('Error adding vendor:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: error.message || 'Failed to add client. Please try again.',
+        duration: 5000
+      });
+      throw error;
     }
   };
 
@@ -337,6 +383,7 @@ function DashboardContent() {
           onRetry={fetchVendors}
           onEditVendor={handleEditVendor}
           onDeleteVendor={handleDeleteVendor}
+          onAddVendor={() => setAddModalOpen(true)}
         />
         
         {/* Two Column Layout - Conditional based on role */}
@@ -417,6 +464,15 @@ function DashboardContent() {
           setVendorToDelete(null);
         }}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Add Vendor Modal */}
+      <AddVendorModal
+        isOpen={addModalOpen}
+        onClose={() => {
+          setAddModalOpen(false);
+        }}
+        onSubmit={handleAddVendor}
       />
     </>
   );
