@@ -23,7 +23,7 @@ export default function TrustPortalPage() {
       setError('');
       
       console.log('Fetching all vendors for trust portal...');
-      const response = await vendorAPI.getAll();
+      const response = await vendorAPI.trustPortal.getVendorsWithItems();
       
       // Transform ALL vendors for trust portal view - show all vendors, not just filtered ones
       const transformedVendors = response.vendors?.map((vendor: any) => ({
@@ -73,37 +73,17 @@ export default function TrustPortalPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchVendors();
-    }
-  }, [isAuthenticated]);
+    // Fetch vendors immediately since trust portal is public
+    fetchVendors();
+  }, []);
 
-  // Show loading while checking authentication
-  if (authLoading) {
+  // Show loading while fetching vendors
+  if (authLoading || isLoadingVendors) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading trust portal...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login prompt if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <Shield className="h-16 w-16 text-primary mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Trust Portal Access</h1>
-          <p className="text-gray-600 mb-4">Please sign in to access the trust portal.</p>
-          <a 
-            href="/auth/login" 
-            className="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Sign In
-          </a>
         </div>
       </div>
     );
