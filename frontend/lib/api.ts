@@ -205,11 +205,39 @@ export const vendors = {
       method: 'POST',
     }),
     
-    // Get trust portal data for a vendor (public)
-    getData: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/trust-portal`),
+    // Get trust portal data for a vendor (authenticated)
+    getData: (vendorId: string) => apiCall(`/api/trust-portal/vendor/${vendorId}`),
     
     // Get trust portal data via invite token (public)
     getByInviteToken: (token: string) => apiCall(`/api/trust-portal/invite/${token}`),
+
+    // Feedback endpoints
+    createFeedback: (feedbackData: any) => apiCall('/api/trust-portal/feedback', {
+      method: 'POST',
+      body: JSON.stringify(feedbackData),
+    }),
+
+    getVendorFeedback: (vendorId: string) => apiCall(`/api/trust-portal/vendor/${vendorId}/feedback`),
+
+    addFeedbackResponse: (feedbackId: string, responseData: any) => 
+      apiCall(`/api/trust-portal/feedback/${feedbackId}/response`, {
+        method: 'POST',
+        body: JSON.stringify(responseData),
+      }),
+
+    updateFeedbackStatus: (feedbackId: string, status: string) => 
+      apiCall(`/api/trust-portal/feedback/${feedbackId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      }),
+
+    // Shared documents endpoints
+    createSharedDocument: (documentData: any) => apiCall('/api/trust-portal/documents', {
+      method: 'POST',
+      body: JSON.stringify(documentData),
+    }),
+
+    getVendorDocuments: (vendorId: string) => apiCall(`/api/trust-portal/vendor/${vendorId}/documents`),
   },
 
   // Questionnaire Answer Management

@@ -1,68 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Building2, Shield, FileText, Search, Users, ChevronRight, ExternalLink, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Building2, Shield, FileText, Search, Users, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, Eye, Star, Globe } from 'lucide-react';
 import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Header from '@/components/Header';
 import { MobileNavigation } from '@/components/MobileNavigation';
-
-interface TrustPortalVendor {
-  id: string;
-  name: string;
-  status: string;
-  industry?: string;
-  region?: string;
-  description?: string;
-  website?: string;
-}
-
-interface VendorTrustPortalData {
-  vendor: {
-    companyName: string;
-    region?: string;
-    industry?: string;
-    description?: string;
-    website?: string;
-  };
-  works: Array<{
-    id: string;
-    projectName: string;
-    description: string;
-    status: string;
-    startDate: string;
-    endDate?: string;
-    clientName?: string;
-    technologies: string[];
-    category: string;
-  }>;
-  questionnaireAnswers: Array<{
-    id: string;
-    questionId: string;
-    question: string;
-    answer: string;
-    createdAt: string;
-  }>;
-  evidenceFiles: Array<{
-    id: string;
-    fileName: string;
-    fileType: string;
-    uploadDate: string;
-    category: string;
-  }>;
-}
+import { TrustPortalVendor } from '@/types/trustPortal';
+import Link from 'next/link';
 
 export default function TrustPortalPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [vendors, setVendors] = useState<TrustPortalVendor[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<TrustPortalVendor | null>(null);
-  const [vendorData, setVendorData] = useState<VendorTrustPortalData | null>(null);
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
-  const [isLoadingVendorData, setIsLoadingVendorData] = useState(false);
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch vendors for the current user
+  // Fetch vendors that have trust portal content
   const fetchVendors = async () => {
     try {
       setIsLoadingVendors(true);
@@ -71,7 +25,7 @@ export default function TrustPortalPage() {
       console.log('Fetching vendors for trust portal...');
       const response = await vendorAPI.getAll();
       
-      // Transform vendors for trust portal view
+      // Transform vendors for trust portal view - only show vendors with data
       const transformedVendors = response.vendors?.map((vendor: any) => ({
         id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
         name: vendor.companyName || vendor.name || 'Unknown Vendor',
@@ -80,7 +34,10 @@ export default function TrustPortalPage() {
         region: vendor.region,
         description: vendor.description,
         website: vendor.website
-      })) || [];
+      })).filter((vendor: TrustPortalVendor) => 
+        // Only show vendors that are not in "Questionnaire Pending" status
+        vendor.status !== 'Questionnaire Pending' || vendor.description || vendor.website
+      ) || [];
       
       setVendors(transformedVendors);
       console.log('Loaded vendors for trust portal:', transformedVendors);
@@ -90,37 +47,6 @@ export default function TrustPortalPage() {
     } finally {
       setIsLoadingVendors(false);
     }
-  };
-
-  // Fetch detailed trust portal data for selected vendor
-  const fetchVendorTrustPortalData = async (vendorId: string) => {
-    try {
-      setIsLoadingVendorData(true);
-      setError('');
-      
-      console.log('Fetching trust portal data for vendor:', vendorId);
-      const data = await vendorAPI.trustPortal.getData(vendorId);
-      
-      console.log('Trust portal data received:', data);
-      setVendorData(data);
-    } catch (err: any) {
-      console.error('Error fetching vendor trust portal data:', err);
-      setError('Failed to load vendor data. Please try again.');
-    } finally {
-      setIsLoadingVendorData(false);
-    }
-  };
-
-  // Handle vendor selection
-  const handleVendorSelect = (vendor: TrustPortalVendor) => {
-    setSelectedVendor(vendor);
-    fetchVendorTrustPortalData(vendor.id);
-  };
-
-  // Handle back to vendor list
-  const handleBackToList = () => {
-    setSelectedVendor(null);
-    setVendorData(null);
   };
 
   // Filter vendors based on search term
@@ -134,14 +60,18 @@ export default function TrustPortalPage() {
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'approved':
-        return 'bg-green-100 text-green-800';
+      case 'compliant':
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'in review':
       case 'pending review':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+      case 'non-compliant':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'questionnaire pending':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
     }
   };
 
@@ -188,121 +118,199 @@ export default function TrustPortalPage() {
       
       <div className="min-h-screen bg-gray-50">
         <main className="container mx-auto py-8 px-4">
-          {!selectedVendor ? (
-            // Vendor List View
-            <>
-              <div className="mb-8">
-                <div className="flex items-center mb-4">
-                  <Shield className="h-8 w-8 text-primary mr-3" />
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Trust Portal</h1>
-                    <p className="text-gray-600">View vendor compliance and work portfolios</p>
-                  </div>
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center mb-4">
+              <Shield className="h-8 w-8 text-primary mr-3" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Trust Portal</h1>
+                <p className="text-gray-600">Explore vendor compliance portfolios and certifications</p>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search vendors, industries, or regions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Building2 className="h-8 w-8 text-blue-600" />
                 </div>
-                
-                <div className="max-w-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      placeholder="Search vendors..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Total Vendors
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {vendors.length}
+                    </dd>
+                  </dl>
                 </div>
               </div>
+            </div>
 
-              {isLoadingVendors ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <span className="ml-3 text-gray-600">Loading vendors...</span>
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
-              ) : error ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                  <p className="text-red-600 mb-4">{error}</p>
-                  <button 
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Compliant Vendors
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {vendors.filter(v => ['approved', 'compliant'].includes(v.status.toLowerCase())).length}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FileText className="h-8 w-8 text-purple-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Active Portfolios
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {vendors.filter(v => v.status !== 'Questionnaire Pending').length}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {isLoadingVendors && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading vendors...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error Loading Vendors</h3>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                  <button
                     onClick={fetchVendors}
-                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                    className="mt-2 text-sm text-red-600 hover:text-red-500 font-medium"
                   >
-                    Retry
+                    Try again
                   </button>
                 </div>
-              ) : filteredVendors.length === 0 ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              </div>
+            </div>
+          )}
+
+          {/* Vendors Grid */}
+          {!isLoadingVendors && !error && (
+            <>
+              {filteredVendors.length === 0 ? (
+                <div className="text-center py-12">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm ? 'No vendors found' : 'No vendors available'}
+                    {searchTerm ? 'No vendors found' : 'No trust portals available'}
                   </h3>
                   <p className="text-gray-600">
-                    {searchTerm ? 'Try adjusting your search criteria.' : 'No vendors have been added yet.'}
+                    {searchTerm 
+                      ? 'Try adjusting your search terms or browse all vendors.' 
+                      : 'Check back later as vendors complete their compliance documentation.'
+                    }
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredVendors.map((vendor) => (
-                    <div
-                      key={vendor.id}
-                      onClick={() => handleVendorSelect(vendor)}
-                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center">
-                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Building2 className="h-6 w-6 text-primary" />
-                          </div>
-                          <div className="ml-3">
-                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                    <div key={vendor.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
                               {vendor.name}
                             </h3>
                             {vendor.industry && (
                               <p className="text-sm text-gray-600">{vendor.industry}</p>
                             )}
                           </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Status:</span>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(vendor.status)}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(vendor.status)}`}>
                             {vendor.status}
                           </span>
                         </div>
-                        
-                        {vendor.region && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Region:</span>
-                            <span className="text-sm font-medium text-gray-900">{vendor.region}</span>
-                          </div>
+
+                        {vendor.description && (
+                          <p className="text-sm text-gray-700 mb-4 line-clamp-2">
+                            {vendor.description}
+                          </p>
                         )}
+
+                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                          {vendor.region && (
+                            <span className="flex items-center">
+                              <Globe className="h-4 w-4 mr-1" />
+                              {vendor.region}
+                            </span>
+                          )}
+                          {vendor.website && (
+                            <a 
+                              href={vendor.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Website
+                            </a>
+                          )}
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/trust-portal/vendor/${vendor.id}`}
+                            className="flex-1 bg-primary text-white text-center py-2 px-4 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="h-4 w-4 inline mr-2" />
+                            View Portfolio
+                          </Link>
+                        </div>
                       </div>
-                      
-                      {vendor.description && (
-                        <p className="mt-3 text-sm text-gray-600 line-clamp-2">{vendor.description}</p>
-                      )}
                     </div>
                   ))}
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center">
-              <h2 className="text-xl font-bold">Vendor Detail View</h2>
-              <p>Selected vendor: {selectedVendor.name}</p>
-              <button 
-                onClick={handleBackToList}
-                className="mt-4 bg-primary text-white px-4 py-2 rounded-md"
-              >
-                Back to List
-              </button>
-            </div>
           )}
         </main>
       </div>
-      
+
       <MobileNavigation />
     </>
   );
