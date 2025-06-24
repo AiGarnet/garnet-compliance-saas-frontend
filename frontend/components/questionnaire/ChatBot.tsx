@@ -123,9 +123,7 @@ What would you like to know about your compliance requirements?`,
       const requestPayload = {
         question: userInput,
         vendorId: vendorId ? parseInt(vendorId) : undefined,
-        context: buildEnhancedContext(userInput, conversationHistory),
-        sessionId,
-        chatMode: true
+        context: buildEnhancedContext(userInput, conversationHistory)
       };
 
       console.log('Sending chat request:', requestPayload);
@@ -133,7 +131,10 @@ What would you like to know about your compliance requirements?`,
       // Try the public endpoint first
       let response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(requestPayload)
       });
 

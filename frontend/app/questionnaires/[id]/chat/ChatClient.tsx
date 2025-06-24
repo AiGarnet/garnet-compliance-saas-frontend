@@ -150,16 +150,25 @@ export function ChatClient({ params }: { params: { id: string } }) {
     try {
       const apiEndpoint = 'https://garnet-compliance-saas-production.up.railway.app/ask';
       
+      const requestBody = {
+        question: question,
+        context: 'This is a compliance questionnaire question that needs a professional response.',
+        vendorId: undefined // Add vendorId if available
+      };
+      
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify(requestBody),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to generate answer');
+        const errorText = await response.text();
+        console.error('AI API Error:', response.status, errorText);
+        throw new Error(`Failed to generate answer: ${response.status}`);
       }
       
       const data = await response.json();

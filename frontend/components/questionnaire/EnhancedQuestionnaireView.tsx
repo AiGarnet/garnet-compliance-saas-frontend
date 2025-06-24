@@ -178,23 +178,32 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     // Use the correct backend AI endpoint with proper format
     try {
       const context = evidenceFiles.length > 0 
-        ? `Context: This question is part of an enterprise compliance questionnaire. Evidence files available: ${evidenceFiles.map(f => f.name).join(', ')}` 
-        : 'Context: This question is part of an enterprise compliance questionnaire.';
+        ? `This question is part of an enterprise compliance questionnaire. Evidence files available: ${evidenceFiles.map(f => f.name).join(', ')}` 
+        : 'This question is part of an enterprise compliance questionnaire.';
+
+      const requestBody = {
+        question: question,
+        context: context,
+        vendorId: selectedVendor ? parseInt(selectedVendor) : undefined
+      };
+
+      console.log('Sending AI request:', requestBody);
 
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: `${context}\n\nQuestion: ${question}`,
-          vendorId: selectedVendor ? parseInt(selectedVendor) : undefined
-        })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
         const data = await response.json();
         return data.answer || data.response || 'Unable to generate AI answer at this time.';
       } else {
-        console.error('AI API error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('AI API error:', response.status, response.statusText, errorText);
         return 'AI service temporarily unavailable. Please try manual answer or request assistance.';
       }
     } catch (error) {

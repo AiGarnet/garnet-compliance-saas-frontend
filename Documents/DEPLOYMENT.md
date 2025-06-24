@@ -102,7 +102,12 @@ Expected response:
 ```bash
 curl -X POST https://garnet-compliance-saas-production.up.railway.app/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "Do you have a privacy policy?"}'
+  -H "Accept: application/json" \
+  -d '{
+    "question": "Do you have a privacy policy?",
+    "context": "This is a compliance questionnaire question.",
+    "vendorId": 123
+  }'
 ```
 
 #### Test Waitlist Signup
