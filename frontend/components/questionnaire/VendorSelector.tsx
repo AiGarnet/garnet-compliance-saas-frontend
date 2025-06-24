@@ -34,26 +34,48 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
   const fetchVendors = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      
+      console.log('Fetching vendors from API...');
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch vendors');
+        throw new Error(`HTTP ${response.status}: Failed to fetch vendors`);
       }
       
       const data = await response.json();
-      const vendorList = data.vendors || data || [];
+      console.log('Vendors API response:', data);
       
-      setVendors(vendorList.map((vendor: any) => ({
-        id: vendor.vendorId?.toString() || vendor.id,
+      // The API returns { success: true, data: [...] } structure
+      const vendorList = data.success && data.data ? data.data : [];
+      console.log('Extracted vendor list:', vendorList);
+      
+      if (vendorList.length === 0) {
+        setError('No vendors found in the system');
+        setVendors([]);
+        return;
+      }
+      
+      const formattedVendors = vendorList.map((vendor: any) => ({
+        id: vendor.vendorId?.toString() || vendor.id?.toString(),
         name: vendor.companyName || vendor.name,
         companyName: vendor.companyName || vendor.name,
-        status: vendor.status,
-        region: vendor.region,
-        industry: vendor.industry
-      })));
+        status: vendor.status || 'QUESTIONNAIRE_PENDING',
+        region: vendor.region || 'Unknown',
+        industry: vendor.industry || 'Not specified'
+      }));
+      
+      console.log('Formatted vendors:', formattedVendors);
+      setVendors(formattedVendors);
+      
+      // Auto-select first vendor if none selected
+      if (formattedVendors.length > 0 && !selectedVendorId) {
+        console.log('Auto-selecting first vendor:', formattedVendors[0].id);
+        onVendorSelect(formattedVendors[0].id);
+      }
     } catch (err) {
       console.error('Error fetching vendors:', err);
-      setError('Failed to load vendors');
+      setError(`Failed to load vendors: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

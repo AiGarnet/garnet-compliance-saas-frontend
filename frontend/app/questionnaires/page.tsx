@@ -81,6 +81,9 @@ const QuestionnairesPage = () => {
 
   // Tab state for enhanced view
   const [activeTab, setActiveTab] = useState<'list' | 'enhanced'>('list');
+  
+  // State for selected vendor in enhanced view
+  const [selectedVendorForEnhanced, setSelectedVendorForEnhanced] = useState<string>('');
 
   // Custom hooks - also must be at top level
   const { isLoading: authLoading } = useAuthGuard();
@@ -184,6 +187,45 @@ const QuestionnairesPage = () => {
       }
     }
   }, [showQuestionnaireInput]);
+
+  // Load vendors when switching to enhanced tab
+  useEffect(() => {
+    if (activeTab === 'enhanced' && vendors.length === 0) {
+      loadVendors();
+    }
+  }, [activeTab]);
+
+  // Function to load vendors
+  const loadVendors = async () => {
+    setIsLoadingVendors(true);
+    try {
+      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
+      if (!response.ok) {
+        throw new Error('Failed to fetch vendors');
+      }
+      
+      const data = await response.json();
+      const vendorList = data.success && data.data ? data.data : [];
+      
+      const formattedVendors = vendorList.map((vendor: any) => ({
+        id: vendor.vendorId?.toString() || vendor.id?.toString(),
+        name: vendor.companyName || vendor.name,
+        status: vendor.status || 'QUESTIONNAIRE_PENDING'
+      }));
+      
+      setVendors(formattedVendors);
+      
+      // Auto-select first vendor if none selected
+      if (formattedVendors.length > 0 && !selectedVendorForEnhanced) {
+        setSelectedVendorForEnhanced(formattedVendors[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading vendors:', error);
+      setError('Failed to load vendors for enhanced submission');
+    } finally {
+      setIsLoadingVendors(false);
+    }
+  };
 
   // Focus trap for modal
   useEffect(() => {
@@ -1590,14 +1632,14 @@ const QuestionnairesPage = () => {
           
           {/* Tab Navigation */}
           <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+              <nav className="flex space-x-1">
                 <button
                   onClick={() => setActiveTab('list')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
                     activeTab === 'list'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                   }`}
                 >
                   <ClipboardList className="w-4 h-4 inline mr-2" />
@@ -1605,10 +1647,10 @@ const QuestionnairesPage = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('enhanced')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
                     activeTab === 'enhanced'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                   }`}
                 >
                   <Upload className="w-4 h-4 inline mr-2" />
@@ -1634,10 +1676,33 @@ const QuestionnairesPage = () => {
             />
           ) : (
             // Enhanced Questionnaire View
-            <EnhancedQuestionnaireView 
-              vendorId={selectedVendorId || '1'}
-              enterpriseId="enterprise-1"
-            />
+            <div className="space-y-6">
+              {isLoadingVendors ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center space-x-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    <span className="text-gray-600 font-medium">Loading vendors...</span>
+                  </div>
+                </div>
+              ) : vendors.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vendors Available</h3>
+                  <p className="text-gray-600 mb-4">You need to have at least one vendor to use the Enterprise Submission feature.</p>
+                  <button
+                    onClick={loadVendors}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Retry Loading Vendors
+                  </button>
+                </div>
+              ) : (
+                <EnhancedQuestionnaireView 
+                  vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
+                  enterpriseId="enterprise-1"
+                />
+              )}
+            </div>
           )}
         </main>
     </>

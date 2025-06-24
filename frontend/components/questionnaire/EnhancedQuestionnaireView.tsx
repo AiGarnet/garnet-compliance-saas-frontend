@@ -60,6 +60,14 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   const checklistInputRef = useRef<HTMLInputElement>(null);
   const evidenceInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize with the passed vendorId if provided
+  useEffect(() => {
+    if (vendorId && !selectedVendor) {
+      console.log('Setting initial vendor:', vendorId);
+      setSelectedVendor(vendorId);
+    }
+  }, [vendorId, selectedVendor]);
+
   // Handle checklist file upload
   const handleChecklistUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -167,27 +175,32 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
   // Generate AI answer for a single question
   const generateAIAnswerForQuestion = async (question: string, evidenceFiles: File[]): Promise<string> => {
-    // Use the correct backend AI endpoint
+    // Use the correct backend AI endpoint with proper format
     try {
+      const context = evidenceFiles.length > 0 
+        ? `Context: This question is part of an enterprise compliance questionnaire. Evidence files available: ${evidenceFiles.map(f => f.name).join(', ')}` 
+        : 'Context: This question is part of an enterprise compliance questionnaire.';
+
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question,
-          context: evidenceFiles.length > 0 ? `Evidence files: ${evidenceFiles.map(f => f.name).join(', ')}` : undefined,
-          vendorId: selectedVendor
+          question: `${context}\n\nQuestion: ${question}`,
+          vendorId: selectedVendor ? parseInt(selectedVendor) : undefined
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.answer || '';
+        return data.answer || data.response || 'Unable to generate AI answer at this time.';
+      } else {
+        console.error('AI API error:', response.status, response.statusText);
+        return 'AI service temporarily unavailable. Please try manual answer or request assistance.';
       }
     } catch (error) {
       console.error('AI answer generation failed:', error);
+      return 'Network error occurred. Please check your connection and try again.';
     }
-    
-    return '';
   };
 
   // Handle manual document upload for specific question
@@ -355,9 +368,24 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
         {/* Vendor Selection - Always Visible */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <VendorSelector 
-            onVendorSelect={(vendorId) => setSelectedVendor(vendorId)}
+            onVendorSelect={(vendorId) => {
+              console.log('Vendor selected:', vendorId);
+              setSelectedVendor(vendorId);
+            }}
             selectedVendorId={selectedVendor}
           />
+          
+          {/* Show warning if no vendor selected */}
+          {!selectedVendor && (
+            <div className="p-4 bg-yellow-50 border-t border-yellow-200">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-800">
+                  Please select a vendor to continue with the questionnaire submission.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Progress Steps */}
