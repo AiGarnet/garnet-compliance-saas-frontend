@@ -17,6 +17,7 @@ const nextConfig = {
   // Environment variables for static export
   env: {
     NEXT_PUBLIC_STATIC_EXPORT: 'true',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app',
   },
   
   // Optimize bundle size
