@@ -166,14 +166,14 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
   // Generate AI answer for a single question
   const generateAIAnswerForQuestion = async (question: string, evidenceFiles: File[]): Promise<string> => {
-    // This would integrate with your AI service
+    // Use the correct backend AI endpoint
     try {
-      const response = await fetch('/api/ai/questionnaire', {
+      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
-          evidenceContext: evidenceFiles.map(f => f.name), // In real implementation, file content would be sent
+          context: evidenceFiles.length > 0 ? `Evidence files: ${evidenceFiles.map(f => f.name).join(', ')}` : undefined,
           vendorId: selectedVendor
         })
       });
@@ -219,30 +219,77 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     alert('Assistance request submitted. Our team will contact you within 24 hours.');
   };
 
+  // Submit to Trust Portal
+  const submitToTrustPortal = async (vendorId: string, questionnaireId: string, questions: QuestionnaireQuestion[]) => {
+    const completedQuestions = questions.filter(q => q.status !== 'empty');
+    const summary = {
+      title: `Compliance Questionnaire Submission`,
+      description: `Completed questionnaire with ${completedQuestions.length} answered questions`,
+      category: 'Compliance Documentation',
+      content: JSON.stringify({
+        questionnaireId,
+        totalQuestions: questions.length,
+        completedQuestions: completedQuestions.length,
+        aiAnsweredQuestions: questions.filter(q => q.status === 'ai-answered').length,
+        manuallyAnsweredQuestions: questions.filter(q => q.status === 'manually-answered').length,
+        assistanceRequestedQuestions: questions.filter(q => q.status === 'assistance-requested').length,
+        submissionDate: new Date().toISOString(),
+        status: 'In Review'
+      }),
+      vendorId: parseInt(vendorId),
+      isQuestionnaireAnswer: true,
+      questionnaireId
+    };
+
+    const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/trust-portal/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(summary),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Trust Portal API error: ${response.status}`);
+    }
+
+    return await response.json();
+  };
+
   // Submit questionnaire for review
   const handleSubmitForReview = async () => {
     setIsProcessing(true);
     
     try {
-      // Submit to backend
-      const response = await fetch('/api/questionnaires/submit', {
+      // Submit to backend using correct questionnaire endpoint
+      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vendorId: selectedVendor,
-          enterpriseId,
+          title: `Enterprise Questionnaire - ${new Date().toLocaleDateString()}`,
+          vendorId: parseInt(selectedVendor),
           questions: questions.map(q => ({
-            id: q.id,
-            question: q.question,
-            aiAnswer: q.aiAnswer,
-            uploadedDocument: q.uploadedDocument?.name,
-            assistanceRequest: q.assistanceRequest,
-            status: q.status
-          }))
+            questionText: q.question,
+            answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
+            status: q.status === 'ai-answered' || q.status === 'manually-answered' ? 'Completed' : 'Not Started',
+            needsAssistance: q.status === 'assistance-requested',
+            assistanceRequest: q.assistanceRequest
+          })),
+          generateAnswers: false
         })
       });
 
       if (response.ok) {
+        const result = await response.json();
+        const questionnaireId = result.questionnaire?.id;
+        
+        // Submit to Trust Portal
+        if (questionnaireId) {
+          try {
+            await submitToTrustPortal(selectedVendor, questionnaireId, questions);
+          } catch (trustPortalError) {
+            console.error('Trust Portal submission error:', trustPortalError);
+          }
+        }
+        
         setTrustPortalStatus('in-review');
         setCurrentStep('submit');
         
