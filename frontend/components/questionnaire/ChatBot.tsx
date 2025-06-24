@@ -130,15 +130,35 @@ What would you like to know about your compliance requirements?`,
 
       console.log('Sending chat request:', requestPayload);
 
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/ai/ask', {
+      // Try the public endpoint first
+      let response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestPayload)
       });
 
+      // If public endpoint fails with 401/404, try authenticated endpoint
+      if (!response.ok && (response.status === 401 || response.status === 404)) {
+        console.log('Public endpoint failed, trying authenticated endpoint...');
+        
+        // Get auth token from localStorage
+        const token = localStorage.getItem('authToken');
+        
+        if (token) {
+          response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/ai/ask', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(requestPayload)
+          });
+        }
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error:', response.status, errorText);
+        console.error('AI API Error:', response.status, errorText);
         throw new Error(`API error: ${response.status} - ${errorText}`);
       }
 
