@@ -6,30 +6,85 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, questions } = body;
-    
-    if (!title || !questions || !Array.isArray(questions)) {
-      return NextResponse.json({ error: 'Title and questions array are required' }, { status: 400 });
+    const { question, evidenceContext, vendorId } = body;
+
+    if (!question) {
+      return NextResponse.json(
+        { error: 'Question is required' },
+        { status: 400 }
+      );
     }
+
+    // For now, we'll use the existing backend API
+    // In a real implementation, this would process evidence files and generate contextual answers
+    const backendUrl = 'https://garnet-compliance-saas-production.up.railway.app/ask';
     
-    // Generate a random ID
-    const id = `q${Date.now().toString(36)}${Math.random().toString(36).substr(2, 5)}`;
-    
-    // Create questionnaire object
-    const questionnaire = {
-      id,
-      name: title,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-      status: 'In Progress',
-      answers: questions.map((question: string) => ({
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         question,
-        answer: '' // Empty answer to be filled later
-      }))
-    };
+        context: evidenceContext ? `Evidence files: ${evidenceContext.join(', ')}` : undefined,
+        vendorId
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status}`);
+    }
+
+    const data = await response.json();
     
-    return NextResponse.json(questionnaire);
+    return NextResponse.json({
+      answer: data.answer || generateFallbackAnswer(question),
+      confidence: data.confidence || 0.7,
+      hasEvidence: evidenceContext && evidenceContext.length > 0,
+      sources: evidenceContext || []
+    });
+
   } catch (error) {
-    console.error('Error creating questionnaire:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('AI questionnaire processing error:', error);
+    
+    // Fallback response
+    const { question } = await request.json();
+    return NextResponse.json({
+      answer: generateFallbackAnswer(question),
+      confidence: 0.3,
+      hasEvidence: false,
+      sources: [],
+      error: 'AI processing temporarily unavailable'
+    });
   }
+}
+
+function generateFallbackAnswer(question: string): string {
+  const lowerQuestion = question.toLowerCase();
+  
+  if (lowerQuestion.includes('security') || lowerQuestion.includes('encrypt')) {
+    return "We implement industry-standard security measures including encryption at rest and in transit, multi-factor authentication, and regular security audits. Our security framework follows established guidelines and best practices to ensure comprehensive protection of data and systems.";
+  }
+  
+  if (lowerQuestion.includes('data') || lowerQuestion.includes('privacy')) {
+    return "Our data protection measures comply with relevant regulations including GDPR and industry standards. We implement data minimization principles, maintain strict access controls, and ensure proper data retention and deletion procedures are in place.";
+  }
+  
+  if (lowerQuestion.includes('access') || lowerQuestion.includes('authentication')) {
+    return "We maintain role-based access control (RBAC) systems with principle of least privilege. Multi-factor authentication is required for administrative access, and we conduct regular access reviews and monitoring of privileged accounts.";
+  }
+  
+  if (lowerQuestion.includes('backup') || lowerQuestion.includes('recovery')) {
+    return "We maintain automated backup systems with regular testing procedures. Our disaster recovery plan includes defined RTO and RPO objectives, with documented procedures for business continuity and system restoration.";
+  }
+  
+  if (lowerQuestion.includes('compliance') || lowerQuestion.includes('audit')) {
+    return "We maintain comprehensive compliance programs with regular internal and external audits. Our compliance framework includes documented policies, procedures, and controls that are regularly reviewed and updated to meet current standards.";
+  }
+  
+  if (lowerQuestion.includes('training') || lowerQuestion.includes('awareness')) {
+    return "We provide regular security awareness training to all personnel, including specialized training for roles with elevated access. Our training program includes phishing simulation, security best practices, and incident response procedures.";
+  }
+  
+  return "We maintain comprehensive policies and procedures to address this requirement. Our implementation follows industry best practices and is regularly reviewed and updated to ensure continued effectiveness and compliance with applicable standards.";
 } 

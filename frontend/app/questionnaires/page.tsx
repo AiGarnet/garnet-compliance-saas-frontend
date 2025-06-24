@@ -11,6 +11,7 @@ import { debounce } from 'lodash';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { QuestionnaireService } from '@/lib/services/questionnaireService';
 import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
+import EnhancedQuestionnaireView from '@/components/questionnaire/EnhancedQuestionnaireView';
 import { vendors as vendorAPI } from '@/lib/api';
 
 interface QuestionAnswer {
@@ -77,6 +78,9 @@ const QuestionnairesPage = () => {
   const [generatedAnswers, setGeneratedAnswers] = useState<QuestionAnswer[]>([]);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [answerCache, setAnswerCache] = useState<Record<string, string>>({});
+
+  // Tab state for enhanced view
+  const [activeTab, setActiveTab] = useState<'list' | 'enhanced'>('list');
 
   // Custom hooks - also must be at top level
   const { isLoading: authLoading } = useAuthGuard();
@@ -1584,18 +1588,57 @@ const QuestionnairesPage = () => {
           </div>
         ) : null}
           
-          {/* Questionnaire List Component */}
-          <QuestionnaireList 
-            questionnaires={questionnaires} 
-            isLoading={isLoading}
-            error={error}
-            onRetry={fetchQuestionnaires}
-          onAddQuestionnaire={handleNewQuestionnaire}
-            onViewQuestionnaire={handleViewQuestionnaire}
-            onEditQuestionnaire={handleEditQuestionnaire}
-            onDeleteQuestionnaire={handleDeleteQuestionnaire}
-            selectedVendorId={selectedVendorId}
-          />
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('list')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'list'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <ClipboardList className="w-4 h-4 inline mr-2" />
+                  Questionnaire List
+                </button>
+                <button
+                  onClick={() => setActiveTab('enhanced')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'enhanced'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Upload className="w-4 h-4 inline mr-2" />
+                  Enterprise Submission
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'list' ? (
+            // Questionnaire List Component
+            <QuestionnaireList 
+              questionnaires={questionnaires} 
+              isLoading={isLoading}
+              error={error}
+              onRetry={fetchQuestionnaires}
+              onAddQuestionnaire={handleNewQuestionnaire}
+              onViewQuestionnaire={handleViewQuestionnaire}
+              onEditQuestionnaire={handleEditQuestionnaire}
+              onDeleteQuestionnaire={handleDeleteQuestionnaire}
+              selectedVendorId={selectedVendorId}
+            />
+          ) : (
+            // Enhanced Questionnaire View
+            <EnhancedQuestionnaireView 
+              vendorId={selectedVendorId || '1'}
+              enterpriseId="enterprise-1"
+            />
+          )}
         </main>
     </>
   );
