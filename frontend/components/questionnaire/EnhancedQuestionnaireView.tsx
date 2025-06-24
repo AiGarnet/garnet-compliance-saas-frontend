@@ -16,7 +16,8 @@ import {
   Plus,
   Trash2,
   Eye,
-  Share
+  Share,
+  Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -335,273 +336,343 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Enterprise Questionnaire</h1>
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-5 h-5 text-gray-600" />
-          <span className="text-sm text-gray-600">Four-Column Submission System</span>
-        </div>
-      </div>
-
-      {/* Vendor Selection */}
-      {currentStep === 'upload' && (
-        <VendorSelector 
-          onVendorSelect={(vendorId) => setSelectedVendor(vendorId)}
-          selectedVendorId={selectedVendor}
-        />
-      )}
-
-      {/* Progress Steps */}
-      <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-        <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-            currentStep === 'upload' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-          }`}>1</div>
-          <span>Upload Files</span>
-        </div>
-        <div className="flex-1 h-px bg-gray-300"></div>
-        
-        <div className={`flex items-center space-x-2 ${currentStep === 'processing' ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-            currentStep === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-          }`}>2</div>
-          <span>AI Processing</span>
-        </div>
-        <div className="flex-1 h-px bg-gray-300"></div>
-        
-        <div className={`flex items-center space-x-2 ${currentStep === 'review' ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-            currentStep === 'review' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-          }`}>3</div>
-          <span>Review & Complete</span>
-        </div>
-        <div className="flex-1 h-px bg-gray-300"></div>
-        
-        <div className={`flex items-center space-x-2 ${currentStep === 'submit' ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-            currentStep === 'submit' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-          }`}>4</div>
-          <span>Submit</span>
-        </div>
-      </div>
-
-      {/* File Upload Section */}
-      {currentStep === 'upload' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="w-5 h-5" />
-                <span>Enterprise Checklist</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 mb-4">
-                  Upload the enterprise's compliance checklist file
-                </p>
-                <input
-                  ref={checklistInputRef}
-                  type="file"
-                  accept=".txt,.pdf,.docx,.xlsx"
-                  onChange={handleChecklistUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => checklistInputRef.current?.click()}
-                  disabled={isProcessing}
-                  className="mb-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Select Checklist File
-                    </>
-                  )}
-                </Button>
-                {enterpriseChecklist && (
-                  <p className="text-sm text-green-600 mt-2">
-                    ✓ {enterpriseChecklist.name}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Upload className="w-5 h-5" />
-                <span>Internal Evidence</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 mb-4">
-                  Upload your internal evidence files
-                </p>
-                <input
-                  ref={evidenceInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.txt,.xlsx"
-                  onChange={handleEvidenceUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => evidenceInputRef.current?.click()}
-                  variant="outline"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Evidence Files
-                </Button>
-                {evidenceFiles.length > 0 && (
-                  <div className="mt-4 text-left">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">
-                      Uploaded files ({evidenceFiles.length}):
-                    </p>
-                    {evidenceFiles.map((file, index) => (
-                      <p key={index} className="text-sm text-green-600">
-                        ✓ {file.name}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Four-Column Questionnaire Table */}
-      {(currentStep === 'processing' || currentStep === 'review') && questions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Questionnaire Review</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="text-left p-4 w-1/4 font-semibold text-gray-700">
-                      Checklist Questions
-                    </th>
-                    <th className="text-left p-4 w-1/4 font-semibold text-gray-700">
-                      AI-Generated Answers
-                    </th>
-                    <th className="text-left p-4 w-1/4 font-semibold text-gray-700">
-                      Upload Supporting Doc
-                    </th>
-                    <th className="text-left p-4 w-1/4 font-semibold text-gray-700">
-                      Request Assistance
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {questions.map((question, index) => (
-                    <QuestionRow
-                      key={question.id}
-                      question={question}
-                      index={index}
-                      onManualUpload={(file) => handleManualDocumentUpload(question.id, file)}
-                      onAssistanceRequest={(request) => handleAssistanceRequest(question.id, request)}
-                      renderStatusIcon={renderStatusIcon}
-                    />
-                  ))}
-                </tbody>
-              </table>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Enhanced Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Enterprise Questionnaire</h1>
+              <p className="text-lg text-gray-600 font-medium">Complete compliance assessment with AI-powered assistance</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex items-center space-x-3 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-semibold text-blue-800">Four-Column Submission System</span>
+            </div>
+          </div>
+        </div>
 
-      {/* Submit Section */}
-      {currentStep === 'review' && questions.length > 0 && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        {/* Vendor Selection - Always Visible */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <VendorSelector 
+            onVendorSelect={(vendorId) => setSelectedVendor(vendorId)}
+            selectedVendorId={selectedVendor}
+          />
+        </div>
+
+        {/* Progress Steps */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center space-x-3 ${currentStep === 'upload' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
+                currentStep === 'upload' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
+              }`}>1</div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Ready to Submit</h3>
-                <p className="text-sm text-gray-600">
-                  {questions.filter(q => q.status !== 'empty').length} of {questions.length} questions addressed
-                </p>
+                <div className="font-semibold text-sm">Upload Files</div>
+                <div className="text-xs text-gray-500">Checklist & Evidence</div>
               </div>
-              <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep('upload')}
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Review Files
-                </Button>
-                <Button
-                  onClick={handleSubmitForReview}
-                  disabled={!allQuestionsAddressed || isProcessing}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Submit for Review
-                    </>
-                  )}
-                </Button>
-              </div>
+            </div>
+            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
+              <div className={`h-full bg-blue-600 transition-all duration-300 ${
+                ['processing', 'review', 'submit'].includes(currentStep) ? 'w-full' : 'w-0'
+              }`}></div>
             </div>
             
-            {!allQuestionsAddressed && (
-              <Alert className="mt-4">
-                <AlertCircle className="w-4 h-4" />
-                <span>Please address all questions before submitting.</span>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            <div className={`flex items-center space-x-3 ${currentStep === 'processing' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
+                currentStep === 'processing' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
+              }`}>2</div>
+              <div>
+                <div className="font-semibold text-sm">AI Processing</div>
+                <div className="text-xs text-gray-500">Generate Answers</div>
+              </div>
+            </div>
+            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
+              <div className={`h-full bg-blue-600 transition-all duration-300 ${
+                ['review', 'submit'].includes(currentStep) ? 'w-full' : 'w-0'
+              }`}></div>
+            </div>
+            
+            <div className={`flex items-center space-x-3 ${currentStep === 'review' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
+                currentStep === 'review' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
+              }`}>3</div>
+              <div>
+                <div className="font-semibold text-sm">Review & Complete</div>
+                <div className="text-xs text-gray-500">Verify Responses</div>
+              </div>
+            </div>
+            <div className="flex-1 h-0.5 bg-gray-200 mx-4">
+              <div className={`h-full bg-blue-600 transition-all duration-300 ${
+                currentStep === 'submit' ? 'w-full' : 'w-0'
+              }`}></div>
+            </div>
+            
+            <div className={`flex items-center space-x-3 ${currentStep === 'submit' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
+                currentStep === 'submit' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
+              }`}>4</div>
+              <div>
+                <div className="font-semibold text-sm">Submit</div>
+                <div className="text-xs text-gray-500">Trust Portal</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Success Message */}
-      {currentStep === 'submit' && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Questionnaire Submitted Successfully!
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Your submission is now in review status and has been added to the Trust Portal.
-            </p>
-            <div className="flex justify-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/trust-portal/vendor/${selectedVendor}`)}
-              >
-                <Share className="w-4 h-4 mr-2" />
-                View in Trust Portal
-              </Button>
-              <Button
-                onClick={() => router.push('/dashboard')}
-              >
-                Return to Dashboard
+        {/* Vendor Selection Required Message */}
+        {!selectedVendor && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+            <div className="flex items-center space-x-3">
+              <Building2 className="w-6 h-6 text-amber-600" />
+              <div>
+                <h3 className="font-semibold text-amber-800">Vendor Selection Required</h3>
+                <p className="text-sm text-amber-700 mt-1">Please select your company from the dropdown above to continue with the questionnaire submission.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* File Upload Section */}
+        {currentStep === 'upload' && selectedVendor && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 rounded-t-lg">
+                <CardTitle className="flex items-center space-x-3">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span className="text-gray-900 font-semibold">Enterprise Checklist</span>
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">Upload the compliance checklist provided by the enterprise</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="font-semibold text-gray-900 mb-2">Upload Checklist File</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Supports TXT, PDF, DOCX, and XLSX formats
+                  </p>
+                  <input
+                    ref={checklistInputRef}
+                    type="file"
+                    accept=".txt,.pdf,.docx,.xlsx"
+                    onChange={handleChecklistUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => checklistInputRef.current?.click()}
+                    disabled={isProcessing}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Select Checklist File
+                      </>
+                    )}
+                  </Button>
+                  {enterpriseChecklist && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm font-medium text-green-800">
+                        ✓ {enterpriseChecklist.name}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        File uploaded successfully
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 rounded-t-lg">
+                <CardTitle className="flex items-center space-x-3">
+                  <Upload className="w-5 h-5 text-green-600" />
+                  <span className="text-gray-900 font-semibold">Internal Evidence</span>
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">Upload your company's compliance evidence files</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-green-400 transition-colors">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="font-semibold text-gray-900 mb-2">Upload Evidence Files</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Multiple files supported (PDF, DOCX, TXT, XLSX)
+                  </p>
+                  <input
+                    ref={evidenceInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.txt,.xlsx"
+                    onChange={handleEvidenceUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => evidenceInputRef.current?.click()}
+                    variant="outline"
+                    className="border-green-600 text-green-600 hover:bg-green-50 font-medium px-6 py-2"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Evidence Files
+                  </Button>
+                  {evidenceFiles.length > 0 && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md text-left">
+                      <h5 className="font-semibold text-green-800 mb-2">
+                        Uploaded files ({evidenceFiles.length}):
+                      </h5>
+                      <div className="space-y-1">
+                        {evidenceFiles.map((file, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            <span className="text-sm text-green-700 font-medium">{file.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Generate Answers Button */}
+        {currentStep === 'upload' && selectedVendor && enterpriseChecklist && evidenceFiles.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Ready to Process</h3>
+                <p className="text-sm text-gray-600 mt-1">All files uploaded. Click below to generate AI answers from your evidence files.</p>
+              </div>
+                             <Button
+                 onClick={() => generateAIAnswers(evidenceFiles)}
+                 disabled={isProcessing}
+                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3"
+               >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing Questions...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Generate AI Answers
+                  </>
+                )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+
+        {/* Four-Column Questionnaire Table */}
+        {(currentStep === 'processing' || currentStep === 'review') && questions.length > 0 && (
+          <Card className="border-gray-200 shadow-sm">
+            <CardHeader className="bg-gray-50 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-900">Questionnaire Review</CardTitle>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <span className="font-medium">{questions.filter(q => q.status === 'completed').length} of {questions.length} complete</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 border-b-2 border-gray-200">
+                      <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
+                        Checklist Questions
+                      </th>
+                      <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
+                        AI-Generated Answers
+                      </th>
+                      <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
+                        Upload Supporting Doc
+                      </th>
+                      <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
+                        Request Assistance
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((question, index) => (
+                      <QuestionRow
+                        key={question.id}
+                        question={question}
+                        index={index}
+                        onManualUpload={(file) => handleManualDocumentUpload(question.id, file)}
+                        onAssistanceRequest={(request) => handleAssistanceRequest(question.id, request)}
+                        renderStatusIcon={renderStatusIcon}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Submit Section */}
+        {currentStep === 'review' && questions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Submit for Enterprise Review</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {allQuestionsAddressed 
+                    ? "All questions have been addressed. Ready to submit to Trust Portal."
+                    : "Some questions still need attention before submission."
+                  }
+                </p>
+              </div>
+              <Button
+                onClick={handleSubmitForReview}
+                disabled={!allQuestionsAddressed || isProcessing}
+                className={`font-semibold px-8 py-3 ${
+                  allQuestionsAddressed 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Submit to Trust Portal
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {currentStep === 'submit' && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-green-800 mb-2">Questionnaire Submitted Successfully!</h3>
+            <p className="text-green-700 mb-4">
+              Your questionnaire has been submitted to the Trust Portal and the enterprise has been notified for review.
+            </p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium"
+            >
+              Submit Another Questionnaire
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -642,14 +713,16 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
   };
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50">
+    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
       {/* Column 1: Checklist Questions */}
       <td className="p-4 align-top">
-        <div className="flex items-start space-x-2">
+        <div className="flex items-start space-x-3">
           {renderStatusIcon(question)}
-          <div>
-            <span className="text-sm font-medium text-gray-600">Q{index + 1}</span>
-            <p className="text-sm text-gray-900 mt-1">{question.question}</p>
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Q{index + 1}</span>
+            </div>
+            <p className="text-sm text-gray-900 leading-relaxed">{question.question}</p>
           </div>
         </div>
       </td>
@@ -657,21 +730,21 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
       {/* Column 2: AI-Generated Answers */}
       <td className="p-4 align-top">
         {question.isAiAnswerLoading ? (
-          <div className="flex items-center space-x-2 text-blue-600">
+          <div className="flex items-center space-x-2 text-blue-600 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Generating answer...</span>
+            <span className="text-sm font-medium">Generating answer...</span>
           </div>
         ) : question.aiAnswer ? (
-          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex items-center space-x-2 mb-2">
               <Bot className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">AI Generated</span>
+              <span className="text-sm font-semibold text-blue-700">AI Generated</span>
             </div>
-            <p className="text-sm text-gray-700">{question.aiAnswer}</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{question.aiAnswer}</p>
           </div>
         ) : (
-          <div className="text-sm text-gray-400 italic">
-            No AI answer generated
+          <div className="text-sm text-gray-400 italic p-3 bg-gray-50 rounded-lg border border-gray-200">
+            No AI answer generated yet
           </div>
         )}
       </td>
@@ -680,12 +753,12 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
       <td className="p-4 align-top">
         <div className="space-y-2">
           {question.uploadedDocument ? (
-            <div className="bg-green-50 border border-green-200 rounded p-3">
-              <div className="flex items-center space-x-2">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2 mb-1">
                 <FileText className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-700">Document Uploaded</span>
+                <span className="text-sm font-semibold text-green-700">Document Uploaded</span>
               </div>
-              <p className="text-sm text-gray-700 mt-1">{question.uploadedDocument.name}</p>
+              <p className="text-sm text-gray-700 font-medium">{question.uploadedDocument.name}</p>
             </div>
           ) : (
             <div>
@@ -700,7 +773,7 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={() => manualUploadRef.current?.click()}
-                className="w-full"
+                className="w-full border-gray-300 hover:border-green-500 hover:text-green-600 transition-colors"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Upload Document
@@ -714,22 +787,22 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
       <td className="p-4 align-top">
         <div className="space-y-2">
           {question.needsAssistance ? (
-            <div className="bg-orange-50 border border-orange-200 rounded p-3">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <HelpCircle className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-medium text-orange-700">Assistance Requested</span>
+                <span className="text-sm font-semibold text-orange-700">Assistance Requested</span>
               </div>
-              <p className="text-sm text-gray-700">{question.assistanceRequest}</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{question.assistanceRequest}</p>
             </div>
           ) : (
             <div>
               {showAssistanceInput ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <textarea
                     value={assistanceText}
                     onChange={(e) => setAssistanceText(e.target.value)}
-                    placeholder="Describe what help you need..."
-                    className="w-full text-sm border border-gray-300 rounded p-2 resize-none"
+                    placeholder="Describe what help you need with this question..."
+                    className="w-full text-sm border border-gray-300 rounded-lg p-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows={3}
                   />
                   <div className="flex space-x-2">
@@ -737,9 +810,10 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
                       size="sm"
                       onClick={handleAssistanceSubmit}
                       disabled={!assistanceText.trim()}
+                      className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
                     >
                       <Send className="w-4 h-4 mr-1" />
-                      Submit
+                      Submit Request
                     </Button>
                     <Button
                       size="sm"
@@ -748,6 +822,7 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
                         setShowAssistanceInput(false);
                         setAssistanceText('');
                       }}
+                      className="border-gray-300"
                     >
                       Cancel
                     </Button>
@@ -758,7 +833,7 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => setShowAssistanceInput(true)}
-                  className="w-full"
+                  className="w-full border-gray-300 hover:border-orange-500 hover:text-orange-600 transition-colors"
                 >
                   <HelpCircle className="w-4 h-4 mr-2" />
                   Need Help

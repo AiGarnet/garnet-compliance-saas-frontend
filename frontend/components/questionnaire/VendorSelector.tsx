@@ -68,14 +68,15 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Building2 className="w-5 h-5" />
-            <span>Select Your Company</span>
+      <Card className="border-gray-200 shadow-sm">
+        <CardHeader className="bg-gray-50 rounded-t-lg">
+          <CardTitle className="flex items-center space-x-3">
+            <Building2 className="w-5 h-5 text-blue-600" />
+            <span className="text-gray-900 font-semibold">Select Your Company</span>
           </CardTitle>
+          <p className="text-sm text-gray-600 mt-1">Choose the vendor account for this questionnaire submission</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="animate-pulse">
             <div className="h-12 bg-gray-200 rounded-md"></div>
           </div>
@@ -86,19 +87,20 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Building2 className="w-5 h-5" />
-            <span>Select Your Company</span>
+      <Card className="border-red-200 shadow-sm">
+        <CardHeader className="bg-red-50 rounded-t-lg">
+          <CardTitle className="flex items-center space-x-3">
+            <Building2 className="w-5 h-5 text-red-600" />
+            <span className="text-gray-900 font-semibold">Select Your Company</span>
           </CardTitle>
+          <p className="text-sm text-gray-600 mt-1">Choose the vendor account for this questionnaire submission</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="text-red-600 text-sm">
             {error}
             <button 
               onClick={fetchVendors}
-              className="ml-2 text-blue-600 hover:text-blue-800 underline"
+              className="ml-2 text-blue-600 hover:text-blue-800 underline font-medium"
             >
               Retry
             </button>
@@ -109,32 +111,33 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Building2 className="w-5 h-5" />
-          <span>Select Your Company</span>
+    <Card className="border-gray-200 shadow-sm">
+      <CardHeader className="bg-gray-50 rounded-t-lg">
+        <CardTitle className="flex items-center space-x-3">
+          <Building2 className="w-5 h-5 text-blue-600" />
+          <span className="text-gray-900 font-semibold">Select Your Company</span>
         </CardTitle>
+        <p className="text-sm text-gray-600 mt-1">Choose the vendor account for this questionnaire submission</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-6">
         <div className="relative">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between p-3 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full flex items-center justify-between p-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           >
             <div className="flex items-center space-x-3">
               <Building2 className="w-5 h-5 text-gray-400" />
               <div className="text-left">
                 {selectedVendor ? (
                   <>
-                    <div className="font-medium text-gray-900">{selectedVendor.companyName}</div>
+                    <div className="font-semibold text-gray-900">{selectedVendor.companyName}</div>
                     <div className="text-sm text-gray-500">
                       {selectedVendor.industry && `${selectedVendor.industry} • `}
                       {selectedVendor.region} • {selectedVendor.status}
                     </div>
                   </>
                 ) : (
-                  <div className="text-gray-500">Choose your company...</div>
+                  <div className="text-gray-500 font-medium">Choose your company...</div>
                 )}
               </div>
             </div>
@@ -142,9 +145,9 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
           </button>
 
           {isOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
               {vendors.length === 0 ? (
-                <div className="p-3 text-gray-500 text-center">
+                <div className="p-4 text-gray-500 text-center font-medium">
                   No vendors available
                 </div>
               ) : (
@@ -152,18 +155,18 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
                   <button
                     key={vendor.id}
                     onClick={() => handleVendorSelect(vendor.id)}
-                    className={`w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
+                    className={`w-full text-left p-4 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors ${
                       selectedVendorId === vendor.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
                     }`}
                   >
                     <div className="flex items-center space-x-3">
                       <Building2 className="w-4 h-4 text-gray-400" />
                       <div>
-                        <div className="font-medium text-gray-900">{vendor.companyName}</div>
+                        <div className="font-semibold text-gray-900">{vendor.companyName}</div>
                         <div className="text-sm text-gray-500">
                           {vendor.industry && `${vendor.industry} • `}
                           {vendor.region} • 
-                          <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
+                          <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
                             vendor.status === 'ACTIVE' 
                               ? 'bg-green-100 text-green-800'
                               : vendor.status === 'QUESTIONNAIRE_PENDING'
@@ -183,10 +186,10 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
         </div>
         
         {selectedVendor && (
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-semibold text-blue-800">
                 Questionnaire will be associated with {selectedVendor.companyName}
               </span>
             </div>
