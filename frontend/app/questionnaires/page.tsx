@@ -12,6 +12,7 @@ import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { QuestionnaireService } from '@/lib/services/questionnaireService';
 import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
 import EnhancedQuestionnaireView from '@/components/questionnaire/EnhancedQuestionnaireView';
+import ChatBot from '../../components/questionnaire/ChatBot';
 import { vendors as vendorAPI } from '@/lib/api';
 
 interface QuestionAnswer {
@@ -80,7 +81,7 @@ const QuestionnairesPage = () => {
   const [answerCache, setAnswerCache] = useState<Record<string, string>>({});
 
   // Tab state for enhanced view
-  const [activeTab, setActiveTab] = useState<'list' | 'enhanced'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'enhanced' | 'chatbot'>('list');
   
   // State for selected vendor in enhanced view
   const [selectedVendorForEnhanced, setSelectedVendorForEnhanced] = useState<string>('');
@@ -1656,6 +1657,17 @@ const QuestionnairesPage = () => {
                   <Upload className="w-4 h-4 inline mr-2" />
                   Enterprise Submission
                 </button>
+                <button
+                  onClick={() => setActiveTab('chatbot')}
+                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                    activeTab === 'chatbot'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 inline mr-2" />
+                  AI Chatbot
+                </button>
               </nav>
             </div>
           </div>
@@ -1674,7 +1686,7 @@ const QuestionnairesPage = () => {
               onDeleteQuestionnaire={handleDeleteQuestionnaire}
               selectedVendorId={selectedVendorId}
             />
-          ) : (
+          ) : activeTab === 'enhanced' ? (
             // Enhanced Questionnaire View
             <div className="space-y-6">
               {isLoadingVendors ? (
@@ -1702,6 +1714,52 @@ const QuestionnairesPage = () => {
                   enterpriseId="enterprise-1"
                 />
               )}
+            </div>
+          ) : (
+            // AI Chatbot View
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">AI Compliance Assistant</h2>
+                    <p className="text-gray-600 mt-1">Chat with our AI to complete your compliance questionnaire conversationally</p>
+                  </div>
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 rounded-full">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-green-700">AI Online</span>
+                  </div>
+                </div>
+                
+                {isLoadingVendors ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center space-x-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <span className="text-gray-600 font-medium">Loading vendors...</span>
+                    </div>
+                  </div>
+                ) : vendors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vendors Available</h3>
+                    <p className="text-gray-600 mb-4">You need to have at least one vendor to use the AI Chatbot feature.</p>
+                    <button
+                      onClick={loadVendors}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Retry Loading Vendors
+                    </button>
+                  </div>
+                ) : (
+                  <ChatBot 
+                    vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
+                    initialContext="Conversational compliance questionnaire completion with role-playing AI assistant"
+                    onQuestionnaireComplete={(questions: Array<{ question: string; answer: string }>) => {
+                      console.log('Questionnaire completed:', questions);
+                      // Handle questionnaire completion
+                    }}
+                  />
+                )}
+              </div>
             </div>
           )}
         </main>
