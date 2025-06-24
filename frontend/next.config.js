@@ -5,7 +5,6 @@ const nextConfig = {
   // Enable static export for Netlify deployment
   output: 'export',
   trailingSlash: true,
-  distDir: '.next',
   
   // Static export requires unoptimized images
   images: {

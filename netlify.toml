@@ -76,8 +76,59 @@
   to = "/.netlify/functions/vendor-by-id?id=:id"
   status = 200
 
-# Redirects for SPA routing (must be last)
+# Ensure JS and CSS files are served with correct MIME types
+[[headers]]
+  for = "/_next/static/chunks/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/_next/static/css/*.css"
+  [headers.values]
+    Content-Type = "text/css; charset=utf-8"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+# Don't redirect static assets - they should be served as-is
+# This ensures _next/static files are not redirected to index.html
+
+# SPA routing redirects - explicit routes only
 [[redirects]]
-  from = "/*"
+  from = "/dashboard*"
   to = "/index.html"
-  status = 200 
+  status = 200
+
+[[redirects]]
+  from = "/auth*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/questionnaires*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/vendors*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/trust-portal*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/compliance*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact*"
+  to = "/index.html"
+  status = 200
+
+# No catch-all redirect - this was causing the JS files to be served as HTML 
