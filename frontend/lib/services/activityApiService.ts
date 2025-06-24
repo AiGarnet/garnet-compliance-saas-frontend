@@ -55,7 +55,7 @@ class ActivityApiService {
   private toastCallbacks: Array<(toast: Omit<Toast, 'id' | 'timestamp'>) => void> = [];
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
   }
 
   /**
@@ -189,11 +189,15 @@ class ActivityApiService {
     try {
       const url = `${this.baseUrl}${endpoint}`;
       
-      // Add auth token if available
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const headers: HeadersInit = {
+      // Add auth token if available (check for browser environment)
+      let token = null;
+      if (typeof window !== 'undefined') {
+        token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      }
+      
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers
+        ...(options.headers as Record<string, string>)
       };
       
       if (token) {
@@ -345,8 +349,12 @@ class ActivityApiService {
   
   async uploadEvidence(evidenceData: FormData): Promise<ApiResponse<any>> {
     // Don't set Content-Type for FormData - let browser set it with boundary
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    const headers: HeadersInit = {};
+    let token = null;
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    }
+    
+    const headers: Record<string, string> = {};
     
     if (token) {
       headers.Authorization = `Bearer ${token}`;

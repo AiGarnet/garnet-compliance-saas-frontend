@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Activity, ActivityType, ActivityMetadata, ActivityFilters, ActivitySummary } from '@/types/activity';
 import { activityService } from '@/lib/services/activityService';
+import activityApiService, { BackendActivity, ActivityFilters as ApiActivityFilters } from '@/lib/services/activityApiService';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 export interface UseActivityReturn {
@@ -29,37 +30,106 @@ export interface UseActivityReturn {
   logLogout: () => void;
 }
 
+// Transform backend activity to frontend activity format
+function transformBackendActivity(backendActivity: BackendActivity): Activity {
+  return {
+    id: backendActivity.id,
+    type: backendActivity.type as ActivityType,
+    userId: backendActivity.userId || '',
+    userName: backendActivity.userName || 'Unknown User',
+    description: backendActivity.description,
+    metadata: backendActivity.metadata,
+    timestamp: new Date(backendActivity.createdAt),
+    icon: { name: 'Activity', type: 'lucide' }, // Default icon, could be enhanced
+    color: { bg: 'bg-blue-100', text: 'text-blue-600' } // Default color, could be enhanced
+  };
+}
+
 export function useActivity(filters?: ActivityFilters): UseActivityReturn {
   const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  // Load activities on mount and when filters change
-  const loadActivities = useCallback(() => {
+  // Check if we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load activities from backend API
+  const loadActivitiesFromApi = useCallback(async () => {
+    if (!isClient) return;
+
     try {
       setIsLoading(true);
       setError(null);
       
-      const allActivities = activityService.getActivities(filters);
-      const recent = activityService.getRecentActivities(10);
+      // Convert frontend filters to API filters
+      const apiFilters: ApiActivityFilters = {};
+      if (filters) {
+        if (filters.types) apiFilters.type = filters.types as any;
+        if (filters.userId) apiFilters.userId = filters.userId;
+        if (filters.dateRange?.start) apiFilters.startDate = filters.dateRange.start;
+        if (filters.dateRange?.end) apiFilters.endDate = filters.dateRange.end;
+        if (filters.limit) apiFilters.limit = filters.limit;
+        if (filters.offset) apiFilters.offset = filters.offset;
+      }
+
+      // Add user filter if available and not already specified
+      if (user?.id && !apiFilters.userId) {
+        apiFilters.userId = user.id;
+      }
       
-      setActivities(allActivities);
-      setRecentActivities(recent);
+      // Fetch activities and recent activities in parallel
+      const [activitiesResponse, recentResponse] = await Promise.all([
+        activityApiService.getActivities(apiFilters),
+        activityApiService.getRecentActivities(10, user?.id)
+      ]);
+      
+      if (activitiesResponse.success && activitiesResponse.data) {
+        const transformedActivities = activitiesResponse.data.map(transformBackendActivity);
+        setActivities(transformedActivities);
+      } else {
+        throw new Error(activitiesResponse.error?.message || 'Failed to fetch activities');
+      }
+
+      if (recentResponse.success && recentResponse.data) {
+        const transformedRecent = recentResponse.data.map(transformBackendActivity);
+        setRecentActivities(transformedRecent);
+      } else {
+        console.warn('Failed to fetch recent activities:', recentResponse.error?.message);
+        // Don't throw error for recent activities, just log warning
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load activities');
-      console.error('Error loading activities:', err);
+      console.error('Error loading activities from API:', err);
+      
+      // Fallback to local storage if API fails
+      console.log('Falling back to local storage...');
+      try {
+        const allActivities = activityService.getActivities(filters);
+        const recent = activityService.getRecentActivities(10);
+        setActivities(allActivities);
+        setRecentActivities(recent);
+      } catch (localError) {
+        console.error('Local storage fallback also failed:', localError);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, user?.id, isClient]);
 
+  // Load activities on mount and when filters change
   useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
+    if (isClient) {
+      loadActivitiesFromApi();
+    }
+  }, [loadActivitiesFromApi]);
 
-  // Log a new activity
+  // Log a new activity (API calls are handled by individual service methods)
   const logActivity = useCallback((
     type: ActivityType,
     customDescription?: string,
@@ -71,6 +141,7 @@ export function useActivity(filters?: ActivityFilters): UseActivityReturn {
     }
 
     try {
+      // Log to local storage for immediate UI update
       activityService.logActivity(
         type,
         user.id || user.email || 'unknown',
@@ -79,40 +150,46 @@ export function useActivity(filters?: ActivityFilters): UseActivityReturn {
         metadata
       );
       
+      // The API logging is handled by the specific service methods (createVendor, updateVendor, etc.)
+      // This is just for manual activity logging
+      console.log('Activity logged locally:', type, metadata);
+      
       // Refresh activities after logging
-      loadActivities();
+      setTimeout(() => loadActivitiesFromApi(), 1000); // Small delay to allow backend processing
     } catch (err) {
       console.error('Error logging activity:', err);
       setError(err instanceof Error ? err.message : 'Failed to log activity');
     }
-  }, [user, loadActivities]);
+  }, [user, loadActivitiesFromApi]);
 
   // Refresh activities
   const refreshActivities = useCallback(() => {
-    loadActivities();
-  }, [loadActivities]);
+    loadActivitiesFromApi();
+  }, [loadActivitiesFromApi]);
 
-  // Get filtered activities
+  // Get filtered activities (local only)
   const getFilteredActivities = useCallback((activityFilters: ActivityFilters): Activity[] => {
     return activityService.getActivities(activityFilters);
   }, []);
 
-  // Get activity summary
+  // Get activity summary (local only)
   const getActivitySummary = useCallback((): ActivitySummary => {
     return activityService.getActivitySummary();
   }, []);
 
-  // Clear all activities
+  // Clear all activities (local only)
   const clearActivities = useCallback(() => {
     activityService.clearActivities();
-    loadActivities();
-  }, [loadActivities]);
+    setActivities([]);
+    setRecentActivities([]);
+  }, []);
 
-  // Add sample activities for testing
+  // Add sample activities for testing (local only)
   const addSampleActivities = useCallback(() => {
     activityService.addSampleActivities();
-    loadActivities();
-  }, [loadActivities]);
+    // Also refresh from API to get any backend sample data
+    setTimeout(() => loadActivitiesFromApi(), 500);
+  }, [loadActivitiesFromApi]);
 
   // Convenience methods for common activities
   const logClientCreated = useCallback((clientName: string) => {

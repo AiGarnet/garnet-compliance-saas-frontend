@@ -106,7 +106,7 @@ export default function Header({ locale = 'en' }: HeaderProps) {
       { href: '/dashboard', label: t.dashboard },
       { href: '/questionnaires', label: t.questionnaires },
       { href: '/trust-portal', label: t.trustPortal },
-      { href: '/compliance', label: t.compliance },
+      // { href: '/compliance', label: t.compliance }, // TEMPORARILY HIDDEN
     ];
     
     // Add vendors link only if user has access

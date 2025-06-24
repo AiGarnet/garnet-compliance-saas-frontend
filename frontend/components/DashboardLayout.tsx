@@ -72,12 +72,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <span className="ml-3">Dashboard</span>
               </Link>
             </li>
-            <li>
+            {/* TEMPORARILY HIDDEN - Compliance link */}
+            {/* <li>
               <Link href="/dashboard/compliance" className="flex items-center p-2 text-gray-900 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 group">
                 <ShieldCheck className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
                 <span className="ml-3">Compliance</span>
               </Link>
-            </li>
+            </li> */}
             <li>
               <Link href="/dashboard/questionnaires" className="flex items-center p-2 text-gray-900 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 group">
                 <FileText className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />

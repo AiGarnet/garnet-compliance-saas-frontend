@@ -78,11 +78,11 @@ export function MobileNavigation() {
         href: '/dashboard', 
         icon: <LayoutDashboard className="h-5 w-5" /> 
       },
-      { 
-        label: 'Compliance', 
-        href: '/compliance', 
-        icon: <ShieldCheck className="h-5 w-5" /> 
-      },
+      // { 
+      //   label: 'Compliance', 
+      //   href: '/compliance', 
+      //   icon: <ShieldCheck className="h-5 w-5" /> 
+      // }, // TEMPORARILY HIDDEN
       { 
         label: 'Documents', 
         href: '/documents', 

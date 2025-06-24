@@ -4,13 +4,32 @@ class ActivityService {
   private activities: Activity[] = [];
   private readonly STORAGE_KEY = 'garnet_activities';
   private readonly MAX_ACTIVITIES = 1000; // Limit to prevent memory issues
+  private isClient: boolean = false;
 
   constructor() {
-    this.loadActivities();
+    // Check if we're running in the browser
+    this.isClient = typeof window !== 'undefined';
+    if (this.isClient) {
+      this.loadActivities();
+    }
+  }
+
+  // Check if localStorage is available
+  private isLocalStorageAvailable(): boolean {
+    try {
+      return this.isClient && typeof localStorage !== 'undefined';
+    } catch (error) {
+      return false;
+    }
   }
 
   // Load activities from localStorage
   private loadActivities(): void {
+    if (!this.isLocalStorageAvailable()) {
+      console.warn('ActivityService: localStorage not available, using in-memory storage');
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
@@ -28,6 +47,10 @@ class ActivityService {
 
   // Save activities to localStorage
   private saveActivities(): void {
+    if (!this.isLocalStorageAvailable()) {
+      return;
+    }
+
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.activities));
     } catch (error) {
