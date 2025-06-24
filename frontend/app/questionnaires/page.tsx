@@ -189,31 +189,37 @@ const QuestionnairesPage = () => {
     }
   }, [showQuestionnaireInput]);
 
-  // Load vendors when switching to enhanced tab
+  // Load vendors when switching to enhanced or chatbot tab
   useEffect(() => {
-    if (activeTab === 'enhanced' && vendors.length === 0) {
+    if ((activeTab === 'enhanced' || activeTab === 'chatbot') && vendors.length === 0 && !isLoadingVendors) {
       loadVendors();
     }
   }, [activeTab]);
 
-  // Function to load vendors
+  // Function to load vendors (unified version)
   const loadVendors = async () => {
+    if (isLoadingVendors) return; // Prevent duplicate calls
+    
     setIsLoadingVendors(true);
     try {
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
       if (!response.ok) {
-        throw new Error('Failed to fetch vendors');
+        throw new Error(`Failed to fetch vendors: ${response.status}`);
       }
       
       const data = await response.json();
-      const vendorList = data.success && data.data ? data.data : [];
+      console.log('Vendors API response:', data);
+      
+      // Handle the API response format { success: true, data: [...] }
+      const vendorList = data.success && data.data ? data.data : (Array.isArray(data) ? data : []);
       
       const formattedVendors = vendorList.map((vendor: any) => ({
-        id: vendor.vendorId?.toString() || vendor.id?.toString(),
-        name: vendor.companyName || vendor.name,
+        id: vendor.vendorId?.toString() || vendor.id?.toString() || vendor.uuid?.toString(),
+        name: vendor.companyName || vendor.name || 'Unknown Vendor',
         status: vendor.status || 'QUESTIONNAIRE_PENDING'
       }));
       
+      console.log('Formatted vendors:', formattedVendors);
       setVendors(formattedVendors);
       
       // Auto-select first vendor if none selected
@@ -222,7 +228,9 @@ const QuestionnairesPage = () => {
       }
     } catch (error) {
       console.error('Error loading vendors:', error);
-      setError('Failed to load vendors for enhanced submission');
+      setError('Failed to load vendors. Please try again.');
+      // Set empty array on error to show no vendors available
+      setVendors([]);
     } finally {
       setIsLoadingVendors(false);
     }
@@ -346,33 +354,16 @@ const QuestionnairesPage = () => {
     }
   }, [selectedVendorId]);
 
-  // Fetch vendors from API
-  const fetchVendors = useCallback(async () => {
-    setIsLoadingVendors(true);
-    try {
-      const response = await vendorAPI.getAll();
-      if (response.vendors && Array.isArray(response.vendors)) {
-        const transformedVendors = response.vendors.map((vendor: any) => ({
-          id: vendor.vendorId?.toString() || vendor.id || vendor.uuid,
-          name: vendor.companyName || vendor.name || 'Unknown Vendor',
-          status: vendor.status || 'Questionnaire Pending'
-        }));
-        setVendors(transformedVendors);
-      } else {
-        setVendors([]);
-      }
-    } catch (err) {
-      console.error('Error fetching vendors:', err);
-      setVendors([]);
-    } finally {
-      setIsLoadingVendors(false);
-    }
-  }, []);
+  // Retry function for vendor loading
+  const retryLoadVendors = () => {
+    console.log('Retrying vendor loading...');
+    loadVendors();
+  };
 
   // Initial fetch on component mount
   useEffect(() => {
     fetchQuestionnaires();
-    fetchVendors();
+    // Vendors will be loaded when needed via the tab switching effect
   }, []);
   
   // Focus the textarea when the modal is shown
@@ -1750,14 +1741,38 @@ const QuestionnairesPage = () => {
                     </button>
                   </div>
                 ) : (
-                  <ChatBot 
-                    vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
-                    initialContext="Conversational compliance questionnaire completion with role-playing AI assistant"
-                    onQuestionnaireComplete={(questions: Array<{ question: string; answer: string }>) => {
-                      console.log('Questionnaire completed:', questions);
-                      // Handle questionnaire completion
-                    }}
-                  />
+                  <div className="space-y-4">
+                    {/* Vendor Selector for Chatbot */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Vendor for Chatbot Session
+                      </label>
+                      <select
+                        value={selectedVendorForEnhanced || vendors[0]?.id || ''}
+                        onChange={(e) => setSelectedVendorForEnhanced(e.target.value)}
+                        className="w-full max-w-md border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        {vendors.map((vendor) => (
+                          <option key={vendor.id} value={vendor.id}>
+                            {vendor.name} - {vendor.status}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        The AI will respond from this vendor's perspective during the conversation
+                      </p>
+                    </div>
+
+                    {/* ChatBot Component */}
+                    <ChatBot 
+                      vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
+                      initialContext="Conversational compliance questionnaire completion with role-playing AI assistant"
+                      onQuestionnaireComplete={(questions: Array<{ question: string; answer: string }>) => {
+                        console.log('Questionnaire completed:', questions);
+                        // Handle questionnaire completion
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             </div>

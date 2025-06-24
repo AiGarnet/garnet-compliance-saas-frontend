@@ -130,18 +130,46 @@ What would you like to know about your compliance requirements?`,
 
       console.log('Sending chat request:', requestPayload);
 
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
+      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/ai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestPayload)
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.answer || data.response || "I'm sorry, I couldn't generate a response right now.";
+      console.log('AI API Response:', data);
+      
+      // Handle different response formats from the backend
+      let aiResponse: string;
+      let responseConfidence: number = 0.85;
+      let responseSources: string[] = [];
+      
+      if (data.answer) {
+        // Format: { answer: string, confidence?: number, sources?: string[] }
+        aiResponse = data.answer;
+        responseConfidence = data.confidence || 0.85;
+        responseSources = data.sources || [];
+      } else if (data.response) {
+        // Format: { response: string }
+        aiResponse = data.response;
+      } else if (data.success && data.data) {
+        // Format: { success: true, data: { answer: string } }
+        aiResponse = data.data.answer || data.data.response || "I'm sorry, I couldn't generate a response.";
+        responseConfidence = data.data.confidence || 0.85;
+        responseSources = data.data.sources || [];
+      } else if (typeof data === 'string') {
+        // Direct string response
+        aiResponse = data;
+      } else {
+        // Fallback
+        aiResponse = "I'm sorry, I couldn't generate a response right now. Please try rephrasing your question.";
+      }
 
       // Determine if this is a compliance question
       const isComplianceQuestion = detectComplianceQuestion(userInput);
@@ -153,8 +181,8 @@ What would you like to know about your compliance requirements?`,
         timestamp: new Date(),
         questionId: isComplianceQuestion ? `q_${Date.now()}` : undefined,
         metadata: {
-          confidence: data.confidence || 0.85,
-          sources: data.sources || [],
+          confidence: responseConfidence,
+          sources: responseSources,
           category: categorizeQuestion(userInput)
         }
       };
