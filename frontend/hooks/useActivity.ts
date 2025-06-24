@@ -129,6 +129,22 @@ export function useActivity(filters?: ActivityFilters): UseActivityReturn {
     }
   }, [loadActivitiesFromApi]);
 
+  // Listen for custom refresh events
+  useEffect(() => {
+    if (!isClient) return;
+
+    const handleRefreshActivities = () => {
+      console.log('Refreshing activities due to custom event');
+      loadActivitiesFromApi();
+    };
+
+    window.addEventListener('refreshActivities', handleRefreshActivities);
+    
+    return () => {
+      window.removeEventListener('refreshActivities', handleRefreshActivities);
+    };
+  }, [loadActivitiesFromApi, isClient]);
+
   // Log a new activity (API calls are handled by individual service methods)
   const logActivity = useCallback((
     type: ActivityType,

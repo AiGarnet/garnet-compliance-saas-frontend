@@ -171,7 +171,7 @@ function DashboardContent() {
       
       // Call backend API with activity logging
       const response = await activityApiService.updateVendor(selectedVendor.id, {
-        companyName: vendorData.name, // Frontend uses 'name', backend uses 'companyName'
+        companyName: (vendorData as any).companyName || vendorData.name, // Handle both companyName and name properties
         contactEmail: vendorData.contactEmail,
         status: vendorData.status,
         previousStatus // Include for activity logging
@@ -192,6 +192,11 @@ function DashboardContent() {
         // The backend automatically logs activities and shows toasts
         setEditModalOpen(false);
         setSelectedVendor(null);
+        
+        // Refresh activities to show the update in Recent Activities
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('refreshActivities'));
+        }, 1000);
       } else {
         throw new Error(response.error?.message || 'Failed to update client');
       }
@@ -225,6 +230,11 @@ function DashboardContent() {
         // The backend automatically logs activities and shows toasts
         setDeleteModalOpen(false);
         setVendorToDelete(null);
+        
+        // Refresh activities to show the deletion in Recent Activities
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('refreshActivities'));
+        }, 1000);
       } else {
         throw new Error(response.error?.message || 'Failed to delete client');
       }
