@@ -86,6 +86,10 @@ const QuestionnairesPage = () => {
   // State for selected vendor in enhanced view
   const [selectedVendorForEnhanced, setSelectedVendorForEnhanced] = useState<string>('');
 
+  // State for chatbot integration
+  const [chatbotQuestions, setChatbotQuestions] = useState<string[]>([]);
+  const [chatbotTitle, setChatbotTitle] = useState<string>('');
+
   // Custom hooks - also must be at top level
   const { isLoading: authLoading } = useAuthGuard();
 
@@ -497,6 +501,17 @@ const QuestionnairesPage = () => {
     setSelectedVendorId('');
   };
 
+  const handleNewQuestionnaireForChat = () => {
+    setShowQuestionnaireInput(true);
+    setActiveTab('list'); // Switch to list tab to show the modal
+  };
+
+  const handleChatbotQuestionnaire = (title: string, questions: string[]) => {
+    setChatbotTitle(title);
+    setChatbotQuestions(questions);
+    setActiveTab('chatbot'); // Switch to chatbot tab with the questions
+  };
+
   // Generate AI answers for questions with enhanced progress tracking
   const handleGenerateAnswers = async (): Promise<QuestionAnswer[]> => {
     const questions = questionnaireInput
@@ -727,23 +742,40 @@ const QuestionnairesPage = () => {
         localStorage.removeItem(AUTOSAVE_KEY);
       }
       
-      // Redirect to the chat interface immediately after successful creation
-      console.log('🔄 Redirecting to chat page for questionnaire:', newQuestionnaire.id);
-      console.log('📊 Questionnaire data structure:', newQuestionnaire);
-      
-      // Close modal and clear state immediately
-      setShowQuestionnaireInput(false);
-      setIsSubmitting(false);
-      closeQuestionnaireInput();
-      
-      // Navigate immediately without timeout - the data is already saved
-      console.log('🚀 Navigating to chat interface...');
-      router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
-      
-      // Refresh the questionnaire list in the background for when user returns
-      setTimeout(() => {
-        fetchQuestionnaires();
-      }, 100);
+      // Check if we need to redirect to chatbot or chat interface
+      if (activeTab === 'chatbot') {
+        // If currently on chatbot tab, send questions to chatbot component
+        console.log('🤖 Sending questions to chatbot component');
+        handleChatbotQuestionnaire(questionnaireTitle, questions);
+        
+        // Close modal and clear state
+        setShowQuestionnaireInput(false);
+        setIsSubmitting(false);
+        closeQuestionnaireInput();
+        
+        // Refresh the questionnaire list in the background
+        setTimeout(() => {
+          fetchQuestionnaires();
+        }, 100);
+      } else {
+        // Regular flow: redirect to the dedicated chat interface
+        console.log('🔄 Redirecting to chat page for questionnaire:', newQuestionnaire.id);
+        console.log('📊 Questionnaire data structure:', newQuestionnaire);
+        
+        // Close modal and clear state immediately
+        setShowQuestionnaireInput(false);
+        setIsSubmitting(false);
+        closeQuestionnaireInput();
+        
+        // Navigate immediately without timeout - the data is already saved
+        console.log('🚀 Navigating to chat interface...');
+        router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
+        
+        // Refresh the questionnaire list in the background for when user returns
+        setTimeout(() => {
+          fetchQuestionnaires();
+        }, 100);
+      }
       
     } catch (error) {
       console.error('❌ Error submitting questionnaire:', error);
@@ -763,6 +795,7 @@ const QuestionnairesPage = () => {
     setGeneratedAnswers([]);
     setShowAIAssistant(false);
     setSelectedVendorId('');
+    // Don't clear chatbot questions here as they should persist until completion
   };
 
   // Process file regardless of upload method
@@ -1612,7 +1645,14 @@ const QuestionnairesPage = () => {
                           Processing...
                         </div>
                       ) : (
-                        'Create Questionnaire'
+                        activeTab === 'chatbot' ? (
+                          <div className="flex items-center">
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Send to AI Chatbot
+                          </div>
+                        ) : (
+                          'Create Questionnaire'
+                        )
                       )}
                     </button>
                   </div>
@@ -1650,7 +1690,7 @@ const QuestionnairesPage = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('chatbot')}
-                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 relative ${
                     activeTab === 'chatbot'
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
@@ -1658,6 +1698,11 @@ const QuestionnairesPage = () => {
                 >
                   <MessageSquare className="w-4 h-4 inline mr-2" />
                   AI Chatbot
+                  {chatbotQuestions.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {chatbotQuestions.length}
+                    </span>
+                  )}
                 </button>
               </nav>
             </div>
@@ -1715,9 +1760,18 @@ const QuestionnairesPage = () => {
                     <h2 className="text-xl font-bold text-gray-900">AI Compliance Assistant</h2>
                     <p className="text-gray-600 mt-1">Chat with our AI to complete your compliance questionnaire conversationally</p>
                   </div>
-                  <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 rounded-full">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-green-700">AI Online</span>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={handleNewQuestionnaireForChat}
+                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>New Questionnaire</span>
+                    </button>
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 rounded-full">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-green-700">AI Online</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -1763,13 +1817,37 @@ const QuestionnairesPage = () => {
                       </p>
                     </div>
 
+                    {/* Getting Started Message when no questions are loaded */}
+                    {chatbotQuestions.length === 0 && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <Sparkles className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-blue-900">Ready to Get Started?</h3>
+                            <p className="text-sm text-blue-800 mt-1">
+                              Click the "New Questionnaire" button above to create questions that will be automatically processed by the AI chatbot. 
+                              You can also start a free-form conversation below!
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ChatBot Component */}
                     <ChatBot 
+                      key={`chatbot-${chatbotQuestions.length}-${chatbotTitle}`}
                       vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
                       initialContext="Conversational compliance questionnaire completion with role-playing AI assistant"
+                      initialQuestions={chatbotQuestions}
+                      questionnaireTitle={chatbotTitle}
                       onQuestionnaireComplete={(questions: Array<{ question: string; answer: string }>) => {
                         console.log('Questionnaire completed:', questions);
                         // Handle questionnaire completion
+                        // Clear the questions after completion
+                        setChatbotQuestions([]);
+                        setChatbotTitle('');
                       }}
                     />
                   </div>

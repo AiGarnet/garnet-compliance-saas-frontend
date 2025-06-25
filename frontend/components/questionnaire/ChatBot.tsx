@@ -34,28 +34,30 @@ interface ChatBotProps {
   vendorId: string;
   onQuestionnaireComplete?: (questions: Array<{ question: string; answer: string }>) => void;
   initialContext?: string;
+  initialQuestions?: string[];
+  questionnaireTitle?: string;
 }
 
 const ChatBot: React.FC<ChatBotProps> = ({ 
   vendorId, 
   onQuestionnaireComplete, 
-  initialContext 
+  initialContext,
+  initialQuestions = [],
+  questionnaireTitle
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [questionsAnswered, setQuestionsAnswered] = useState<Array<{ question: string; answer: string }>>([]);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [hasProcessedInitialQuestions, setHasProcessedInitialQuestions] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize chat with welcome message
+  // Initialize chat with welcome message and process initial questions
   useEffect(() => {
-    const welcomeMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'assistant',
-      content: `👋 Hi! I'm your AI Compliance Assistant. I'm here to help you complete your compliance questionnaire efficiently and accurately.
+    let welcomeContent = `👋 Hi! I'm your AI Compliance Assistant. I'm here to help you complete your compliance questionnaire efficiently and accurately.
 
 I can help you with:
 📋 **Compliance Questions** - Answer specific regulatory queries
@@ -69,14 +71,108 @@ You can ask me questions like:
 • "Describe our cybersecurity incident response"
 • "What is our data breach notification process?"
 
-💡 **Tip**: Be specific about your compliance area (data privacy, financial crime, cybersecurity, etc.) for the most accurate responses.
+💡 **Tip**: Be specific about your compliance area (data privacy, financial crime, cybersecurity, etc.) for the most accurate responses.`;
 
-What would you like to know about your compliance requirements?`,
+    // If we have initial questions, modify the welcome message
+    if (initialQuestions.length > 0) {
+      welcomeContent = `👋 Hi! I'm your AI Compliance Assistant. ${questionnaireTitle ? `I see you've created "${questionnaireTitle}"` : 'I see you\'ve created a new questionnaire'} with ${initialQuestions.length} questions.
+
+🚀 **Getting Started**: I'll automatically process each question and provide detailed compliance responses. You can:
+• ✏️ Edit any of my responses
+• 🔄 Ask me to regenerate answers
+• ➕ Add follow-up questions
+• 💾 Save your progress anytime
+
+Let me start by working through your questions one by one...`;
+    } else {
+      welcomeContent += '\n\nWhat would you like to know about your compliance requirements?';
+    }
+
+    const welcomeMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'assistant',
+      content: welcomeContent,
       timestamp: new Date()
     };
     
     setMessages([welcomeMessage]);
-  }, []);
+  }, [initialQuestions, questionnaireTitle]);
+
+  // Process initial questions when they are provided
+  useEffect(() => {
+    if (initialQuestions.length > 0 && !hasProcessedInitialQuestions && messages.length > 0) {
+      setHasProcessedInitialQuestions(true);
+      processInitialQuestions();
+    }
+  }, [initialQuestions, hasProcessedInitialQuestions, messages]);
+
+  // Function to process initial questions automatically
+  const processInitialQuestions = async () => {
+    if (initialQuestions.length === 0) return;
+
+    setIsLoading(true);
+
+    try {
+      for (let i = 0; i < initialQuestions.length; i++) {
+        const question = initialQuestions[i];
+        
+        // Add user message for each question
+        const userMessage: ChatMessage = {
+          id: `msg_${Date.now()}_user_${i}`,
+          role: 'user',
+          content: question,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+
+        // Wait a moment for the message to be added to the DOM
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        try {
+          // Generate AI response for this question
+          await generateAIResponse(question, i + 1, initialQuestions.length);
+          
+          // Add a small delay between processing questions for better UX
+          if (i < initialQuestions.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+        } catch (error) {
+          console.error(`Error processing question ${i + 1}:`, error);
+          addErrorMessage(`I encountered an issue processing question ${i + 1}. Please try rephrasing it.`);
+        }
+      }
+
+      // Add a completion message
+      setTimeout(() => {
+        const completionMessage: ChatMessage = {
+          id: `msg_${Date.now()}_completion`,
+          role: 'assistant',
+          content: `✅ **Questionnaire Processing Complete!**
+
+I've processed all ${initialQuestions.length} questions from your questionnaire. Here's what you can do next:
+
+🔍 **Review Responses**: Check each answer above and let me know if you'd like any modifications
+📝 **Edit Answers**: Click any response to refine or expand it
+➕ **Add Questions**: Ask follow-up questions or add new compliance topics
+💾 **Export Results**: Use the export button to save your completed questionnaire
+
+Is there anything specific you'd like me to clarify or expand upon?`,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, completionMessage]);
+        
+        // Notify parent component about completion if callback is provided
+        if (onQuestionnaireComplete && questionsAnswered.length > 0) {
+          onQuestionnaireComplete(questionsAnswered);
+        }
+      }, 500);
+      
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -112,13 +208,24 @@ What would you like to know about your compliance requirements?`,
     }
   };
 
-  const generateAIResponse = async (userInput: string) => {
+  const generateAIResponse = async (userInput: string, questionNumber?: number, totalQuestions?: number) => {
     try {
       // Build conversation context
       const conversationHistory = messages
         .slice(-6) // Last 6 messages for context
         .map(msg => `${msg.role}: ${msg.content}`)
         .join('\n');
+
+      // Show progress for initial question processing
+      if (questionNumber && totalQuestions) {
+        const progressMessage: ChatMessage = {
+          id: `msg_${Date.now()}_progress`,
+          role: 'assistant',
+          content: `⏳ Processing question ${questionNumber} of ${totalQuestions}...`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, progressMessage]);
+      }
 
       const requestPayload = {
         question: userInput,
@@ -208,7 +315,16 @@ What would you like to know about your compliance requirements?`,
         }
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // If this was from initial question processing, remove the progress message and add the response
+      if (questionNumber && totalQuestions) {
+        setMessages(prev => {
+          // Remove the last progress message and add the response
+          const filteredMessages = prev.filter(msg => !msg.content.includes('⏳ Processing question'));
+          return [...filteredMessages, assistantMessage];
+        });
+      } else {
+        setMessages(prev => [...prev, assistantMessage]);
+      }
 
       // Add to questionnaire if it's a compliance question
       if (isComplianceQuestion) {
