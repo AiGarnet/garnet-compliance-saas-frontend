@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Forward the request to the backend AI service for batch processing
-    const backendResponse = await fetch(`${BACKEND_API_URL}/ai/generate-batch-answers`, {
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/ai/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

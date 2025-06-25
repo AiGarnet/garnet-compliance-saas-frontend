@@ -84,7 +84,7 @@ exports.handler = async (event, context) => {
 
     // Railway backend URL
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
-    const waitlistEndpoint = `${BACKEND_URL}/join-waitlist`;
+    const waitlistEndpoint = `${BACKEND_URL}/api/waitlist/join`;
 
     console.log('Waitlist-signup function: Forwarding to Railway backend:', waitlistEndpoint);
     console.log('Data being sent:', JSON.stringify({

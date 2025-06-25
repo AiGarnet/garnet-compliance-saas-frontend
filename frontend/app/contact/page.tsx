@@ -6,15 +6,18 @@ import {
   Mail, 
   MessageSquare, 
   Clock, 
-  MapPin, 
-  Phone,
   Send,
   CheckCircle,
   ArrowLeft,
-  Heart
+  Heart,
+  Sparkles,
+  Users,
+  Shield,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast, ToastProvider } from '@/components/ui/Toast';
+import ContactIllustration from '@/components/ContactIllustration';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -43,8 +46,6 @@ const ContactPage = () => {
         [name]: ''
       }));
     }
-    
-
   };
 
   const validateForm = () => {
@@ -82,8 +83,8 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
-      // Submit to Formspree - Replace YOUR_FORM_ID with your actual Formspree form ID
-      const response = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+      // Submit to Formspree
+      const response = await fetch('https://formspree.io/f/xpwrorwk', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,292 +134,570 @@ const ContactPage = () => {
     setIsSubmitted(false);
   };
 
+  // Animation variants for different elements
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 }
+    }
+  };
+
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-      {/* Header with Back Navigation */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link 
-              href="/" 
-              className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Home</span>
-            </Link>
-            <div className="flex items-center space-x-3">
-              <span className="text-xl sm:text-2xl font-bold">
-                <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Garnet</span>
-              </span>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Main Animated Background Gradient */}
+        <motion.div 
+          className="absolute inset-0 opacity-90"
+          animate={{
+            background: [
+              "linear-gradient(135deg, #f3e8ff 0%, #fef7cd 25%, #fce7f3 50%, #e0f2fe 75%, #f3e8ff 100%)",
+              "linear-gradient(135deg, #fce7f3 0%, #e0f2fe 25%, #f3e8ff 50%, #fef7cd 75%, #fce7f3 100%)",
+              "linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 25%, #fef7cd 50%, #fce7f3 75%, #e0f2fe 100%)",
+              "linear-gradient(135deg, #f3e8ff 0%, #fef7cd 25%, #fce7f3 50%, #e0f2fe 75%, #f3e8ff 100%)"
+            ]
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+
+        {/* Secondary Gradient Layer */}
+        <motion.div 
+          className="absolute inset-0 opacity-40"
+          animate={{
+            background: [
+              "radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.3) 0%, transparent 50%)",
+              "radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.3) 0%, transparent 50%)"
+            ]
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <motion.div
+            className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-purple-300 to-pink-300 rounded-full opacity-20"
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.2, 0.4, 0.2],
+              x: [0, 30, 0],
+              y: [0, -20, 0],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div
+            className="absolute bottom-20 right-10 w-24 h-24 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full opacity-25"
+            animate={{
+              scale: [1.2, 1, 1.2],
+              opacity: [0.25, 0.4, 0.25],
+              x: [0, -25, 0],
+              y: [0, 15, 0],
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          {/* Additional floating shapes */}
+          <motion.div
+            className="absolute top-1/2 left-20 w-16 h-16 bg-gradient-to-r from-pink-300 to-blue-300 rounded-full opacity-20"
+            animate={{
+              scale: [1, 1.1, 1],
+              opacity: [0.2, 0.3, 0.2],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          <motion.div
+            className="absolute top-1/3 right-20 w-20 h-20 bg-gradient-to-r from-purple-300 to-pink-300 rounded-full opacity-15"
+            animate={{
+              scale: [1.1, 1, 1.1],
+              opacity: [0.15, 0.25, 0.15],
+              rotate: [360, 180, 0],
+            }}
+            transition={{
+              duration: 14,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          {/* Mesh gradient overlay */}
+          <motion.div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `
+                radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 30%),
+                radial-gradient(circle at 70% 70%, rgba(236, 72, 153, 0.1) 0%, transparent 30%),
+                radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 30%),
+                radial-gradient(circle at 30% 70%, rgba(168, 85, 247, 0.1) 0%, transparent 30%)
+              `
+            }}
+            animate={{
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        </div>
+
+        {/* Header with Back Navigation */}
+        <header className="bg-white/90 backdrop-blur-xl border-b border-white/30 sticky top-0 z-20 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <Link 
+                href="/" 
+                className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span>Back to Home</span>
+              </Link>
+              <div className="flex items-center space-x-3">
+                <span className="text-xl sm:text-2xl font-bold">
+                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Garnet</span>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {!isSubmitted ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            {/* Hero Section */}
-            <div className="text-center mb-16">
-              <motion.h1 
-                className="text-4xl sm:text-5xl font-bold mb-6"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+          {!isSubmitted ? (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Hero Section */}
+              <motion.div 
+                className="text-center mb-16"
+                variants={itemVariants}
               >
-                <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Get support on AI compliance
-                </span>
-              </motion.h1>
-              <motion.p 
-                className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-              >
-                From framework alignment to audit readiness, Garnet helps you stay compliant and ahead. 
-                Contact us and we'll follow up within 1 business day.
-              </motion.p>
-            </div>
+                <motion.h1 
+                  className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6"
+                  variants={itemVariants}
+                >
+                  <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+                    Let's Talk AI Compliance
+                  </span>
+                </motion.h1>
+                <motion.p 
+                  className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed"
+                  variants={itemVariants}
+                >
+                  From framework alignment to audit readiness, Garnet helps you stay compliant and ahead. 
+                  Ready to get started? Let's discuss your compliance needs.
+                </motion.p>
+              </motion.div>
 
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              {/* Contact Form */}
-              <motion.div
-                className="bg-white rounded-2xl shadow-xl p-8"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-              >
-                <div className="flex items-center mb-6">
-                  <MessageSquare className="h-6 w-6 text-purple-600 mr-3" />
-                  <h2 className="text-2xl font-semibold text-gray-900">Send Message</h2>
-                </div>
+                            {/* Main Content Grid */}
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
                 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  <div className="grid sm:grid-cols-2 gap-4">
+                {/* Left Side - Custom SVG Illustration */}
+                <motion.div
+                  className="order-2 lg:order-1"
+                  variants={itemVariants}
+                >
+                  {/* Custom Contact Illustration */}
+                  <div className="relative bg-white/90 backdrop-blur-xl border border-white/30 shadow-2xl rounded-3xl p-8 overflow-hidden min-h-[500px] lg:min-h-[600px]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 via-pink-50/60 to-blue-50/80 rounded-3xl"></div>
+                    <div className="relative z-10 h-full flex items-center justify-center">
+                      <ContactIllustration variant="team" className="w-full h-full max-w-lg" />
+                    </div>
+                    
+                    {/* Floating Stats */}
+                    <motion.div
+                      className="absolute top-6 right-6 bg-white/95 backdrop-blur-md border border-white/40 rounded-xl p-4 shadow-lg"
+                      animate={{
+                        x: [0, 10, 0],
+                        y: [0, -5, 0],
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-5 w-5 text-purple-600" />
+                        <span className="text-sm font-semibold text-gray-700">1000+ Companies</span>
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-md border border-white/40 rounded-xl p-4 shadow-lg"
+                      animate={{
+                        x: [0, -10, 0],
+                        y: [0, 5, 0],
+                      }}
+                      transition={{
+                        duration: 5,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="h-5 w-5 text-pink-600" />
+                        <span className="text-sm font-semibold text-gray-700">AI-Powered</span>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+
+                {/* Right Side - Enhanced Contact Form */}
+                <motion.div
+                  className="order-1 lg:order-2 bg-white/90 backdrop-blur-xl border border-white/30 shadow-2xl rounded-3xl p-8 min-h-[500px] lg:min-h-[600px] flex flex-col"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.005 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    boxShadow: '0 25px 50px -12px rgba(139, 92, 246, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3)'
+                  }}
+                >
+                  <div className="flex items-center mb-8">
+                    <motion.div
+                      className="p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl mr-4"
+                      animate={{
+                        boxShadow: [
+                          "0 0 20px rgba(168, 85, 247, 0.4)",
+                          "0 0 40px rgba(168, 85, 247, 0.6)",
+                          "0 0 20px rgba(168, 85, 247, 0.4)"
+                        ]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <MessageSquare className="h-7 w-7 text-white" />
+                    </motion.div>
                     <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                        Name *
+                      <h2 className="text-3xl font-bold text-gray-900">Send Message</h2>
+                      <p className="text-base text-gray-600 mt-1">Let's discuss your compliance requirements</p>
+                    </div>
+                  </div>
+                  
+                  <form onSubmit={handleSubmit} className="flex-grow flex flex-col">
+                    <div className="space-y-6 flex-grow">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                      <motion.div
+                        whileFocus={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+                          Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          id="name"
+                          name="name"
+                          required
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
+                            validationErrors.name ? 'border-red-300 bg-red-50/80' : 'border-white/50 focus:border-purple-500 hover:border-purple-300'
+                          }`}
+                          placeholder="Your full name"
+                        />
+                        {validationErrors.name && (
+                          <motion.p 
+                            className="mt-1 text-sm text-red-600"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                          >
+                            {validationErrors.name}
+                          </motion.p>
+                        )}
+                      </motion.div>
+                      
+                      <motion.div
+                        whileFocus={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                          Email Address *
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          required
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
+                            validationErrors.email ? 'border-red-300 bg-red-50/80' : 'border-white/50 focus:border-purple-500 hover:border-purple-300'
+                          }`}
+                          placeholder="your@email.com"
+                        />
+                        {validationErrors.email && (
+                          <motion.p 
+                            className="mt-1 text-sm text-red-600"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                          >
+                            {validationErrors.email}
+                          </motion.p>
+                        )}
+                      </motion.div>
+                    </div>
+                    
+                    <motion.div
+                      whileFocus={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Company Name
                       </label>
                       <input
                         type="text"
-                        id="name"
-                        name="name"
-                        required
-                        value={formData.name}
+                        id="company"
+                        name="company"
+                        value={formData.company}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                          validationErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="Your full name"
+                        className="w-full px-4 py-3 border-2 border-white/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 bg-white/80 backdrop-blur-sm hover:border-purple-300"
+                        placeholder="Your company name"
                       />
-                      {validationErrors.name && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
+                    </motion.div>
+                    
+                    <motion.div
+                      whileFocus={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Subject *
                       </label>
                       <input
-                        type="email"
-                        id="email"
-                        name="email"
+                        type="text"
+                        id="subject"
+                        name="subject"
                         required
-                        value={formData.email}
+                        value={formData.subject}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                          validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="your@email.com"
+                        className="w-full px-4 py-3 border-2 border-white/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 bg-white/80 backdrop-blur-sm hover:border-purple-300"
+                        placeholder="How can we help you?"
                       />
-                      {validationErrors.email && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+                    </motion.div>
+                    
+                    <motion.div
+                      whileFocus={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Message/Query *
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        required
+                        rows={5}
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 resize-none bg-white/80 backdrop-blur-sm ${
+                          validationErrors.message ? 'border-red-300 bg-red-50/80' : 'border-white/50 focus:border-purple-500 hover:border-purple-300'
+                        }`}
+                        placeholder="Tell us more about your AI compliance requirements..."
+                      />
+                      {validationErrors.message && (
+                        <motion.p 
+                          className="mt-1 text-sm text-red-600"
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          {validationErrors.message}
+                        </motion.p>
                       )}
+                    </motion.div>
+                    
+                    <motion.button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-xl transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                      whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                      whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                      animate={{
+                        boxShadow: [
+                          "0 4px 20px rgba(168, 85, 247, 0.3)",
+                          "0 8px 40px rgba(168, 85, 247, 0.5)",
+                          "0 4px 20px rgba(168, 85, 247, 0.3)"
+                        ]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center">
+                          <motion.div 
+                            className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          Sending your message...
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <Send className="h-5 w-5 mr-3" />
+                          Send Message
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                            animate={{
+                              x: ['-100%', '100%'],
+                            }}
+                            transition={{
+                              duration: 3,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        </div>
+                      )}
+                    </motion.button>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      id="company"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                      placeholder="Your company name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-                      Subject *
-                    </label>
-                    <input
-                      type="text"
-                      id="subject"
-                      name="subject"
-                      required
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                      placeholder="How can we help you?"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                      Message/Query *
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      required
-                      rows={5}
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors resize-none ${
-                        validationErrors.message ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                      placeholder="Tell us more about your requirements..."
-                    />
-                    {validationErrors.message && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.message}</p>
-                    )}
-                  </div>
-                  
-                  <motion.button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
-                    whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Sending...
+                  </form>
+
+                  {/* Contact Information Cards */}
+                  <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <motion.div
+                      className="bg-white/70 backdrop-blur-md border border-white/30 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
+                      whileHover={{ scale: 1.02, boxShadow: '0 15px 20px -5px rgba(139, 92, 246, 0.1)' }}
+                    >
+                      <div className="flex items-center mb-2">
+                        <Mail className="h-5 w-5 text-purple-600 mr-2" />
+                        <span className="text-sm font-semibold text-gray-900">Direct Email</span>
                       </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <Send className="h-5 w-5 mr-2" />
-                        Send Message
+                      <a 
+                        href="mailto:rusha@garnetai.net"
+                        className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                      >
+                        rusha@garnetai.net
+                      </a>
+                    </motion.div>
+
+                    <motion.div
+                      className="bg-white/70 backdrop-blur-md border border-white/30 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
+                      whileHover={{ scale: 1.02, boxShadow: '0 15px 20px -5px rgba(59, 130, 246, 0.1)' }}
+                    >
+                      <div className="flex items-center mb-2">
+                        <Clock className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="text-sm font-semibold text-gray-900">Response Time</span>
                       </div>
-                    )}
-                  </motion.button>
-                </form>
-              </motion.div>
+                      <span className="text-sm text-blue-600 font-medium">
+                        Within 1 business day
+                      </span>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </div>
 
-              {/* Contact Information */}
-              <motion.div
-                className="space-y-8"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.8 }}
-              >
-                {/* Direct Contact */}
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <div className="flex items-center mb-6">
-                    <Mail className="h-6 w-6 text-purple-600 mr-3" />
-                    <h3 className="text-xl font-semibold text-gray-900">Direct Contact</h3>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    Or drop us a message via email directly.
-                  </p>
-                  <a 
-                    href="mailto:rusha@garnetai.net"
-                    className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium transition-colors"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    rusha@garnetai.net
-                  </a>
-                </div>
 
-                {/* Response Time */}
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100">
-                  <div className="flex items-center mb-4">
-                    <Clock className="h-6 w-6 text-purple-600 mr-3" />
-                    <h3 className="text-xl font-semibold text-gray-900">Response Time</h3>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    We typically respond to all inquiries within 1 business day.
-                  </p>
-                  <div className="text-sm text-purple-600 font-medium">
-                    Priority support available for enterprise customers
-                  </div>
-                </div>
-
-                {/* About Garnet */}
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">About Garnet</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Garnet is an AI-powered vendor compliance platform designed to help businesses use the power of AI safely and responsibly. 
-                    Our platform ensures compliance and robust AI management without compromising on security.
-                  </p>
-                  <div className="mt-4 flex items-center text-sm text-gray-500">
-                    <Heart className="h-4 w-4 text-red-500 mr-1" />
-                    made with love for compliance teams
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        ) : (
-          /* Success Message */
-          <motion.div
-            className="text-center max-w-2xl mx-auto"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-          >
-            <motion.div
-              className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <CheckCircle className="h-10 w-10 text-green-600" />
             </motion.div>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Message Sent Successfully!
-            </h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Thank you for reaching out to us. We've received your message and will get back to you within 1 business day.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                onClick={resetForm}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition-all duration-300"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+          ) : (
+            /* Success Message */
+            <motion.div
+              className="text-center max-w-2xl mx-auto"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              <motion.div
+                className="bg-gradient-to-r from-green-400 to-blue-500 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-8"
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
               >
-                Send Another Message
-              </motion.button>
-              <Link
-                href="/"
-                className="border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition-all duration-300 text-center"
+                <CheckCircle className="h-12 w-12 text-white" />
+              </motion.div>
+              
+              <motion.h1 
+                className="text-4xl font-bold text-gray-900 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
               >
-                Back to Home
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </main>
-    </div>
+                Message Sent Successfully!
+              </motion.h1>
+              <motion.p 
+                className="text-lg text-gray-600 mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+              >
+                Thank you for reaching out to us. We've received your message and will get back to you soon.
+              </motion.p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <motion.button
+                  onClick={resetForm}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-8 rounded-xl hover:shadow-lg transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  Send Another Message
+                </motion.button>
+                <Link
+                  href="/"
+                  className="border-2 border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-xl hover:bg-gray-50 transition-all duration-300 text-center"
+                >
+                  <motion.span
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.1 }}
+                  >
+                    Back to Home
+                  </motion.span>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </main>
+      </div>
     </ToastProvider>
   );
 };
 
-export default ContactPage; 
+export default ContactPage;

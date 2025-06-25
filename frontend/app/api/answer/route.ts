@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Forward the request to the backend AI service with OpenAI integration
-    const backendResponse = await fetch(`${BACKEND_API_URL}/ai/generate-answer`, {
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/ai/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -33,10 +33,13 @@ const WaitlistAdminPage = () => {
     try {
       setLoading(true);
       
-      // Fetch users and stats in parallel
+      // Get backend URL
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+      
+      // Fetch users and stats in parallel from backend
       const [usersResponse, statsResponse] = await Promise.all([
-        fetch('/api/waitlist/users'),
-        fetch('/api/waitlist/stats')
+        fetch(`${BACKEND_URL}/api/waitlist/users`),
+        fetch(`${BACKEND_URL}/api/waitlist/stats`)
       ]);
 
       if (!usersResponse.ok || !statsResponse.ok) {
@@ -46,8 +49,9 @@ const WaitlistAdminPage = () => {
       const usersData = await usersResponse.json();
       const statsData = await statsResponse.json();
 
-      setUsers(usersData.users || []);
-      setStats(statsData);
+      // Handle the new backend response format with success flag
+      setUsers(usersData.data?.users || usersData.users || []);
+      setStats(statsData.data || statsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
