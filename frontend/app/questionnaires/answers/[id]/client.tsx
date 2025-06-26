@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Check, Edit2, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 interface QuestionAnswer {
   question: string;
@@ -69,16 +70,14 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
             const parsedQuestionnaires = JSON.parse(storedQuestionnaires);
             const found = parsedQuestionnaires.find((q: any) => q.id === id);
             
-            if (found && found.answers && found.answers.length > 0) {
+            if (found && Array.isArray(found.answers) && found.answers.length > 0) {
               setQuestionnaire(found);
               
               // Initialize the answer cache with current answers
               const initialCache: Record<string, string> = {};
-              if (found.answers) {
-                found.answers.forEach((qa: QuestionAnswer, index: number) => {
-                  initialCache[`${found.id}-${index}`] = qa.answer;
-                });
-              }
+              safeMap(found.answers, (qa: QuestionAnswer, index: number) => {
+                initialCache[`${found.id}-${index}`] = qa.answer;
+              });
               setAnswerCache(initialCache);
               setLoading(false);
               return;
@@ -97,7 +96,16 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         console.log('Questionnaire data from backend:', data);
         
         if (data.questionnaire) {
-          // Transform backend data to frontend format
+          // Transform backend data to frontend format with safe array handling
+          const backendQuestions = data.questionnaire.questions;
+          const transformedAnswers = Array.isArray(backendQuestions) 
+            ? backendQuestions.map((q: any) => ({
+                question: q.questionText || q.question || '',
+                answer: q.answer || '',
+                questionId: q.id
+              }))
+            : [];
+
           const questionnaire = {
             id: data.questionnaire.id.toString(),
             name: data.questionnaire.title || `Questionnaire ${data.questionnaire.id}`,
@@ -105,22 +113,16 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
             progress: data.questionnaire.progress || 100,
             vendorId: data.questionnaire.vendorId?.toString(),
             vendorName: data.questionnaire.vendorName,
-            answers: data.questionnaire.questions?.map((q: any) => ({
-              question: q.questionText,
-              answer: q.answer || '',
-              questionId: q.id
-            })) || []
+            answers: transformedAnswers
           };
           
           setQuestionnaire(questionnaire);
           
           // Initialize the answer cache with current answers
           const initialCache: Record<string, string> = {};
-          if (questionnaire.answers) {
-            questionnaire.answers.forEach((qa: QuestionAnswer, index: number) => {
-              initialCache[`${questionnaire.id}-${index}`] = qa.answer;
-            });
-          }
+          safeMap(questionnaire.answers, (qa: QuestionAnswer, index: number) => {
+            initialCache[`${questionnaire.id}-${index}`] = qa.answer;
+          });
           setAnswerCache(initialCache);
         } else {
           console.error('Questionnaire not found in API response');
@@ -141,7 +143,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
   
   // Handle saving edited answer
   const handleSaveAnswer = async (index: number) => {
-    if (!questionnaire || !questionnaire.answers) return;
+    if (!questionnaire || !Array.isArray(questionnaire.answers)) return;
     
     try {
       // Call backend API first
@@ -162,7 +164,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         updatedQuestionnaire = await response.json();
         
         // Convert backend format to frontend format if needed
-        if (updatedQuestionnaire.answers) {
+        if (Array.isArray(updatedQuestionnaire.answers)) {
           updatedQuestionnaire.answers = updatedQuestionnaire.answers.map((qa: any) => ({
             question: qa.question,
             answer: qa.answer,
@@ -201,9 +203,9 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
             const updatedQuestionnaires = parsedQuestionnaires.map((q: any) => 
               q.id === id ? {
                 ...q,
-                answers: q.answers.map((qa: any, idx: number) => 
+                answers: Array.isArray(q.answers) ? q.answers.map((qa: any, idx: number) => 
                   idx === index ? { ...qa, answer: editedAnswer } : qa
-                ),
+                ) : [],
                 progress: updatedQuestionnaire.progress,
                 status: updatedQuestionnaire.status
               } : q
@@ -226,14 +228,16 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         // Create a copy of the questionnaire
         const updatedQuestionnaire = {
           ...questionnaire,
-          answers: [...questionnaire.answers]
+          answers: Array.isArray(questionnaire.answers) ? [...questionnaire.answers] : []
         };
         
-        // Update the specific answer
-        updatedQuestionnaire.answers[index] = {
-          ...updatedQuestionnaire.answers[index],
-          answer: editedAnswer
-        };
+        // Update the specific answer if index is valid
+        if (updatedQuestionnaire.answers[index]) {
+          updatedQuestionnaire.answers[index] = {
+            ...updatedQuestionnaire.answers[index],
+            answer: editedAnswer
+          };
+        }
         
         // Update answer cache
         setAnswerCache({
@@ -267,9 +271,10 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
   
   // Handle regenerating an answer
   const handleRegenerateAnswer = async (index: number) => {
-    if (!questionnaire || !questionnaire.answers) return;
+    if (!questionnaire || !Array.isArray(questionnaire.answers)) return;
     
-    const question = questionnaire.answers[index].question;
+    const question = questionnaire.answers[index]?.question;
+    if (!question) return;
     
     // Set regenerating state for this answer
     setRegeneratingAnswers(prev => ({ ...prev, [index]: true }));
@@ -394,6 +399,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
   
   // Handle starting edit
   const handleEditAnswer = (index: number) => {
+    if (!Array.isArray(questionnaire.answers) || !questionnaire.answers[index]) return;
     setEditingAnswerIndex(index);
     setEditedAnswer(questionnaire.answers[index].answer);
   };
@@ -483,7 +489,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         </div>
         
         {/* Welcome Message for new questionnaire */}
-        {questionnaire.answers?.some((qa: QuestionAnswer) => qa.isLoading) && (
+        {Array.isArray(questionnaire.answers) && questionnaire.answers.some((qa: QuestionAnswer) => qa.isLoading) && (
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/10 rounded-lg p-6">
               <div className="flex items-center mb-3">
@@ -501,7 +507,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
 
         {/* Q&A Section with Enhanced ChatGPT-like interface */}
         <div className="space-y-6 max-w-4xl mx-auto animate-slide-up" role="list" aria-label="Questions and answers">
-          {questionnaire.answers?.map((qa: QuestionAnswer, index: number) => (
+          {safeMap(questionnaire.answers || [], (qa: QuestionAnswer, index: number) => (
             <div key={index} className="space-y-4" role="listitem">
               {/* Question Bubble (User style) */}
               <div className="flex justify-end">
@@ -609,7 +615,7 @@ export function QuestionnairesAnswersClient({ id }: { id: string }) {
         </div>
 
         {/* Completion Message */}
-        {questionnaire.answers?.length > 0 && !questionnaire.answers.some((qa: QuestionAnswer) => qa.isLoading) && (
+        {Array.isArray(questionnaire.answers) && questionnaire.answers.length > 0 && !questionnaire.answers.some((qa: QuestionAnswer) => qa.isLoading) && (
           <div className="max-w-4xl mx-auto mt-8">
             <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-4">

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Building2, Shield, FileText, Share2, Copy, ExternalLink } from 'lucide-react';
 import { vendors } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 export const TrustPortalVendorView: React.FC = () => {
   const { user } = useAuth();
@@ -213,9 +214,9 @@ export const TrustPortalVendorView: React.FC = () => {
               <FileText className="h-6 w-6 text-green-600 mr-2" />
               <h2 className="text-lg font-semibold">Shared Works</h2>
             </div>
-            {data?.works && data.works.length > 0 ? (
+            {Array.isArray(data?.works) && data.works.length > 0 ? (
               <div className="space-y-3">
-                {data.works.slice(0, 3).map((work: any, index: number) => (
+                {safeMap(data.works.slice(0, 3), (work: any, index: number) => (
                   <div key={index} className="border-l-4 border-green-500 pl-3">
                     <h3 className="font-medium text-sm">{work.projectName}</h3>
                     <p className="text-xs text-gray-600">{work.status}</p>
@@ -236,9 +237,9 @@ export const TrustPortalVendorView: React.FC = () => {
               <Shield className="h-6 w-6 text-purple-600 mr-2" />
               <h2 className="text-lg font-semibold">Compliance Answers</h2>
             </div>
-            {data?.questionnaireAnswers && data.questionnaireAnswers.length > 0 ? (
+            {Array.isArray(data?.questionnaireAnswers) && data.questionnaireAnswers.length > 0 ? (
               <div className="space-y-3">
-                {data.questionnaireAnswers.slice(0, 3).map((answer: any, index: number) => (
+                {safeMap(data.questionnaireAnswers.slice(0, 3), (answer: any, index: number) => (
                   <div key={index} className="border-l-4 border-purple-500 pl-3">
                     <h3 className="font-medium text-sm">{answer.question}</h3>
                     <p className="text-xs text-gray-600">{answer.answer?.substring(0, 50)}...</p>

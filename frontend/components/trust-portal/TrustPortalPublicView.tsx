@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Shield, FileText } from 'lucide-react';
 import { vendors } from '@/lib/api';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 interface TrustPortalPublicViewProps {
   token: string;
@@ -92,7 +93,7 @@ export const TrustPortalPublicView: React.FC<TrustPortalPublicViewProps> = ({ to
               )}
             </div>
 
-            {data.works && data.works.length > 0 && (
+            {Array.isArray(data.works) && data.works.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
                 <div className="flex items-center mb-6">
                   <FileText className="h-6 w-6 text-blue-600 mr-2" />
@@ -100,7 +101,7 @@ export const TrustPortalPublicView: React.FC<TrustPortalPublicViewProps> = ({ to
                 </div>
                 
                 <div className="grid gap-6">
-                  {data.works.map((work: any) => (
+                  {safeMap(data.works, (work: any) => (
                     <div key={work.id} className="border border-gray-200 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {work.projectName}
@@ -110,9 +111,9 @@ export const TrustPortalPublicView: React.FC<TrustPortalPublicViewProps> = ({ to
                         <p className="text-gray-600 mb-4">{work.description}</p>
                       )}
                       
-                      {work.technologies && work.technologies.length > 0 && (
+                      {Array.isArray(work.technologies) && work.technologies.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {work.technologies.map((tech: string, index: number) => (
+                          {safeMap(work.technologies, (tech: string, index: number) => (
                             <span
                               key={index}
                               className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
