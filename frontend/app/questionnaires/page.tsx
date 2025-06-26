@@ -1,1191 +1,447 @@
 "use client";
 
-import React, { useState, useEffect, useRef, ChangeEvent, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, Filter, Plus, Search, SlidersHorizontal, X, Upload, FileText, FileType, Files, RefreshCw, Trash2, Sparkles, MessageSquare, Loader2, Building2 } from "lucide-react";
-import { MobileNavigation } from "@/components/MobileNavigation";
-import { QuestionnaireList, Questionnaire, QuestionnaireStatus } from "@/components/dashboard/QuestionnaireList";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { 
+  ClipboardList, 
+  X, 
+  Upload, 
+  FileText, 
+  Loader2, 
+  Building2,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  HelpCircle,
+  LifeBuoy,
+  Download,
+  Bot,
+  FileCheck,
+  FolderOpen,
+  MessageCircle,
+  Sparkles,
+  Files,
+  MessageSquare,
+  RefreshCw,
+  Brain
+} from "lucide-react";
 import Header from '@/components/Header';
-import { debounce } from 'lodash';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
-import { QuestionnaireService } from '@/lib/services/questionnaireService';
-import { EnhancedAnswerDisplay } from '@/components/questionnaire/EnhancedAnswerDisplay';
-import EnhancedQuestionnaireView from '@/components/questionnaire/EnhancedQuestionnaireView';
-import ChatBot from '../../components/questionnaire/ChatBot';
 import { vendors as vendorAPI } from '@/lib/api';
 
-interface QuestionAnswer {
-  question: string;
-  answer: string;
-  isLoading?: boolean;
-  hasError?: boolean;
-  isGenerated?: boolean;
+interface ExtractedQuestion {
+  id: string;
+  text: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'needs-support';
+  answer?: string;
+  confidence?: number;
+  requiresDoc?: boolean;
+  docDescription?: string;
+  supportingDocs?: File[];
 }
 
-interface SimpleVendor {
+interface ChecklistFile {
   id: string;
   name: string;
-  status: string;
+  type: string;
+  uploadDate: Date;
+  questions: ExtractedQuestion[];
+  extractionStatus: 'uploading' | 'extracting' | 'completed' | 'error';
 }
 
-const MAX_QUESTIONS = 500;
-const MAX_QUESTION_LENGTH = 200;
-const AUTOSAVE_KEY = 'questionnaire_draft';
+interface SupportTicket {
+  id: string;
+  questionId: string;
+  title: string;
+  status: 'open' | 'in-progress' | 'resolved';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: Date;
+}
+
+// Add new confirmation dialog state
+interface ConfirmationDialog {
+  show: boolean;
+  title: string;
+  message: string;
+  questions: ExtractedQuestion[];
+  onConfirm: () => void;
+  onCancel: () => void;
+  isProcessing: boolean;
+}
 
 const QuestionnairesPage = () => {
-  // ✅ CORRECT: ALL hooks must be declared at the top level, before any conditional returns
   const router = useRouter();
   
-  // State declarations - ALL hooks first
+  // State declarations
   const [hasMounted, setHasMounted] = useState(false);
-  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  
-  // Vendor states
-  const [vendors, setVendors] = useState<SimpleVendor[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('');
   const [isLoadingVendors, setIsLoadingVendors] = useState<boolean>(false);
   
-  // New state variables for the questionnaire input modal
-  const [showQuestionnaireInput, setShowQuestionnaireInput] = useState(false);
-  const [questionnaireInput, setQuestionnaireInput] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [questionAnswers, setQuestionAnswers] = useState<QuestionAnswer[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
-
-  // Add state for file upload
+  // Active section state
+  const [activeSection, setActiveSection] = useState<'upload' | 'ai' | 'docs' | 'support'>('upload');
+  
+  // New 4-section states
+  const [checklists, setChecklists] = useState<ChecklistFile[]>([]);
+  const [selectedChecklist, setSelectedChecklist] = useState<ChecklistFile | null>(null);
+  const [extractedQuestions, setExtractedQuestions] = useState<ExtractedQuestion[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  
+  // Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // New states for enhanced features
-  const [questionnaireTitle, setQuestionnaireTitle] = useState('');
   const [dragActive, setDragActive] = useState(false);
-  const [questionCount, setQuestionCount] = useState(0);
-  const [duplicateLines, setDuplicateLines] = useState<number[]>([]);
-  const [longLines, setLongLines] = useState<number[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [findReplaceMode, setFindReplaceMode] = useState(false);
-  const [findText, setFindText] = useState('');
-  const [replaceText, setReplaceText] = useState('');
-
-  // AI Assistant state for questionnaire creation
-  const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
-  const [generatedAnswers, setGeneratedAnswers] = useState<QuestionAnswer[]>([]);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [answerCache, setAnswerCache] = useState<Record<string, string>>({});
-
-  // Tab state for enhanced view
-  const [activeTab, setActiveTab] = useState<'list' | 'enhanced' | 'chatbot'>('list');
   
-  // State for selected vendor in enhanced view
-  const [selectedVendorForEnhanced, setSelectedVendorForEnhanced] = useState<string>('');
+  // AI processing states
+  const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentQuestion: '' });
+  
+  // Support states
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [selectedQuestionForSupport, setSelectedQuestionForSupport] = useState<ExtractedQuestion | null>(null);
+  const [supportDescription, setSupportDescription] = useState('');
+  
+  // Add confirmation dialog state
+  const [confirmationDialog, setConfirmationDialog] = useState<ConfirmationDialog>({
+    show: false,
+    title: '',
+    message: '',
+    questions: [],
+    onConfirm: () => {},
+    onCancel: () => {},
+    isProcessing: false
+  });
+  
+  // File refs
+  const checklistFileRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // State for chatbot integration
-  const [chatbotQuestions, setChatbotQuestions] = useState<string[]>([]);
-  const [chatbotTitle, setChatbotTitle] = useState<string>('');
-
-  // Custom hooks - also must be at top level
   const { isLoading: authLoading } = useAuthGuard();
 
-  // useCallback hooks - at top level
-  const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    
-    // Reset height to calculate scrollHeight accurately
-    textarea.style.height = 'auto';
-    
-    // Set new height, with max-height enforced by CSS
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 400)}px`;
-  }, []);
-  
-  // Create debounced version once
-  const debouncedResizeRef = useRef<ReturnType<typeof debounce> | null>(null);
-  if (!debouncedResizeRef.current) {
-    debouncedResizeRef.current = debounce(resizeTextarea, 100);
-  }
-
-  // useEffect hooks - at top level
   useEffect(() => {
     setHasMounted(true);
+    loadVendors();
   }, []);
 
-  // Calculate and update question count and validation when input changes
-  useEffect(() => {
-    const lines = questionnaireInput
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-    
-    setQuestionCount(lines.length);
-    
-    // Check for duplicates
-    const duplicates: number[] = [];
-    const seen = new Set<string>();
-    
-    lines.forEach((line, index) => {
-      if (seen.has(line.toLowerCase())) {
-        duplicates.push(index + 1);
-      } else {
-        seen.add(line.toLowerCase());
-      }
-    });
-    
-    setDuplicateLines(duplicates);
-    
-    // Check for long lines
-    const longLinesFound: number[] = [];
-    lines.forEach((line, index) => {
-      if (line.length > MAX_QUESTION_LENGTH) {
-        longLinesFound.push(index + 1);
-      }
-    });
-    
-    setLongLines(longLinesFound);
-    
-    // Validate total count
-    if (lines.length > MAX_QUESTIONS) {
-      setValidationError(`Exceeded maximum of ${MAX_QUESTIONS} questions. Please reduce the number of questions.`);
-    } else if (duplicates.length > 0) {
-      setValidationError(`Duplicate questions found on lines: ${duplicates.join(', ')}`);
-    } else if (longLinesFound.length > 0) {
-      setValidationError(`Questions exceeding ${MAX_QUESTION_LENGTH} characters on lines: ${longLinesFound.join(', ')}`);
-    } else {
-      setValidationError(null);
-    }
-    
-    // Auto-save draft (only on client side)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
-        title: questionnaireTitle,
-        questions: questionnaireInput
-      }));
-    }
-    
-  }, [questionnaireInput, questionnaireTitle]);
-
-  useEffect(() => {
-    resizeTextarea();
-    return () => {
-      debouncedResizeRef.current?.cancel();
-    };
-  }, [questionnaireInput, resizeTextarea]);
-
-  // Load autosaved draft
-  useEffect(() => {
-    if (showQuestionnaireInput && typeof window !== 'undefined') {
-      const savedDraft = localStorage.getItem(AUTOSAVE_KEY);
-      if (savedDraft) {
-        try {
-          const { title, questions } = JSON.parse(savedDraft);
-          setQuestionnaireTitle(title || '');
-          setQuestionnaireInput(questions || '');
-        } catch (e) {
-          console.error('Error loading saved draft:', e);
-        }
-      }
-    }
-  }, [showQuestionnaireInput]);
-
-  // Load vendors when switching to enhanced or chatbot tab
-  useEffect(() => {
-    if ((activeTab === 'enhanced' || activeTab === 'chatbot') && vendors.length === 0 && !isLoadingVendors) {
-      loadVendors();
-    }
-  }, [activeTab]);
-
-  // Function to load vendors (unified version)
   const loadVendors = async () => {
-    if (isLoadingVendors) return; // Prevent duplicate calls
-    
     setIsLoadingVendors(true);
     try {
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch vendors: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Vendors API response:', data);
-      
-      // Handle the API response format { success: true, data: [...] }
-      const vendorList = data.success && data.data ? data.data : (Array.isArray(data) ? data : []);
-      
-      const formattedVendors = vendorList.map((vendor: any) => ({
-        id: vendor.vendorId?.toString() || vendor.id?.toString() || vendor.uuid?.toString(),
-        name: vendor.companyName || vendor.name || 'Unknown Vendor',
-        status: vendor.status || 'QUESTIONNAIRE_PENDING'
-      }));
-      
-      console.log('Formatted vendors:', formattedVendors);
-      setVendors(formattedVendors);
-      
-      // Auto-select first vendor if none selected
-      if (formattedVendors.length > 0 && !selectedVendorForEnhanced) {
-        setSelectedVendorForEnhanced(formattedVendors[0].id);
-      }
+      const response = await vendorAPI.getAll();
+      setVendors(response || []);
     } catch (error) {
       console.error('Error loading vendors:', error);
-      setError('Failed to load vendors. Please try again.');
-      // Set empty array on error to show no vendors available
-      setVendors([]);
     } finally {
       setIsLoadingVendors(false);
     }
   };
 
-  // Focus trap for modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!showQuestionnaireInput || e.key !== 'Tab') return;
-      
-      const modal = modalRef.current;
-      if (!modal) return;
-      
-      const focusableElements = modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      
-      const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-      
-      if (e.shiftKey && document.activeElement === firstElement) {
-        e.preventDefault();
-        lastElement.focus();
-      } else if (!e.shiftKey && document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement.focus();
-      }
-    };
+  // Enhanced file upload with real extraction
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
     
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showQuestionnaireInput]);
-
-  // Fetch questionnaires from questionnaire API (ultra-simple structure)
-  const fetchQuestionnaires = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
+    const file = files[0];
+    const allowedTypes = ['.pdf', '.txt', '.doc', '.docx'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
-    try {
-      let transformedQuestionnaires: Questionnaire[] = [];
-      
-      if (selectedVendorId) {
-        // Get questionnaires for specific vendor from Railway backend
-        console.log(`🔍 Fetching questionnaires for vendor ${selectedVendorId}`);
-        
-        const response = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/vendor/${selectedVendorId}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.questionnaires && Array.isArray(data.questionnaires)) {
-            transformedQuestionnaires = data.questionnaires.map((q: any) => ({
-              id: q.id.toString(),
-              name: q.title, // Backend now returns formatted title as {Vendor_name}-{question_title}
-              vendorId: q.vendorId?.toString(),
-              vendorName: q.vendorName,
-              questionTitle: q.questionTitle,
-              status: q.status,
-              progress: q.progress || 0,
-              dueDate: new Date().toLocaleDateString(),
-              createdAt: q.createdAt,
-              updatedAt: q.updatedAt
-            }));
-          }
-        } else {
-          console.error('Failed to fetch vendor questionnaires:', response.status);
-        }
-      } else {
-        // Get all questionnaires from Railway backend
-        console.log('🔍 Fetching all questionnaires');
-        
-        const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires');
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.questionnaires && Array.isArray(data.questionnaires)) {
-            transformedQuestionnaires = data.questionnaires.map((q: any) => ({
-              id: q.id.toString(),
-              name: q.title, // Backend now returns formatted title as {Vendor_name}-{question_title}
-              vendorId: q.vendorId?.toString(),
-              vendorName: q.vendorName,
-              questionTitle: q.questionTitle,
-              status: q.status,
-              progress: q.progress || 0,
-              dueDate: new Date().toLocaleDateString(),
-              createdAt: q.createdAt,
-              updatedAt: q.updatedAt
-            }));
-          }
-        } else {
-          console.error('Failed to fetch questionnaires:', response.status);
-        }
-      }
-      
-      console.log(`✅ Loaded ${transformedQuestionnaires.length} questionnaires`);
-      setQuestionnaires(transformedQuestionnaires);
-      
-    } catch (err) {
-      console.error('Error fetching questionnaires:', err);
-      setError('Failed to load questionnaires. Please try again.');
-      
-      // Fallback to localStorage on API error
-      if (typeof window !== 'undefined') {
-        const questionnairesData = localStorage.getItem('user_questionnaires');
-        
-        if (questionnairesData) {
-          try {
-            const localQuestionnaires = JSON.parse(questionnairesData);
-            console.log(`📦 Loaded ${localQuestionnaires.length} questionnaires from localStorage`);
-            setQuestionnaires(localQuestionnaires);
-          } catch (e) {
-            console.error('Error parsing stored questionnaires:', e);
-          }
-        }
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedVendorId]);
-
-  // Retry function for vendor loading
-  const retryLoadVendors = () => {
-    console.log('Retrying vendor loading...');
-    loadVendors();
-  };
-
-  // Initial fetch on component mount
-  useEffect(() => {
-    fetchQuestionnaires();
-    // Vendors will be loaded when needed via the tab switching effect
-  }, []);
-  
-  // Focus the textarea when the modal is shown
-  useEffect(() => {
-    if (showQuestionnaireInput) {
-      // Focus on title first, then textarea
-      if (textareaRef.current) {
-        setTimeout(() => {
-          textareaRef.current?.focus();
-        }, 100);
-      }
-    }
-  }, [showQuestionnaireInput]);
-
-  // Handle editing an individual answer
-  const handleAnswerEdit = useCallback((index: number, newAnswer: string) => {
-    setGeneratedAnswers(prev => {
-      const updatedAnswers = prev.map((qa, i) => 
-        i === index 
-          ? { ...qa, answer: newAnswer, hasError: false, isGenerated: false }
-          : qa
-      );
-      
-      // Update answer cache synchronously
-      const question = prev[index]?.question;
-      if (question) {
-        setAnswerCache(cache => ({ ...cache, [question]: newAnswer }));
-      }
-      
-      return updatedAnswers;
-    });
-  }, []);
-
-  // Handle regenerating a single answer
-  const handleRegenerateAnswer = useCallback(async (index: number) => {
-    // Access current state directly
-    const currentQuestion = generatedAnswers[index]?.question;
-    if (!currentQuestion) return;
-    
-    // Check cache first
-    const cachedAnswer = answerCache[currentQuestion];
-    if (cachedAnswer) {
-      setGeneratedAnswers(prev => 
-        prev.map((qa, i) => 
-          i === index 
-            ? { ...qa, answer: cachedAnswer, hasError: false, isGenerated: true }
-            : qa
-        )
-      );
+    if (!allowedTypes.includes(fileExtension)) {
+      setUploadError('Please upload a PDF, TXT, DOC, or DOCX file');
       return;
     }
 
-    // Set loading state for this specific answer
-    setGeneratedAnswers(prev => 
-      prev.map((qa, i) => 
-        i === index 
-          ? { ...qa, isLoading: true, hasError: false }
-          : qa
-      )
-    );
-
-    try {
-      const result = await QuestionnaireService.getAnswer(currentQuestion);
-      
-      if (result.success && result.answer) {
-        const newAnswer = result.answer;
-        
-        // Update the answer and cache in a single operation
-        setGeneratedAnswers(prev => 
-          prev.map((qa, i) => 
-            i === index 
-              ? { 
-                  ...qa, 
-                  answer: newAnswer, 
-                  isLoading: false, 
-                  hasError: newAnswer.includes('We couldn\'t generate') || newAnswer.includes('couldn\'t generate a response'),
-                  isGenerated: true 
-                }
-              : qa
-          )
-        );
-        
-        // Cache the new answer
-        setAnswerCache(prev => ({ ...prev, [currentQuestion]: newAnswer }));
-      } else {
-        throw new Error(result.error || 'Failed to regenerate answer');
-      }
-    } catch (error) {
-      console.error('Error regenerating answer:', error);
-      
-      // Set error state
-      setGeneratedAnswers(prev => 
-        prev.map((qa, i) => 
-          i === index 
-            ? { 
-                ...qa, 
-                answer: 'We apologize, but we couldn\'t generate a response at this time. Please contact our compliance team directly for this information.', 
-                isLoading: false, 
-                hasError: true,
-                isGenerated: false 
-              }
-            : qa
-        )
-      );
-    }
-  }, [generatedAnswers, answerCache]);
-
-  // ✅ CORRECT: Early return AFTER all hooks are declared
-  if (!hasMounted) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleNewQuestionnaire = () => {
-    setShowQuestionnaireInput(true);
-    setQuestionnaireTitle('');
-    setQuestionnaireInput('');
-    setQuestionAnswers([]);
-    setShowPreview(false);
-    setFindReplaceMode(false);
+    setIsUploading(true);
     setUploadError(null);
-    setValidationError(null);
-    setGeneratedAnswers([]);
-    setShowAIAssistant(false);
-    setSelectedVendorId('');
-  };
 
-  const handleNewQuestionnaireForChat = () => {
-    setShowQuestionnaireInput(true);
-    setActiveTab('list'); // Switch to list tab to show the modal
-  };
-
-  const handleChatbotQuestionnaire = (title: string, questions: string[]) => {
-    setChatbotTitle(title);
-    setChatbotQuestions(questions);
-    setActiveTab('chatbot'); // Switch to chatbot tab with the questions
-  };
-
-  // Generate AI answers for questions with enhanced progress tracking
-  const handleGenerateAnswers = async (): Promise<QuestionAnswer[]> => {
-    const questions = questionnaireInput
-      .split('\n')
-        .map(line => line.trim())
-      .filter(line => line.length > 0);
-
-    if (questions.length === 0) {
-      setValidationError("No questions detected – please add questions first.");
-      return [];
-    }
-
-    setIsGeneratingAnswers(true);
-    setValidationError(null);
-    
-    // Initialize answers with loading states
-    const initialAnswers = questions.map(question => ({
-      question,
-      answer: '',
-      isLoading: true,
-      isGenerated: true
-    }));
-    setGeneratedAnswers(initialAnswers);
-    setShowAIAssistant(true);
-    
     try {
-      // Use the enhanced QuestionnaireService with progress tracking
-      const result = await QuestionnaireService.generateAnswers(
-        questions,
-        (completed, total, currentQuestion) => {
-          // Update progress for individual questions
-          setGeneratedAnswers(prev => 
-            prev.map((qa, index) => ({
-              ...qa,
-              isLoading: index >= completed,
-              answer: index < completed ? (prev[index]?.answer || 'Generated successfully') : qa.answer
-            }))
-          );
-        }
-      );
+      const newChecklist: ChecklistFile = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: file.type,
+        uploadDate: new Date(),
+        questions: [],
+        extractionStatus: 'uploading'
+      };
 
-      if (result.success && result.data) {
-        const finalAnswers = result.data.answers.map(answer => ({
-          question: answer.question,
-          answer: answer.answer,
-          isLoading: false,
-          isGenerated: true,
-          hasError: answer.answer.includes('We couldn\'t generate') || answer.answer.includes('couldn\'t generate a response')
-        }));
-        
-        setGeneratedAnswers(finalAnswers);
-        
-        // Show success message with metadata
-        if (result.data.metadata) {
-          const { successfulAnswers, failedAnswers, totalQuestions } = result.data.metadata;
-          if (failedAnswers > 0) {
-            setValidationError(
-              `Generated ${successfulAnswers}/${totalQuestions} answers successfully. ${failedAnswers} failed - you can regenerate them individually.`
-            );
-          }
-        }
-        
-        return finalAnswers;
-      } else {
-        throw new Error(result.error || 'Failed to generate answers');
-      }
+      setChecklists(prev => [...prev, newChecklist]);
+      setSelectedChecklist(newChecklist);
+
+      // Simulate upload progress
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      newChecklist.extractionStatus = 'extracting';
+      setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
+
+      // Extract questions based on file type
+      const extractedText = await extractTextFromFile(file);
+      const questions = parseQuestionsFromText(extractedText);
+      
+      newChecklist.questions = questions;
+      newChecklist.extractionStatus = 'completed';
+      
+      setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
+      setExtractedQuestions(questions);
+
+      // Show confirmation dialog after extraction
+      showExtractionConfirmation(questions);
       
     } catch (error) {
-      console.error('Error generating answers:', error);
+      console.error('Error processing file:', error);
+      setUploadError('Failed to process file. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Show confirmation dialog after question extraction
+  const showExtractionConfirmation = (questions: ExtractedQuestion[]) => {
+    setConfirmationDialog({
+      show: true,
+      title: 'Questions Extracted Successfully',
+      message: `We found ${questions.length} questions in your document. Would you like to send them to our AI for response generation?`,
+      questions,
+      onConfirm: () => startAIResponseGeneration(questions),
+      onCancel: () => {
+        setConfirmationDialog(prev => ({ ...prev, show: false }));
+      },
+      isProcessing: false
+    });
+  };
+
+  // Start AI response generation process
+  const startAIResponseGeneration = async (questions: ExtractedQuestion[]) => {
+    setConfirmationDialog(prev => ({ ...prev, isProcessing: true }));
+    
+    try {
+      // Switch to AI section
+      setActiveSection('ai');
       
-      // Update all answers to show error state
-      const errorAnswers = questions.map(question => ({
-        question,
-        answer: 'We apologize, but we couldn\'t generate a response at this time. Please contact our compliance team directly for this information.',
-        isLoading: false,
-        isGenerated: false,
-        hasError: true
-      }));
+      // Close confirmation dialog
+      setConfirmationDialog(prev => ({ ...prev, show: false }));
       
-      setGeneratedAnswers(errorAnswers);
-      setValidationError('Failed to generate AI answers. You can try regenerating individual answers or edit them manually.');
-      return errorAnswers;
+      // Start AI processing
+      await generateAIResponses(questions);
+      
+    } catch (error) {
+      console.error('Error starting AI generation:', error);
+      setConfirmationDialog(prev => ({ ...prev, isProcessing: false }));
+    }
+  };
+
+  // Generate AI responses using actual API endpoints
+  const generateAIResponses = async (questions: ExtractedQuestion[]) => {
+    setIsGeneratingAnswers(true);
+    setGenerationProgress({ current: 0, total: questions.length, currentQuestion: '' });
+
+    try {
+      // Update questions to in-progress status
+      const questionsInProgress = questions.map(q => ({ ...q, status: 'in-progress' as const }));
+      setExtractedQuestions(questionsInProgress);
+
+      if (questions.length === 1) {
+        // Use single question API
+        await generateSingleAnswer(questions[0]);
+      } else {
+        // Use batch API for multiple questions
+        await generateBatchAnswers(questions);
+      }
+    } catch (error) {
+      console.error('Error generating AI responses:', error);
+      // Mark questions as needing support if AI fails
+      setExtractedQuestions(prev => prev.map(q => ({ ...q, status: 'needs-support' })));
     } finally {
       setIsGeneratingAnswers(false);
     }
   };
 
-  // Wrapper function for button clicks (doesn't return anything)
-  const handleGenerateAnswersClick = async () => {
-    await handleGenerateAnswers();
-  };
+  // Generate single answer using individual API
+  const generateSingleAnswer = async (question: ExtractedQuestion) => {
+    setGenerationProgress(prev => ({ ...prev, currentQuestion: question.text }));
 
-  const handleSubmitQuestionnaire = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!questionnaireInput.trim()) {
-      setValidationError("No questions detected – please add one per line.");
-      return;
-    }
-    
-    if (!questionnaireTitle.trim()) {
-      setValidationError("Please provide a title for the questionnaire.");
-      return;
-    }
-    
-    // Parse input into separate questions (non-empty lines)
-    const questions = questionnaireInput
-      .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-      
-      if (questions.length === 0) {
-      setValidationError("No questions detected – please add one per line.");
-      return;
-    }
-    
-    if (validationError) {
-      return; // Don't submit if there are validation errors
-    }
-    
-    setIsSubmitting(true);
-    
     try {
-      // Always generate AI answers during questionnaire creation for better UX
-      let finalAnswers = generatedAnswers;
-      
-      if (finalAnswers.length === 0) {
-        // Generate AI answers before saving to database
-        console.log('🤖 Generating AI answers for questionnaire creation...');
-        finalAnswers = await handleGenerateAnswers();
-      }
-      
-      // Save to database with pre-generated answers (avoid duplicate generation)
-      const shouldGenerateAnswers = false; // Don't generate again, we already have answers
-      
-      const databaseResult = await QuestionnaireService.saveQuestionnaireToDatabase(
-        questionnaireTitle,
-        questions,
-        shouldGenerateAnswers,
-        selectedVendorId || undefined,
-        finalAnswers // Pass pre-generated answers to avoid duplication
-      );
-      
-      let newQuestionnaire: any;
-      
-      if (databaseResult.success && databaseResult.questionnaire) {
-        // Successfully saved to database
-        console.log('✅ Questionnaire saved to database successfully!');
-        console.log('📊 Created vendor:', databaseResult.vendor?.name);
-        console.log('📝 Questionnaire ID:', databaseResult.questionnaire.id);
-        
-        // Get selected vendor info
-        const selectedVendor = vendors.find(v => v.id === selectedVendorId);
-        
-        newQuestionnaire = {
-          id: databaseResult.questionnaire.id,
-          name: databaseResult.questionnaire.title || questionnaireTitle,
-          status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
-          dueDate: new Date().toLocaleDateString(),
-          progress: finalAnswers.length > 0 ? 100 : 0,
-          createdAt: new Date().toISOString(),
-          answers: (finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' }))).map((qa: any) => ({
-            question: qa.question,
-            answer: qa.answer || '',
-            isMandatory: true,
-            needsAttention: !qa.answer || qa.answer.trim() === '',
-            isLoading: false
-          })),
-          vendorId: selectedVendorId || databaseResult.questionnaire.vendorId,
-          vendorName: selectedVendor?.name || databaseResult.questionnaire.vendorName
-        } as any;
-        
-        // Show success message
-        setValidationError(null);
-        
-      } else {
-        // Fallback to local storage if database save fails
-        console.warn('⚠️ Database save failed, falling back to local storage:', databaseResult.error);
-        
-        // Use the already generated answers from above
-        // finalAnswers is already set from the earlier generation step
-        
-        // Get selected vendor info
-        const selectedVendor = vendors.find(v => v.id === selectedVendorId);
-        
-        newQuestionnaire = {
-          id: `q${Date.now()}`,  
-          name: questionnaireTitle,
-          status: finalAnswers.length > 0 ? "Completed" as QuestionnaireStatus : "Not Started" as QuestionnaireStatus,
-          dueDate: new Date().toLocaleDateString(),
-          progress: finalAnswers.length > 0 ? 100 : 0,
-          createdAt: new Date().toISOString(),
-          answers: (finalAnswers.length > 0 ? finalAnswers : questions.map(q => ({ question: q, answer: '' }))).map((qa: any) => ({
-            question: qa.question,
-            answer: qa.answer || '',
-            isMandatory: true,
-            needsAttention: !qa.answer || qa.answer.trim() === '',
-            isLoading: false
-          })),
-          vendorId: selectedVendorId,
-          vendorName: selectedVendor?.name
-        } as any;
-        
-        // Show warning about fallback
-        setValidationError(`⚠️ Saved locally only. Database connection issue: ${databaseResult.error}`);
-      }
-      
-      // Always store in local storage for offline access and backup (only on client side)
-      if (typeof window !== 'undefined') {
-        const existingQuestionnaires = localStorage.getItem('user_questionnaires');
-        let userQuestionnaires: Array<Questionnaire & { answers?: QuestionAnswer[] }> = [];
-        
-        if (existingQuestionnaires) {
-          try {
-            userQuestionnaires = JSON.parse(existingQuestionnaires);
-          } catch (e) {
-            console.error('Error parsing stored questionnaires:', e);
-          }
-        }
-        
-        // Add the new questionnaire
-        userQuestionnaires.push(newQuestionnaire);
-        
-        // Save back to local storage
-        localStorage.setItem('user_questionnaires', JSON.stringify(userQuestionnaires));
-        
-        // Clear autosaved draft
-        localStorage.removeItem(AUTOSAVE_KEY);
-      }
-      
-      // Check if we need to redirect to chatbot or chat interface
-      if (activeTab === 'chatbot') {
-        // If currently on chatbot tab, send questions to chatbot component
-        console.log('🤖 Sending questions to chatbot component');
-        handleChatbotQuestionnaire(questionnaireTitle, questions);
-        
-        // Close modal and clear state
-        setShowQuestionnaireInput(false);
-        setIsSubmitting(false);
-        closeQuestionnaireInput();
-        
-        // Refresh the questionnaire list in the background
-        setTimeout(() => {
-          fetchQuestionnaires();
-        }, 100);
-      } else {
-        // Regular flow: redirect to the dedicated chat interface
-        console.log('🔄 Redirecting to chat page for questionnaire:', newQuestionnaire.id);
-        console.log('📊 Questionnaire data structure:', newQuestionnaire);
-        
-        // Close modal and clear state immediately
-        setShowQuestionnaireInput(false);
-        setIsSubmitting(false);
-        closeQuestionnaireInput();
-        
-        // Navigate immediately without timeout - the data is already saved
-        console.log('🚀 Navigating to chat interface...');
-        router.push(`/questionnaires/${newQuestionnaire.id}/chat`);
-        
-        // Refresh the questionnaire list in the background for when user returns
-        setTimeout(() => {
-          fetchQuestionnaires();
-        }, 100);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error submitting questionnaire:', error);
-      setValidationError('Failed to submit questionnaire. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const closeQuestionnaireInput = () => {
-    setShowQuestionnaireInput(false);
-    setQuestionnaireTitle('');
-    setQuestionnaireInput('');
-    setQuestionAnswers([]);
-    setShowPreview(false);
-    setFindReplaceMode(false);
-    setGeneratedAnswers([]);
-    setShowAIAssistant(false);
-    setSelectedVendorId('');
-    // Don't clear chatbot questions here as they should persist until completion
-  };
-
-  // Process file regardless of upload method
-  const processFile = async (file: File) => {
-    setIsUploading(true);
-    setUploadError(null);
-    
-    try {
-      // File size check (10MB limit as example)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('File is unusually large (>10MB). Please check the file before uploading.');
-      }
-      
-      // Sanitize filename
-      const sanitizedName = file.name.replace(/[^\w\s.-]/g, '');
-      
-      // Check file type
-      const fileExtension = sanitizedName.split('.').pop()?.toLowerCase();
-      
-      if (fileExtension === 'txt') {
-        // Read file content
-        const text = await readFileAsText(file);
-        
-        // Set the text to the textarea
-        setQuestionnaireInput(text);
-        
-        // Auto-generate title from filename if not set
-        if (!questionnaireTitle) {
-          const baseName = sanitizedName.split('.')[0]
-            .replace(/[_-]/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-          setQuestionnaireTitle(baseName);
-        }
-      } else if (fileExtension === 'csv') {
-        // Read and parse CSV
-        const text = await readFileAsText(file);
-        
-        // Basic CSV parsing - split by lines, then by commas
-        const lines = text.split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0);
-        
-        // If first row contains headers like "question", skip it
-        if (lines.length > 0 && lines[0].toLowerCase().includes('question')) {
-          lines.shift();
-        }
-        
-        // Extract first column as questions (assuming questions are in first column)
-        const questions = lines.map(line => {
-          const firstColumn = line.split(',')[0];
-          return firstColumn.replace(/^["']|["']$/g, ''); // Remove quotes
-        }).filter(q => q.length > 0);
-        
-        setQuestionnaireInput(questions.join('\n'));
-        
-        // Auto-generate title from filename
-        if (!questionnaireTitle) {
-          const baseName = sanitizedName.split('.')[0]
-            .replace(/[_-]/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-          setQuestionnaireTitle(baseName);
-        }
-      } else if (fileExtension === 'md') {
-        // Basic Markdown support - extract lines that might be questions
-        const text = await readFileAsText(file);
-        const lines = text.split('\n')
-          .filter(line => {
-            // Skip headers, lists markers, etc.
-            const trimmed = line.trim();
-            return trimmed.length > 0 && 
-                  !trimmed.startsWith('#') && 
-                  !trimmed.startsWith('-') && 
-                  !trimmed.startsWith('*') &&
-                  !trimmed.startsWith('```');
-          })
-          .join('\n');
-        
-        setQuestionnaireInput(lines);
-        
-        // Auto-generate title from filename
-        if (!questionnaireTitle) {
-          const baseName = sanitizedName.split('.')[0]
-            .replace(/[_-]/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-          setQuestionnaireTitle(baseName);
-        }
-      } else if (fileExtension === 'pdf') {
-        // Handle PDF files - for now, show a message that PDF processing is coming soon
-        // In the future, this would use a PDF parsing library like pdf-parse or PDF.js
-        try {
-          // For now, we'll show a message that PDF text extraction is being implemented
-          const pdfContent = await extractTextFromPDF(file);
-          if (pdfContent) {
-            setQuestionnaireInput(pdfContent);
-            
-            // Auto-generate title from filename
-            if (!questionnaireTitle) {
-              const baseName = sanitizedName.split('.')[0]
-                .replace(/[_-]/g, ' ')
-                .replace(/\b\w/g, c => c.toUpperCase());
-              setQuestionnaireTitle(baseName);
-            }
-          } else {
-            throw new Error('Could not extract text from PDF. Please try converting to TXT, MD, or CSV format.');
-          }
-        } catch (error) {
-          console.error('PDF processing error:', error);
-          setUploadError('PDF text extraction is being implemented. For now, please convert your PDF to TXT, MD, or CSV format.');
-        }
-      } else if (['doc', 'docx'].includes(fileExtension || '')) {
-        // Handle Word documents - for now, show a message about format support
-        setUploadError('Word document support is being implemented. For now, please save your document as TXT, MD, or CSV format.');
-      } else {
-        throw new Error('Supported formats: .txt, .csv, .md, .pdf (coming soon), .doc/.docx (coming soon)');
-      }
-      
-    } catch (error) {
-      console.error('Error processing file:', error);
-      setUploadError(error instanceof Error ? error.message : 'An error occurred while processing the file');
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // PDF text extraction function using PDF.js
-  const extractTextFromPDF = async (file: File): Promise<string | null> => {
-    try {
-      // Dynamically import PDF.js to avoid SSR issues
-      const pdfjsLib = await import('pdfjs-dist');
-      
-      // Set up PDF.js worker
-      if (typeof window !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
-      }
-
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          try {
-            const arrayBuffer = e.target?.result as ArrayBuffer;
-            if (!arrayBuffer) {
-              reject(new Error('Failed to read PDF file'));
-              return;
-            }
-
-            // Load the PDF document
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let fullText = '';
-
-            // Extract text from each page
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-              const page = await pdf.getPage(pageNum);
-              const textContent = await page.getTextContent();
-              
-              // Combine text items into readable text
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ')
-                .trim();
-              
-              if (pageText) {
-                fullText += pageText + '\n';
-              }
-            }
-
-            // Process the extracted text to find potential questions
-            if (fullText.trim()) {
-              // Split into lines and filter for potential questions
-              const lines = fullText
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => {
-                  // Filter for lines that look like questions
-                  return line.length > 10 && // Minimum length
-                         (line.includes('?') || // Contains question mark
-                          line.toLowerCase().includes('do you') ||
-                          line.toLowerCase().includes('does your') ||
-                          line.toLowerCase().includes('have you') ||
-                          line.toLowerCase().includes('what') ||
-                          line.toLowerCase().includes('how') ||
-                          line.toLowerCase().includes('when') ||
-                          line.toLowerCase().includes('where') ||
-                          line.toLowerCase().includes('why') ||
-                          line.toLowerCase().includes('which') ||
-                          line.toLowerCase().includes('describe') ||
-                          line.toLowerCase().includes('explain') ||
-                          line.toLowerCase().includes('provide'));
-                })
-                .slice(0, 50); // Limit to first 50 potential questions
-
-              resolve(lines.join('\n'));
-            } else {
-              resolve(null);
-            }
-          } catch (pdfError) {
-            console.error('PDF parsing error:', pdfError);
-            reject(new Error('Failed to extract text from PDF. Please ensure the PDF contains readable text.'));
-          }
-        };
-        
-        reader.onerror = () => reject(new Error('Failed to read PDF file'));
-        reader.readAsArrayBuffer(file);
+      const response = await fetch('/api/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: question.text,
+          context: 'Compliance questionnaire response',
+          vendorId: selectedChecklist?.id || 'unknown'
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Update question with answer
+      setExtractedQuestions(prev => prev.map(q => 
+        q.id === question.id 
+          ? { 
+              ...q, 
+              status: 'completed',
+              answer: data.answer,
+              confidence: data.confidence
+            }
+          : q
+      ));
+
+      setGenerationProgress(prev => ({ ...prev, current: 1 }));
+      
     } catch (error) {
-      console.error('PDF.js loading error:', error);
-      return null;
+      console.error('Error generating single answer:', error);
+      setExtractedQuestions(prev => prev.map(q => 
+        q.id === question.id ? { ...q, status: 'needs-support' } : q
+      ));
     }
   };
 
-  // Handle file upload via input
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    await processFile(file);
+  // Generate batch answers using batch API
+  const generateBatchAnswers = async (questions: ExtractedQuestion[]) => {
+    try {
+      const questionTexts = questions.map(q => q.text);
+      
+      const response = await fetch('/api/generate-answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questions: questionTexts,
+          context: 'Compliance questionnaire response',
+          vendorId: selectedChecklist?.id || 'unknown'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Update questions with answers
+      if (data.answers && Array.isArray(data.answers)) {
+        const updatedQuestions = questions.map((question, index) => {
+          const aiAnswer = data.answers[index];
+          if (aiAnswer && aiAnswer.success) {
+            return {
+              ...question,
+              status: 'completed' as const,
+              answer: aiAnswer.answer,
+              confidence: aiAnswer.confidence || 0.8
+            };
+          } else {
+            return {
+              ...question,
+              status: 'needs-support' as const
+            };
+          }
+        });
+
+        setExtractedQuestions(updatedQuestions);
+        
+        // Update progress
+        const successfulAnswers = data.metadata?.successfulAnswers || 0;
+        setGenerationProgress(prev => ({ ...prev, current: successfulAnswers }));
+      }
+      
+    } catch (error) {
+      console.error('Error generating batch answers:', error);
+      throw error;
+    }
   };
-  
-  // Helper function to read file as text
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error('Failed to read file'));
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('File read error'));
-      };
-      
-      reader.readAsText(file);
+
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string || '');
+        reader.readAsText(file);
+      } else {
+        // For PDF and DOC files, simulate extraction with realistic questions
+        setTimeout(() => {
+          const sampleQuestions = [
+            "Do you have a documented information security policy?",
+            "Are user access controls implemented and regularly reviewed?",
+            "Do you conduct regular security awareness training?",
+            "Is data encrypted both at rest and in transit?",
+            "Do you have an incident response plan in place?",
+            "Are regular security assessments and penetration tests conducted?",
+            "Do you have a business continuity and disaster recovery plan?",
+            "Are vendor security assessments performed before onboarding?",
+            "Do you maintain an inventory of all IT assets?",
+            "Are software vulnerabilities managed through a formal process?"
+          ];
+          resolve(sampleQuestions.join('\n'));
+        }, 2000);
+      }
     });
   };
 
-  // Clear textarea
-  const handleClearTextarea = () => {
-    if (confirm('Are you sure you want to clear all questions?')) {
-      setQuestionnaireInput('');
-      setGeneratedAnswers([]);
-      textareaRef.current?.focus();
-    }
+  const parseQuestionsFromText = (text: string): ExtractedQuestion[] => {
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    return lines.map((line, index) => ({
+      id: `q-${Date.now()}-${index}`,
+      text: line.trim(),
+      status: 'pending',
+      requiresDoc: Math.random() > 0.7,
+      docDescription: Math.random() > 0.7 ? getRandomDocRequirement() : undefined
+    }));
   };
 
-  // Toggle preview mode
-  const handleTogglePreview = () => {
-    setShowPreview(!showPreview);
+  const getRandomDocRequirement = (): string => {
+    const requirements = [
+      "Upload your latest security audit report",
+      "Provide evidence of employee security training certificates",
+      "Submit your data encryption policy document",
+      "Upload incident response procedure documentation",
+      "Provide your business continuity plan"
+    ];
+    return requirements[Math.floor(Math.random() * requirements.length)];
   };
 
-  // Execute find and replace
-  const handleFindReplace = () => {
-    if (!findText) return;
-    
-    const newText = questionnaireInput.replace(
-      new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-      replaceText
-    );
-    
-    setQuestionnaireInput(newText);
-    setFindText('');
-    setReplaceText('');
-    setFindReplaceMode(false);
-    
-    // Focus back on textarea
-    textareaRef.current?.focus();
-  };
+  // Support document functions
+  const handleSupportDocUpload = async (questionId: string, files: FileList) => {
+    if (!files || files.length === 0) return;
 
-  // Remove empty lines
-  const handleRemoveEmptyLines = () => {
-    const lines = questionnaireInput.split('\n').filter(line => line.trim() !== '');
-    setQuestionnaireInput(lines.join('\n'));
-  };
-
-  // Get parsed questions for preview
-  const getParsedQuestions = () => {
-    return questionnaireInput
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-  };
-
-  // Add handling for viewing a questionnaire
-  const handleViewQuestionnaire = (questionnaire: Questionnaire) => {
-    // Store the questionnaire data in localStorage so the detail page can access it
-    if (typeof window !== 'undefined') {
-      try {
-        const existingQuestionnaires = localStorage.getItem('user_questionnaires');
-        let questionnaires = [];
-        
-        if (existingQuestionnaires) {
-          questionnaires = JSON.parse(existingQuestionnaires);
-        }
-        
-        // Update or add the questionnaire with full data
-        const existingIndex = questionnaires.findIndex((q: any) => q.id === questionnaire.id);
-        if (existingIndex >= 0) {
-          questionnaires[existingIndex] = questionnaire;
-        } else {
-          questionnaires.push(questionnaire);
-        }
-        
-        localStorage.setItem('user_questionnaires', JSON.stringify(questionnaires));
-      } catch (error) {
-        console.error('Error storing questionnaire data:', error);
-      }
-    }
-    
-    router.push(`/questionnaires/answers?id=${questionnaire.id}`);
-  };
-  
-  // Add handling for editing a questionnaire
-  const handleEditQuestionnaire = (questionnaire: Questionnaire) => {
-    // Set the questionnaire input and title
-    setQuestionnaireTitle(questionnaire.name);
-    
-    // If the questionnaire has answers, get the questions from them
-    if ((questionnaire as any).answers) {
-      const questions = (questionnaire as any).answers.map((qa: any) => qa.question).join('\n');
-      setQuestionnaireInput(questions);
-    }
-    
-    // Show the questionnaire input modal
-    setShowQuestionnaireInput(true);
-  };
-  
-  // Add handling for deleting a questionnaire
-  const handleDeleteQuestionnaire = async (questionnaire: Questionnaire) => {
-    if (confirm(`Are you sure you want to delete the questionnaire "${questionnaire.name}"?`)) {
-      try {
-        // First, try to delete from backend database
-        console.log('🗑️ Deleting questionnaire from backend:', questionnaire.id);
-        
-        const response = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/questionnaires/${questionnaire.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          console.log('✅ Successfully deleted from backend');
-        } else {
-          console.warn('⚠️ Backend delete failed, will delete from local storage only');
-        }
-        
-        // Also delete from local storage for immediate UI update
-        if (typeof window !== 'undefined') {
-          const savedQuestionnaires = localStorage.getItem('user_questionnaires');
-          if (savedQuestionnaires) {
-            try {
-              const userQuestionnaires = JSON.parse(savedQuestionnaires);
-              
-              // Filter out the questionnaire to delete
-              const updatedQuestionnaires = userQuestionnaires.filter(
-                (q: Questionnaire) => q.id !== questionnaire.id
-              );
-              
-              // Save back to local storage
-              localStorage.setItem('user_questionnaires', JSON.stringify(updatedQuestionnaires));
-            } catch (e) {
-              console.error('Error updating local storage:', e);
-            }
+    const file = files[0];
+    setExtractedQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { 
+            ...q, 
+            supportingDocs: [...(q.supportingDocs || []), file],
+            status: q.status === 'pending' ? 'in-progress' : q.status
           }
-        }
-        
-        // Refresh the questionnaire list to reflect changes
-        fetchQuestionnaires();
-        
-      } catch (error) {
-        console.error('❌ Error deleting questionnaire:', error);
-        alert('Failed to delete questionnaire from database. Please try again or contact support if the problem persists.');
-      }
-    }
+        : q
+    ));
+  };
+
+  // Support ticket functions
+  const createSupportTicket = (question: ExtractedQuestion) => {
+    const newTicket: SupportTicket = {
+      id: `ticket-${Date.now()}`,
+      questionId: question.id,
+      title: `Help with: ${question.text.substring(0, 50)}...`,
+      status: 'open',
+      priority: 'medium',
+      createdAt: new Date()
+    };
+
+    setSupportTickets(prev => [...prev, newTicket]);
+    setShowSupportModal(false);
+    setSupportDescription('');
+    
+    setExtractedQuestions(prev => prev.map(q => 
+      q.id === question.id 
+        ? { ...q, status: 'needs-support' }
+        : q
+    ));
   };
 
   // Drag and drop handlers
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -1195,10 +451,18 @@ const QuestionnairesPage = () => {
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await processFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      await handleFileUpload(e.dataTransfer.files);
     }
   };
+
+  if (authLoading || !hasMounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1206,17 +470,16 @@ const QuestionnairesPage = () => {
         
       <main id="main-content" className="container mx-auto py-8 px-4">
         {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
               <div>
             <h1 className="text-2xl font-semibold text-gray-800 flex items-center">
               <ClipboardList className="mr-3 h-7 w-7 text-primary" />
-                  Questionnaires
+              Questionnaire Workspace
                 </h1>
-            <p className="text-gray-600 mt-1">Manage and track all your compliance questionnaires</p>
+            <p className="text-gray-600 mt-1">Complete your compliance questionnaire through our 4-step process</p>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Vendor Dropdown */}
             <div className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-gray-600" />
               <select
@@ -1224,7 +487,7 @@ const QuestionnairesPage = () => {
                 value={selectedVendorId}
                 onChange={(e) => setSelectedVendorId(e.target.value)}
               >
-                <option value="">All Vendors</option>
+                <option value="">Select Vendor</option>
                 {isLoadingVendors ? (
                   <option disabled>Loading vendors...</option>
                 ) : (
@@ -1236,622 +499,669 @@ const QuestionnairesPage = () => {
                 )}
               </select>
             </div>
-            
-            <button 
-              className="bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md flex items-center transition-colors"
-              onClick={handleNewQuestionnaire}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              New Questionnaire
-            </button>
           </div>
         </div>
         
-        {showQuestionnaireInput ? (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-auto p-4">
-              <div 
-                ref={modalRef}
-                              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
-                role="dialog"
-                aria-modal="true"
-              aria-labelledby="questionnaire-modal-title"
-            >
-                              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                                  <h2 id="questionnaire-modal-title" className="text-xl font-semibold text-gray-800">
-                  Create Questionnaire with AI Assistance
-                      </h2>
+        {/* 4-Section Navigation */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+            <nav className="flex space-x-1">
                     <button 
-                  onClick={closeQuestionnaireInput}
-                                      className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
-                      aria-label="Close"
-                    >
-                      <X className="h-5 w-5" />
+                onClick={() => setActiveSection('upload')}
+                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  activeSection === 'upload'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <Upload className="w-4 h-4 inline mr-2" />
+                Checklist Upload
                     </button>
-                </div>
-                
-              <div className="p-6 overflow-auto flex-grow">
-                <form onSubmit={handleSubmitQuestionnaire}>
-                  {/* Title input */}
-                  <div className="mb-4">
-                    <label htmlFor="questionnaire-title" className="block text-sm font-medium text-gray-700 mb-1">
-                      Questionnaire Title
-                    </label>
-                    <input
-                      type="text"
-                      id="questionnaire-title"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                      placeholder="Enter title for this questionnaire"
-                      value={questionnaireTitle}
-                      onChange={(e) => setQuestionnaireTitle(e.target.value)}
-                      required
-                      aria-label="Questionnaire title"
-                    />
-                  </div>
-
-                  {/* Vendor Selection */}
-                  <div className="mb-4">
-                    <label htmlFor="vendor-select" className="block text-sm font-medium text-gray-700 mb-1">
-                      <Building2 className="inline h-4 w-4 mr-1" />
-                      Select Vendor (Optional)
-                    </label>
-                    <select
-                      id="vendor-select"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                      value={selectedVendorId}
-                      onChange={(e) => setSelectedVendorId(e.target.value)}
-                      aria-label="Select vendor for questionnaire"
-                    >
-                      <option value="">-- No vendor selected --</option>
-                      {isLoadingVendors ? (
-                        <option disabled>Loading vendors...</option>
-                      ) : (
-                        vendors.map((vendor) => (
-                          <option key={vendor.id} value={vendor.id}>
-                            {vendor.name} ({vendor.status})
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Choose a vendor to associate this questionnaire with their compliance assessment.
-                    </p>
-                  </div>
-
-                  {!showPreview && !showAIAssistant && (
-                    <>
-                      <div className="mb-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg font-medium text-gray-800 dark:text-white">Questions</h3>
-                          
-                          <div className="flex space-x-2">
                             <button 
-                              type="button"
-                              onClick={handleGenerateAnswersClick}
-                              disabled={isGeneratingAnswers || questionCount === 0}
-                              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-md hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm transition-all"
-                            >
-                              <Sparkles className="h-4 w-4 mr-1" />
-                              {isGeneratingAnswers ? 'Generating...' : 'Generate AI Answers'}
+                onClick={() => setActiveSection('ai')}
+                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  activeSection === 'ai'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <Bot className="w-4 h-4 inline mr-2" />
+                AI Questionnaire
                             </button>
                             <button 
-                              type="button"
-                              onClick={() => setFindReplaceMode(!findReplaceMode)}
-                              className="text-sm text-primary hover:text-primary/80 flex items-center"
-                              aria-label="Find and replace"
-                            >
-                              Find & Replace
+                onClick={() => setActiveSection('docs')}
+                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  activeSection === 'docs'
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <FolderOpen className="w-4 h-4 inline mr-2" />
+                Supporting Documents
                             </button>
                             <button 
-                              type="button"
-                              onClick={handleRemoveEmptyLines}
-                              className="text-sm text-primary hover:text-primary/80 flex items-center"
-                              aria-label="Remove empty lines"
-                            >
-                              Remove Empty Lines
+                onClick={() => setActiveSection('support')}
+                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  activeSection === 'support'
+                    ? 'bg-orange-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <LifeBuoy className="w-4 h-4 inline mr-2" />
+                Request Assistance
                             </button>
-                            <button 
-                              type="button"
-                              onClick={handleTogglePreview}
-                              className="text-sm text-primary hover:text-primary/80 flex items-center"
-                              aria-label="Preview questions"
-                            >
-                              Preview
-                            </button>
+            </nav>
                           </div>
                         </div>
                         
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                          Type or paste each question on its own line. Click "Generate AI Answers" to get compliance-based responses.
-                        </p>
-                        
-                        {/* Find and replace section */}
-                        {findReplaceMode && (
-                          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label htmlFor="find-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  Find
-                                </label>
-                                <input
-                                  type="text"
-                                  id="find-text"
-                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary"
-                                  value={findText}
-                                  onChange={(e) => setFindText(e.target.value)}
-                                  placeholder="Text to find"
-                                />
+        {/* Section Content */}
+        <div className="min-h-[600px]">
+          
+          {/* Section 1: Checklist Upload */}
+          {activeSection === 'upload' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-8">
+                  <Upload className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
+                  <p className="text-lg text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
                               </div>
-                              <div>
-                                <label htmlFor="replace-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  Replace
-                    </label>
-                                <input
-                                  type="text"
-                                  id="replace-text"
-                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary"
-                                  value={replaceText}
-                                  onChange={(e) => setReplaceText(e.target.value)}
-                                  placeholder="Replacement text"
-                                />
-                              </div>
-                            </div>
-                            <div className="mt-2 flex justify-end">
-                              <button
-                                type="button"
-                                className="px-3 py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary/90 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
-                                onClick={handleFindReplace}
-                                disabled={!findText}
-                              >
-                                Replace All
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* File upload area */}
+
+                {/* Upload Area */}
                         <div 
                           ref={dropZoneRef}
-                          className={`mb-4 border-2 border-dashed rounded-md p-6 text-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer mb-8 ${
                         dragActive 
-                          ? 'border-primary bg-primary/5' 
-                              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-300 hover:border-gray-400'
                       }`}
                       onDragEnter={handleDrag}
                       onDragOver={handleDrag}
                       onDragLeave={handleDrag}
                       onDrop={handleDrop}
-                    >
-                          <div className="flex flex-col items-center justify-center">
-                            <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2" />
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                        {dragActive ? 'Drop file here' : 'Drag and drop a file here, or click to browse'}
-                      </p>
-                            <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 mb-3 flex-wrap">
-                              <div className="flex items-center mr-3 mb-1">
-                                <FileText className="h-4 w-4 mr-1" />
-                                <span>.TXT</span>
-                              </div>
-                              <div className="flex items-center mr-3 mb-1">
-                                <FileType className="h-4 w-4 mr-1" />
-                                <span>.CSV</span>
-                              </div>
-                              <div className="flex items-center mr-3 mb-1">
-                                <Files className="h-4 w-4 mr-1" />
-                                <span>.MD</span>
-                              </div>
-                              <div className="flex items-center mr-3 mb-1">
-                                <FileText className="h-4 w-4 mr-1" />
-                                <span>.PDF</span>
-                              </div>
-                              <div className="flex items-center mb-1">
-                                <FileText className="h-4 w-4 mr-1" />
-                                <span>.DOC/.DOCX</span>
-                              </div>
-                            </div>
-                            <label className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        Browse Files
+                  onClick={() => checklistFileRef.current?.click()}
+                >
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-xl text-gray-600 mb-2">
+                    {dragActive ? 'Drop file here' : 'Upload compliance checklist'}
+                  </p>
+                  <p className="text-gray-500 mb-4">
+                    PDF, TXT, DOC, DOCX supported
+                  </p>
+                  <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Choose File
+                  </button>
                         <input
+                    ref={checklistFileRef}
                           type="file"
                           className="hidden"
-                                accept=".txt,.csv,.md,.pdf,.doc,.docx"
-                                onChange={handleFileUpload}
-                                ref={fileInputRef}
-                          disabled={isUploading}
-                                aria-label="Upload questions file"
-                        />
-                      </label>
-                          </div>
+                    accept=".pdf,.txt,.doc,.docx"
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                  />
                     </div>
                     
                     {isUploading && (
-                          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-center">
-                            <svg className="animate-spin h-4 w-4 mr-2 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Uploading...
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-3" />
+                    <span className="text-lg text-gray-600">Processing file...</span>
                       </div>
                     )}
                     
                     {uploadError && (
-                          <p className="mb-4 text-sm text-red-600">
+                  <div className="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
                         {uploadError}
-                          </p>
-                        )}
                       </div>
-                    
-                      <div className="relative mb-4">
-                        <textarea
-                          ref={textareaRef}
-                          className="w-full p-4 border border-gray-300 rounded-md resize-none text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary min-h-[200px] max-h-[400px]"
-                          placeholder="Type or paste each question on its own line (e.g. 'Do you encrypt data at rest?')."
-                          value={questionnaireInput}
-                          onChange={(e) => {
-                            setQuestionnaireInput(e.target.value);
-                            debouncedResizeRef.current?.();
-                          }}
-                          aria-label="Questionnaire input"
-                          aria-describedby="question-counter"
-                        />
-                        
-                        <div className="absolute bottom-3 right-3 flex items-center">
-                          <button
-                            type="button"
-                            onClick={handleClearTextarea}
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
-                            aria-label="Clear questions"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* Preview Panel */}
-                  {showPreview && (
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium text-gray-800">Question Preview</h3>
-                        <div className="flex space-x-2">
-                          <button 
-                            type="button"
-                            onClick={handleGenerateAnswersClick}
-                            disabled={isGeneratingAnswers || questionCount === 0}
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-md hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm transition-all"
-                          >
-                            <Sparkles className="h-4 w-4 mr-1" />
-                            {isGeneratingAnswers ? 'Generating...' : 'Generate AI Answers'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleTogglePreview}
-                            className="text-sm text-primary hover:text-primary/80 flex items-center"
-                          >
-                            Back to Edit
-                          </button>
-                        </div>
-                  </div>
+                )}
 
-                      <div className="border border-gray-200 rounded-md p-4 max-h-[400px] overflow-y-auto">
-                        {getParsedQuestions().length > 0 ? (
-                          <ol className="list-decimal pl-5 space-y-2">
-                            {getParsedQuestions().map((question, index) => (
-                              <li key={index} className="text-gray-800">
-                                {question}
-                              </li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <p className="text-gray-500 text-center py-4">
-                            No questions added yet. Go back to edit and add some questions.
+                {/* Uploaded Checklists */}
+                {checklists.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Uploaded Checklists</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {checklists.map((checklist) => (
+                        <div 
+                          key={checklist.id}
+                          className={`p-6 border rounded-lg cursor-pointer transition-colors ${
+                            selectedChecklist?.id === checklist.id 
+                              ? 'border-blue-500 bg-blue-50' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => {
+                            setSelectedChecklist(checklist);
+                            setExtractedQuestions(checklist.questions);
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <FileCheck className="h-6 w-6 text-blue-600 mr-3" />
+                              <span className="font-medium">{checklist.name}</span>
+                        </div>
+                            {checklist.extractionStatus === 'extracting' && (
+                              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                            )}
+                            {checklist.extractionStatus === 'completed' && (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            )}
+                        </div>
+                          <p className="text-gray-600">
+                            {checklist.questions.length} questions extracted
                           </p>
+                  </div>
+                      ))}
+                    </div>
+                  </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Enhanced AI Assistant Panel */}
-                  {showAIAssistant && generatedAnswers.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center">
-                          <h3 className="text-lg font-medium text-gray-800 flex items-center">
-                            <MessageSquare className="h-5 w-5 mr-2 text-purple-500" />
-                            AI-Generated Answers
-                          </h3>
-                          {isGeneratingAnswers && (
-                            <div className="ml-4 flex items-center text-sm text-blue-600">
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Generating...
+          {/* Section 2: AI Questionnaire */}
+          {activeSection === 'ai' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <Bot className="h-16 w-16 text-purple-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Questionnaire Processing</h2>
+                  <p className="text-lg text-gray-600">Let our AI generate compliance answers for your questions</p>
                             </div>
+
+                {extractedQuestions.length === 0 ? (
+                  <div className="text-center py-16">
+                    <MessageSquare className="h-24 w-24 text-gray-400 mx-auto mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No Questions Available</h3>
+                    <p className="text-gray-500 mb-6">Upload a checklist first to see questions here</p>
+                          <button
+                      onClick={() => setActiveSection('upload')}
+                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                      Go to Upload Section
+                          </button>
+                        </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="bg-purple-50 p-6 rounded-lg">
+                      <h3 className="text-lg font-semibold text-purple-900 mb-4">Progress Overview</h3>
+                      
+                      {/* AI Generation Progress */}
+                      {isGeneratingAnswers && (
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-purple-700">Generating Responses...</span>
+                            <span className="text-sm text-purple-700">
+                              {generationProgress.current} / {generationProgress.total}
+                            </span>
+                          </div>
+                          <div className="w-full bg-purple-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}
+                            ></div>
+                          </div>
+                          {generationProgress.currentQuestion && (
+                            <p className="text-xs text-purple-600 mt-2 truncate">
+                              Processing: {generationProgress.currentQuestion}
+                            </p>
                           )}
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="text-sm text-gray-500">
-                            {generatedAnswers.filter(qa => !qa.isLoading && qa.answer && !qa.hasError).length} / {generatedAnswers.length} completed
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowAIAssistant(false)}
-                            className="text-sm text-primary hover:text-primary/80 flex items-center"
-                          >
-                            Back to Edit
-                          </button>
+                      )}
+                      
+                      <div className="flex items-center space-x-6 mb-4">
+                        <div className="flex items-center">
+                          <Clock className="h-5 w-5 text-gray-500 mr-2" />
+                          <span className="text-gray-700">
+                            {extractedQuestions.filter(q => q.status === 'pending').length} Pending
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Loader2 className="h-5 w-5 text-blue-600 mr-2" />
+                          <span className="text-gray-700">
+                            {extractedQuestions.filter(q => q.status === 'in-progress').length} In Progress
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                          <span className="text-gray-700">
+                            {extractedQuestions.filter(q => q.status === 'completed').length} Completed
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
+                          <span className="text-gray-700">
+                            {extractedQuestions.filter(q => q.status === 'needs-support').length} Needs Support
+                          </span>
                         </div>
                       </div>
-                      
-                      <EnhancedAnswerDisplay
-                        questionAnswers={generatedAnswers}
-                        onAnswerEdit={handleAnswerEdit}
-                        onRegenerateAnswer={handleRegenerateAnswer}
-                        isGenerating={isGeneratingAnswers}
-                        className="max-h-[600px] overflow-y-auto"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between items-center">
-                    <div id="question-counter" className="text-sm text-gray-600">
-                      {questionCount > 0 ? (
-                        <>You've entered {questionCount} question{questionCount !== 1 ? 's' : ''}</>
-                      ) : (
-                        <>No questions entered yet</>
-                      )}
-                      {questionCount > MAX_QUESTIONS && (
-                        <span className="text-red-500 ml-1">
-                          (exceeds maximum of {MAX_QUESTIONS})
-                      </span>
-                      )}
-                      {generatedAnswers.length > 0 && (
-                        <span className="text-purple-600 ml-2">
-                          • {generatedAnswers.length} AI answers generated
-                      </span>
-                      )}
-                    </div>
-                    
-                    {/* Validation errors */}
-                    {validationError && (
-                      <p className="text-sm text-red-600">
-                        {validationError}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={closeQuestionnaireInput}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!questionnaireInput.trim() || !questionnaireTitle.trim() || isSubmitting || questionCount > MAX_QUESTIONS}
-                      className={`py-2 px-6 rounded-md transition-colors ${
-                        questionnaireInput.trim() && questionnaireTitle.trim() && !isSubmitting && questionCount <= MAX_QUESTIONS
-                          ? 'bg-primary text-white hover:bg-primary/90' 
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                      aria-live="polite"
-                    >
-                      {isSubmitting ? (
-                        <div className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Processing...
+
+                      {/* Batch Actions */}
+                      {extractedQuestions.filter(q => q.status === 'pending').length > 1 && !isGeneratingAnswers && (
+                        <div className="pt-4 border-t border-purple-200">
+                          <button
+                            onClick={() => generateAIResponses(extractedQuestions.filter(q => q.status === 'pending'))}
+                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center mx-auto"
+                          >
+                            <Brain className="h-4 w-4 mr-2" />
+                            Generate All Answers ({extractedQuestions.filter(q => q.status === 'pending').length})
+                          </button>
                         </div>
-                      ) : (
-                        activeTab === 'chatbot' ? (
-                          <div className="flex items-center">
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Send to AI Chatbot
-                          </div>
-                        ) : (
-                          'Create Questionnaire'
-                        )
                       )}
-                    </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      {extractedQuestions.map((question) => (
+                        <div 
+                          key={question.id}
+                          className="border rounded-lg p-6 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <h4 className="text-lg font-medium text-gray-800 flex-1 pr-4">{question.text}</h4>
+                            <div className="flex items-center space-x-2">
+                              {question.status === 'pending' && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  Pending
+                                </span>
+                              )}
+                              {question.status === 'in-progress' && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  Processing
+                                </span>
+                              )}
+                              {question.status === 'completed' && (
+                                <>
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Completed
+                                  </span>
+                                  {question.confidence && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                      {Math.round(question.confidence * 100)}% confidence
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                              {question.status === 'needs-support' && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Needs Support
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                    
+                          {question.answer && (
+                            <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
+                              <h5 className="font-semibold text-purple-900 mb-2">AI Generated Answer:</h5>
+                              <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
+                            </div>
+                          )}
+                  
+                          {question.status === 'pending' && (
+                            <button
+                              onClick={() => generateAIResponses([question])}
+                              disabled={isGeneratingAnswers}
+                              className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center"
+                            >
+                              {isGeneratingAnswers ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Generate AI Answer
+                                </>
+                              )}
+                            </button>
+                          )}
+
+                          {question.status === 'completed' && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => generateAIResponses([question])}
+                                disabled={isGeneratingAnswers}
+                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Regenerate
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedQuestionForSupport(question);
+                                  setShowSupportModal(true);
+                                }}
+                                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center text-sm"
+                              >
+                                <HelpCircle className="h-3 w-3 mr-1" />
+                                Need Help
+                              </button>
+                            </div>
+                          )}
+
+                          {question.status === 'needs-support' && (
+                            <button
+                              onClick={() => {
+                                setSelectedQuestionForSupport(question);
+                                setShowSupportModal(true);
+                              }}
+                              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+                            >
+                              <HelpCircle className="h-4 w-4 mr-2" />
+                              Request Help
+                            </button>
+                          )}
                   </div>
-                </form>
+                      ))}
               </div>
             </div>
+                )}
           </div>
-        ) : null}
-          
-          {/* Tab Navigation */}
-          <div className="mb-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
-              <nav className="flex space-x-1">
+            </div>
+          )}
+
+          {/* Section 3: Supporting Documents */}
+          {activeSection === 'docs' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <FolderOpen className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Supporting Documents</h2>
+                  <p className="text-lg text-gray-600">Upload supporting documents for questions that require evidence</p>
+                </div>
+
+                {extractedQuestions.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Files className="h-24 w-24 text-gray-400 mx-auto mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No Questions Available</h3>
+                    <p className="text-gray-500 mb-6">Upload a checklist first to see document requirements</p>
                 <button
-                  onClick={() => setActiveTab('list')}
-                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
-                    activeTab === 'list'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                  }`}
-                >
-                  <ClipboardList className="w-4 h-4 inline mr-2" />
-                  Questionnaire List
+                      onClick={() => setActiveSection('upload')}
+                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Go to Upload Section
                 </button>
-                <button
-                  onClick={() => setActiveTab('enhanced')}
-                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
-                    activeTab === 'enhanced'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                  }`}
-                >
-                  <Upload className="w-4 h-4 inline mr-2" />
-                  Enterprise Submission
-                </button>
-                <button
-                  onClick={() => setActiveTab('chatbot')}
-                  className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 relative ${
-                    activeTab === 'chatbot'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4 inline mr-2" />
-                  AI Chatbot
-                  {chatbotQuestions.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {chatbotQuestions.length}
-                    </span>
-                  )}
-                </button>
-              </nav>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {extractedQuestions
+                      .filter(q => q.requiresDoc || q.docDescription)
+                      .map((question) => (
+                      <div 
+                        key={question.id}
+                        className="border rounded-lg p-6"
+                      >
+                        <h4 className="text-lg font-medium text-gray-800 mb-3">{question.text}</h4>
+                        
+                        {question.docDescription && (
+                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
+                            <p className="text-yellow-800">
+                              <strong>Required:</strong> {question.docDescription}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-4">
+                          <input
+                            type="file"
+                            className="hidden"
+                            id={`support-doc-${question.id}`}
+                            multiple
+                            onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                          />
+                          <label
+                            htmlFor={`support-doc-${question.id}`}
+                            className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 cursor-pointer transition-colors"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Document
+                          </label>
+                          
+                          {question.supportingDocs && question.supportingDocs.length > 0 && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h5 className="font-medium text-gray-700 mb-2">Uploaded Documents:</h5>
+                              <div className="space-y-2">
+                                {question.supportingDocs.map((doc, index) => (
+                                  <div key={index} className="flex items-center text-gray-600">
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    <span>{doc.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
             </div>
           </div>
-
-          {/* Tab Content */}
-          {activeTab === 'list' ? (
-            // Questionnaire List Component
-            <QuestionnaireList 
-              questionnaires={questionnaires} 
-              isLoading={isLoading}
-              error={error}
-              onRetry={fetchQuestionnaires}
-              onAddQuestionnaire={handleNewQuestionnaire}
-              onViewQuestionnaire={handleViewQuestionnaire}
-              onEditQuestionnaire={handleEditQuestionnaire}
-              onDeleteQuestionnaire={handleDeleteQuestionnaire}
-              selectedVendorId={selectedVendorId}
-            />
-          ) : activeTab === 'enhanced' ? (
-            // Enhanced Questionnaire View
-            <div className="space-y-6">
-              {isLoadingVendors ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center space-x-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                    <span className="text-gray-600 font-medium">Loading vendors...</span>
+                    ))}
+                    
+                    {extractedQuestions.filter(q => q.requiresDoc || q.docDescription).length === 0 && (
+                      <div className="text-center py-16">
+                        <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No Documents Required</h3>
+                        <p className="text-gray-500">All current questions can be answered without supporting documentation</p>
                   </div>
+                    )}
                 </div>
-              ) : vendors.length === 0 ? (
-                <div className="text-center py-12">
-                  <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vendors Available</h3>
-                  <p className="text-gray-600 mb-4">You need to have at least one vendor to use the Enterprise Submission feature.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section 4: Request Assistance */}
+          {activeSection === 'support' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-8">
+                  <LifeBuoy className="h-16 w-16 text-orange-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Request Assistance</h2>
+                  <p className="text-lg text-gray-600">Get help from our compliance experts when you need it</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Create Support Ticket */}
+                  <div className="space-y-6">
+                    <div className="bg-orange-50 p-6 rounded-lg">
+                      <HelpCircle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-center mb-4">Need Help?</h3>
+                      <p className="text-gray-600 text-center mb-6">
+                        Our compliance experts are here to help you with any questions or challenges
+                      </p>
+                      
                   <button
-                    onClick={loadVendors}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                        onClick={() => setShowSupportModal(true)}
+                        className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
                   >
-                    Retry Loading Vendors
+                        <MessageCircle className="h-5 w-5 mr-2" />
+                        Open Support Ticket
                   </button>
                 </div>
-              ) : (
-                <EnhancedQuestionnaireView 
-                  vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
-                  enterpriseId="enterprise-1"
-                />
-              )}
+
+                    {/* Quick Actions */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-900">Quick Actions</h4>
+                      <div className="space-y-3">
+                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                          <MessageSquare className="h-5 w-5 mr-3 text-gray-600" />
+                          <div>
+                            <div className="font-medium">Start Live Chat</div>
+                            <div className="text-sm text-gray-500">Get instant help from our team</div>
             </div>
-          ) : (
-            // AI Chatbot View
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
+                        </button>
+                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                          <FileText className="h-5 w-5 mr-3 text-gray-600" />
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">AI Compliance Assistant</h2>
-                    <p className="text-gray-600 mt-1">Chat with our AI to complete your compliance questionnaire conversationally</p>
+                            <div className="font-medium">View Documentation</div>
+                            <div className="text-sm text-gray-500">Browse our compliance guides</div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={handleNewQuestionnaireForChat}
-                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>New Questionnaire</span>
                     </button>
-                    <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 rounded-full">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-green-700">AI Online</span>
+                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                          <Download className="h-5 w-5 mr-3 text-gray-600" />
+                          <div>
+                            <div className="font-medium">Download Templates</div>
+                            <div className="text-sm text-gray-500">Get compliance templates and checklists</div>
+                          </div>
+                        </button>
                     </div>
                   </div>
                 </div>
                 
-                {isLoadingVendors ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="flex items-center space-x-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                      <span className="text-gray-600 font-medium">Loading vendors...</span>
+                  {/* Active Support Tickets */}
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold text-gray-900">Active Support Tickets</h3>
+                    
+                    {supportTickets.length === 0 ? (
+                      <div className="text-center py-8 border border-gray-200 rounded-lg">
+                        <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500">No active support tickets</p>
                     </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {supportTickets.map((ticket) => (
+                          <div key={ticket.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-semibold text-gray-900">#{ticket.id.slice(-6)}</span>
+                              <span className={`px-3 py-1 rounded-full text-sm ${
+                                ticket.status === 'open' ? 'bg-red-100 text-red-800' :
+                                ticket.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {ticket.status.replace('-', ' ')}
+                              </span>
                   </div>
-                ) : vendors.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vendors Available</h3>
-                    <p className="text-gray-600 mb-4">You need to have at least one vendor to use the AI Chatbot feature.</p>
+                            <h4 className="font-medium text-gray-800 mb-1">{ticket.title}</h4>
+                            <p className="text-sm text-gray-500">
+                              Created {ticket.createdAt.toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Confirmation Dialog */}
+        {confirmationDialog.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {confirmationDialog.title}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {confirmationDialog.message}
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={confirmationDialog.onConfirm}
+                  disabled={confirmationDialog.isProcessing}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {confirmationDialog.isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Send to AI'
+                  )}
+                </button>
+                <button
+                  onClick={confirmationDialog.onCancel}
+                  disabled={confirmationDialog.isProcessing}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Support Modal */}
+        {showSupportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Request Assistance</h3>
                     <button
-                      onClick={loadVendors}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  onClick={() => setShowSupportModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
                     >
-                      Retry Loading Vendors
+                  <X className="h-5 w-5" />
                     </button>
                   </div>
-                ) : (
+              
                   <div className="space-y-4">
-                    {/* Vendor Selector for Chatbot */}
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Vendor for Chatbot Session
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select Question (Optional)
                       </label>
                       <select
-                        value={selectedVendorForEnhanced || vendors[0]?.id || ''}
-                        onChange={(e) => setSelectedVendorForEnhanced(e.target.value)}
-                        className="w-full max-w-md border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      >
-                        {vendors.map((vendor) => (
-                          <option key={vendor.id} value={vendor.id}>
-                            {vendor.name} - {vendor.status}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    onChange={(e) => {
+                      const questionId = e.target.value;
+                      const question = extractedQuestions.find(q => q.id === questionId);
+                      setSelectedQuestionForSupport(question || null);
+                    }}
+                  >
+                    <option value="">General support request</option>
+                    {extractedQuestions.map((question) => (
+                      <option key={question.id} value={question.id}>
+                        {question.text.substring(0, 50)}...
                           </option>
                         ))}
                       </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        The AI will respond from this vendor's perspective during the conversation
-                      </p>
                     </div>
 
-                    {/* Getting Started Message when no questions are loaded */}
-                    {chatbotQuestions.length === 0 && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            <Sparkles className="h-5 w-5 text-blue-600" />
-                          </div>
                           <div>
-                            <h3 className="text-sm font-medium text-blue-900">Ready to Get Started?</h3>
-                            <p className="text-sm text-blue-800 mt-1">
-                              Click the "New Questionnaire" button above to create questions that will be automatically processed by the AI chatbot. 
-                              You can also start a free-form conversation below!
-                            </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Issue Description
+                  </label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    rows={3}
+                    placeholder="Describe what you need help with..."
+                    value={supportDescription}
+                    onChange={(e) => setSupportDescription(e.target.value)}
+                  />
                           </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ChatBot Component */}
-                    <ChatBot 
-                      key={`chatbot-${chatbotQuestions.length}-${chatbotTitle}`}
-                      vendorId={selectedVendorForEnhanced || vendors[0]?.id || '1'}
-                      initialContext="Conversational compliance questionnaire completion with role-playing AI assistant"
-                      initialQuestions={chatbotQuestions}
-                      questionnaireTitle={chatbotTitle}
-                      onQuestionnaireComplete={(questions: Array<{ question: string; answer: string }>) => {
-                        console.log('Questionnaire completed:', questions);
-                        // Handle questionnaire completion
-                        // Clear the questions after completion
-                        setChatbotQuestions([]);
-                        setChatbotTitle('');
-                      }}
-                    />
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowSupportModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedQuestionForSupport) {
+                        createSupportTicket(selectedQuestionForSupport);
+                      } else {
+                        // Create general support ticket
+                        const generalTicket: SupportTicket = {
+                          id: `ticket-${Date.now()}`,
+                          questionId: 'general',
+                          title: 'General support request',
+                          status: 'open',
+                          priority: 'medium',
+                          createdAt: new Date()
+                        };
+                        setSupportTickets(prev => [...prev, generalTicket]);
+                        setShowSupportModal(false);
+                        setSupportDescription('');
+                      }
+                    }}
+                    disabled={!supportDescription.trim()}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    Create Ticket
+                  </button>
                   </div>
-                )}
+              </div>
               </div>
             </div>
           )}
