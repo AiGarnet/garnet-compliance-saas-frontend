@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 interface Vendor {
   id: string;
@@ -47,7 +48,7 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
       console.log('Vendors API response:', data);
       
       // The API returns { success: true, data: [...] } structure
-      const vendorList = data.success && data.data ? data.data : [];
+      const vendorList = data.success && Array.isArray(data.data) ? data.data : [];
       console.log('Extracted vendor list:', vendorList);
       
       if (vendorList.length === 0) {
@@ -56,7 +57,7 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
         return;
       }
       
-      const formattedVendors = vendorList.map((vendor: any) => ({
+      const formattedVendors = safeMap(vendorList, (vendor: any) => ({
         id: vendor.vendorId?.toString() || vendor.id?.toString(),
         name: vendor.companyName || vendor.name,
         companyName: vendor.companyName || vendor.name,
@@ -173,7 +174,7 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
                   No vendors available
                 </div>
               ) : (
-                vendors.map((vendor) => (
+                safeMap(vendors, (vendor: Vendor) => (
                   <button
                     key={vendor.id}
                     onClick={() => handleVendorSelect(vendor.id)}

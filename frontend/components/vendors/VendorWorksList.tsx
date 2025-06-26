@@ -15,8 +15,10 @@ import {
   EyeOff,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Copy
 } from 'lucide-react';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 export interface VendorWork {
   id: string;
@@ -259,7 +261,7 @@ export const VendorWorksList: React.FC<VendorWorksListProps> = ({
                     </div>
                   )}
                   
-                  {work.technologies.length > 0 && (
+                  {Array.isArray(work.technologies) && work.technologies.length > 0 && (
                     <div className="flex items-center">
                       <Code className="h-4 w-4 mr-2 text-gray-400" />
                       {work.technologies.slice(0, 2).join(', ')}
@@ -268,18 +270,18 @@ export const VendorWorksList: React.FC<VendorWorksListProps> = ({
                   )}
                 </div>
 
-                {work.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {work.technologies.map((tech, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                                  {Array.isArray(work.technologies) && work.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-3">
+                      {safeMap(work.technologies, (tech: string, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </div>
 
               <div className="flex items-center space-x-2 ml-4">

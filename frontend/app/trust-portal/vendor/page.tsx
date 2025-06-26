@@ -20,7 +20,8 @@ import {
   Send,
   Clock,
   User,
-  MessageCircle
+  MessageCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -36,6 +37,7 @@ import {
   CreateFeedbackResponseDto,
   ResponderType
 } from '@/types/trustPortal';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 function VendorTrustPortalContent() {
   const searchParams = useSearchParams();
@@ -355,9 +357,9 @@ function VendorTrustPortalContent() {
                             </span>
                           </div>
                           
-                          {work.technologies && work.technologies.length > 0 && (
+                          {Array.isArray(work.technologies) && work.technologies.length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                              {work.technologies.map((tech, index) => (
+                              {safeMap(work.technologies, (tech: string, index) => (
                                 <span
                                   key={index}
                                   className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"

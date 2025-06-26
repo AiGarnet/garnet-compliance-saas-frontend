@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 // Dummy logo component with different styles for better visual appeal
 const Logo = ({ name, index }: { name: string; index: number }) => {
@@ -99,7 +100,7 @@ const TrustedBy = () => {
             whileHover={{ animationPlayState: "paused" }}
           >
             {/* Duplicated logos to create the infinite effect */}
-            {[...logos, ...logos].map((logo, index) => (
+            {safeMap([...logos, ...logos], (logo: string, index) => (
               <Logo key={`scroll-1-${index}`} name={logo} index={index} />
             ))}
           </motion.div>
@@ -119,7 +120,7 @@ const TrustedBy = () => {
             whileHover={{ animationPlayState: "paused" }}
           >
             {/* Duplicated and reversed logos for variety */}
-            {[...logos, ...logos].reverse().map((logo, index) => (
+            {safeMap([...logos, ...logos].reverse(), (logo: string, index) => (
               <Logo key={`scroll-2-${index}`} name={logo} index={index} />
             ))}
           </motion.div>
@@ -134,7 +135,7 @@ const TrustedBy = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, staggerChildren: 0.1 }}
           >
-            {logos.slice(0, 6).map((logo, index) => (
+            {safeMap(logos.slice(0, 6), (logo: string, index) => (
               <motion.div 
                 key={index} 
                 className="flex justify-center"
@@ -155,7 +156,7 @@ const TrustedBy = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            {logos.slice(6, 12).map((logo, index) => (
+            {safeMap(logos.slice(6, 12), (logo: string, index) => (
               <motion.div 
                 key={index} 
                 className="flex justify-center"

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Save, Clock, CheckCircle, AlertCircle, Calendar, Building, Tag, Code, FileText } from 'lucide-react';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 export interface VendorWorkFormData {
   projectName: string;
@@ -303,7 +304,7 @@ export const VendorWorkForm: React.FC<VendorWorkFormProps> = ({
             Technologies Used
           </label>
           <div className="flex flex-wrap gap-2 mb-2">
-            {formData.technologies.map((tech, index) => (
+            {safeMap(formData.technologies, (tech: string, index) => (
               <span
                 key={index}
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
