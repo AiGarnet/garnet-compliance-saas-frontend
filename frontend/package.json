@@ -7,6 +7,7 @@
     "dev:with-api": "node scripts/start-questionnaire-service.js && next dev",
     "build": "next build",
     "build:netlify": "npm ci && next build",
+    "build:verify": "node scripts/verify-build.js",
     "build:skip-types": "next build --no-check",
     "export": "next export",
     "build:export": "next build && next export -o .next/out",

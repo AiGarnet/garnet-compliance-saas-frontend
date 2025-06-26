@@ -57,8 +57,80 @@ export function VendorList({
   onDeleteVendor,
   onAddVendor
 }: VendorListProps) {
-  // Access translations based on locale
-  const t = translations[locale as keyof typeof translations]?.vendorList || translations.en.vendorList;
+  // Access translations based on locale with comprehensive fallbacks
+  const t = useMemo(() => {
+    try {
+      const localeTranslations = translations[locale as keyof typeof translations];
+      const vendorListTranslations = localeTranslations?.vendorList || translations.en?.vendorList;
+      
+      // Provide default translations if none are found
+      return vendorListTranslations || {
+        title: 'Clients',
+        loading: 'Loading clients...',
+        error: 'Unable to load clients. Retry?',
+        retry: 'Retry',
+        emptyState: {
+          noVendors: 'No clients in onboarding yet.',
+          invite: 'Invite your first client →',
+          noMatches: 'No clients match your current filters.',
+          clearFilters: 'Clear all filters'
+        },
+        table: {
+          name: 'Name',
+          status: 'Status',
+          actions: 'Actions',
+          viewDetails: 'View Details'
+        },
+        search: {
+          placeholder: 'Search clients by name...',
+          label: 'Search clients by name'
+        },
+        filter: {
+          label: 'Filter clients by status'
+        },
+        status: {
+          all: 'All',
+          questionnairePending: 'Questionnaire Pending',
+          inReview: 'In Review',
+          approved: 'Approved'
+        }
+      };
+    } catch (error) {
+      console.error('Error loading translations:', error);
+      // Return default English translations as fallback
+      return {
+        title: 'Clients',
+        loading: 'Loading clients...',
+        error: 'Unable to load clients. Retry?',
+        retry: 'Retry',
+        emptyState: {
+          noVendors: 'No clients in onboarding yet.',
+          invite: 'Invite your first client →',
+          noMatches: 'No clients match your current filters.',
+          clearFilters: 'Clear all filters'
+        },
+        table: {
+          name: 'Name',
+          status: 'Status',
+          actions: 'Actions',
+          viewDetails: 'View Details'
+        },
+        search: {
+          placeholder: 'Search clients by name...',
+          label: 'Search clients by name'
+        },
+        filter: {
+          label: 'Filter clients by status'
+        },
+        status: {
+          all: 'All',
+          questionnairePending: 'Questionnaire Pending',
+          inReview: 'In Review',
+          approved: 'Approved'
+        }
+      };
+    }
+  }, [locale]);
   
   // Get user role for permissions
   const { user } = useAuth();
@@ -89,9 +161,13 @@ export function VendorList({
     }
   };
   
-  // Filter and sort vendors based on current state
+  // Filter and sort vendors based on current state with safety checks
   const filteredAndSortedVendors = useMemo(() => {
-    if (!initialVendors) return [];
+    // Ensure initialVendors is an array
+    if (!Array.isArray(initialVendors)) {
+      console.warn('initialVendors is not an array:', initialVendors);
+      return [];
+    }
     
     // Apply filters in sequence: status filter -> search -> sort
     const statusFiltered = filterVendorsByStatus(initialVendors, statusFilter);

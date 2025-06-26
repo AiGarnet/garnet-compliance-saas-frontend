@@ -59,12 +59,20 @@ const nextConfig = {
       };
     }
 
-    // Optimize chunks for static export
+    // Optimize chunks for static export and fix MIME type issues
     if (!dev && !isServer) {
+      // Ensure proper file extensions for chunks
+      config.output = {
+        ...config.output,
+        filename: 'static/js/[name]-[contenthash].js',
+        chunkFilename: 'static/chunks/[name]-[contenthash].js',
+      };
+
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           chunks: 'all',
+          maxSize: 244000, // ~240KB chunks to ensure better caching
           cacheGroups: {
             default: {
               minChunks: 2,
@@ -77,27 +85,41 @@ const nextConfig = {
               priority: -10,
               chunks: 'all',
             },
+            // Separate chunk for React/Next.js framework
+            framework: {
+              test: /[\\/]node_modules[\\/](react|react-dom|next)[\\/]/,
+              name: 'framework',
+              priority: 40,
+              chunks: 'all',
+            },
+            // Common chunk for utilities
+            commons: {
+              name: 'commons',
+              minChunks: 2,
+              priority: 5,
+              chunks: 'all',
+            },
           },
         },
       };
     }
 
-    // Handle CSS modules properly in static export
-    config.module.rules.push({
-      test: /\.css$/,
-      use: [
-        'style-loader',
-        {
-          loader: 'css-loader',
-          options: {
-            modules: {
-              auto: true,
-              localIdentName: '[name]__[local]__[hash:base64:5]',
-            },
-          },
-        },
-      ],
-    });
+    // Remove the CSS rule that might conflict with Next.js built-in CSS handling
+    // config.module.rules.push({
+    //   test: /\.css$/,
+    //   use: [
+    //     'style-loader',
+    //     {
+    //       loader: 'css-loader',
+    //       options: {
+    //         modules: {
+    //           auto: true,
+    //           localIdentName: '[name]__[local]__[hash:base64:5]',
+    //         },
+    //       },
+    //     },
+    //   ],
+    // });
 
     return config;
   },
@@ -110,6 +132,27 @@ const nextConfig = {
   
   // Optimize for static export
   distDir: '.next',
+  
+  // Add proper rewrites for missing static files (fallback to 404, not index.html)
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // These rewrites are checked first and will not be overridden by filesystem routes
+      ],
+      afterFiles: [
+        // These rewrites are checked after pages/public files are checked
+        // but before dynamic routes
+      ],
+      fallback: [
+        // These rewrites are checked after both pages and public files
+        // are checked but before dynamic routes
+        {
+          source: '/_next/static/:path*',
+          destination: '/404', // Don't redirect static assets to index.html
+        },
+      ],
+    };
+  },
   
   // Handle redirects properly for static export
   async redirects() {
