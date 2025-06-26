@@ -125,7 +125,7 @@ const LoadingAnimation = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          Loading Garnet AI...
+          Loading Garnet...
         </motion.p>
       </div>
     </motion.div>
@@ -623,7 +623,7 @@ const GarnetLandingPage = () => {
   const faqs = [
     {
       question: "How can Garnet help streamline my compliance process?",
-      answer: "Garnet AI automation reduces questionnaire response time by up to 80%, automatically analyzing your security posture and suggesting accurate responses. Our AI learns from your previous submissions and adapts to different compliance frameworks, transforming weeks of manual work into hours of intelligent automation."
+      answer: "Garnet automation reduces questionnaire response time by up to 80%, automatically analyzing your security posture and suggesting accurate responses. Our AI learns from your previous submissions and adapts to different compliance frameworks, transforming weeks of manual work into hours of intelligent automation."
     },
     {
       question: "What compliance frameworks does Garnet support?",
@@ -1103,7 +1103,7 @@ const GarnetLandingPage = () => {
               <span className="block sm:inline bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"> Vendor Compliance</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Streamline security reviews, build trust with buyers, and accelerate deal closure using Garnet AI.
+              Streamline security reviews, build trust with buyers, and accelerate deal closure using Garnet.
             </p>
           </motion.div>
 
