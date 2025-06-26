@@ -1,6 +1,6 @@
 [build]
   # Build command for the frontend Next.js app with static export
-  command = "cd frontend && npm install && npm run build"
+  command = "cd frontend && npm run build:netlify"
   
   # Directory to publish (Next.js static export automatically outputs to 'out')
   publish = "frontend/out"
@@ -37,7 +37,30 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Disable Pretty URLs and optimize for React
+# CRITICAL: Ensure JS and CSS files are served with correct MIME types BEFORE any redirects
+[[headers]]
+  for = "/_next/static/chunks/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_next/static/js/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_next/static/css/*.css"
+  [headers.values]
+    Content-Type = "text/css; charset=utf-8"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
@@ -49,86 +72,91 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 [context.production]
-  command = "cd frontend && npm install && npm run build"
+  command = "cd frontend && npm run build:netlify"
   publish = "frontend/out"
 
 [context.deploy-preview]
-  command = "cd frontend && npm install && npm run build"
+  command = "cd frontend && npm run build:netlify"
   publish = "frontend/out"
 
 [context.branch-deploy]
-  command = "cd frontend && npm install && npm run build"
+  command = "cd frontend && npm run build:netlify"
   publish = "frontend/out"
 
-# Redirects for API routes to Netlify functions
+# IMPORTANT: Static assets must be handled BEFORE SPA redirects
+# Redirects for API routes to backend
 [[redirects]]
-  from = "/api/vendors"
-  to = "/.netlify/functions/vendors"
+  from = "/api/*"
+  to = "https://garnet-compliance-saas-production.up.railway.app/api/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/ask"
+  to = "https://garnet-compliance-saas-production.up.railway.app/ask"
   status = 200
 
 [[redirects]]
-  from = "/api/vendors/stats"
-  to = "/.netlify/functions/vendor-stats"
+  from = "/status"
+  to = "https://garnet-compliance-saas-production.up.railway.app/status"
   status = 200
 
 [[redirects]]
-  from = "/api/vendors/:id"
-  to = "/.netlify/functions/vendor-by-id?id=:id"
+  from = "/health"
+  to = "https://garnet-compliance-saas-production.up.railway.app/health"
   status = 200
 
-# Ensure JS and CSS files are served with correct MIME types
-[[headers]]
-  for = "/_next/static/chunks/*.js"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/_next/static/css/*.css"
-  [headers.values]
-    Content-Type = "text/css; charset=utf-8"
-
-[[headers]]
-  for = "/*.js"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-# Don't redirect static assets - they should be served as-is
-# This ensures _next/static files are not redirected to index.html
-
-# SPA routing redirects - explicit routes only
 [[redirects]]
-  from = "/dashboard*"
+  from = "/ping"
+  to = "https://garnet-compliance-saas-production.up.railway.app/ping"
+  status = 200
+
+# SPA routing redirects - ONLY for HTML pages, NOT static assets
+[[redirects]]
+  from = "/dashboard/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/auth*"
+  from = "/auth/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/questionnaires*"
+  from = "/questionnaires/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/vendors*"
+  from = "/vendors/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/trust-portal*"
+  from = "/trust-portal/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/compliance*"
+  from = "/compliance/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
 [[redirects]]
-  from = "/contact*"
+  from = "/contact/*"
   to = "/index.html"
   status = 200
+  conditions = {Role = ["request"], "force" = false}
 
-# No catch-all redirect - this was causing the JS files to be served as HTML 
+# Catch-all for SPA - ONLY for non-asset requests
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["request"], "force" = false} 

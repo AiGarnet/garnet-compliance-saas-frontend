@@ -351,10 +351,10 @@ const QuestionnairesPage = () => {
   const extractTextFromFile = async (file: File): Promise<string> => {
     return new Promise((resolve) => {
       if (file.type === 'text/plain') {
-        const reader = new FileReader();
+      const reader = new FileReader();
         reader.onload = (e) => resolve(e.target?.result as string || '');
         reader.readAsText(file);
-      } else {
+        } else {
         // For PDF and DOC files, simulate extraction with realistic questions
         setTimeout(() => {
           const sampleQuestions = [
@@ -642,7 +642,7 @@ const QuestionnairesPage = () => {
                             {checklist.extractionStatus === 'completed' && (
                               <CheckCircle className="h-5 w-5 text-green-600" />
                             )}
-                        </div>
+                      </div>
                           <p className="text-gray-600">
                             {checklist.questions.length} questions extracted
                           </p>
@@ -670,7 +670,7 @@ const QuestionnairesPage = () => {
                     <MessageSquare className="h-24 w-24 text-gray-400 mx-auto mb-6" />
                     <h3 className="text-xl font-semibold text-gray-600 mb-2">No Questions Available</h3>
                     <p className="text-gray-500 mb-6">Upload a checklist first to see questions here</p>
-                          <button
+                          <button 
                       onClick={() => setActiveSection('upload')}
                       className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
                           >
@@ -700,18 +700,18 @@ const QuestionnairesPage = () => {
                           {generationProgress.currentQuestion && (
                             <p className="text-xs text-purple-600 mt-2 truncate">
                               Processing: {generationProgress.currentQuestion}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      
+                          </p>
+                        )}
+                    </div>
+                  )}
+
                       <div className="flex items-center space-x-6 mb-4">
                         <div className="flex items-center">
                           <Clock className="h-5 w-5 text-gray-500 mr-2" />
                           <span className="text-gray-700">
                             {extractedQuestions.filter(q => q.status === 'pending').length} Pending
                           </span>
-                        </div>
+                            </div>
                         <div className="flex items-center">
                           <Loader2 className="h-5 w-5 text-blue-600 mr-2" />
                           <span className="text-gray-700">
@@ -723,7 +723,7 @@ const QuestionnairesPage = () => {
                           <span className="text-gray-700">
                             {extractedQuestions.filter(q => q.status === 'completed').length} Completed
                           </span>
-                        </div>
+                          </div>
                         <div className="flex items-center">
                           <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
                           <span className="text-gray-700">
@@ -744,8 +744,8 @@ const QuestionnairesPage = () => {
                           </button>
                         </div>
                       )}
-                    </div>
-
+                      </div>
+                      
                     <div className="grid grid-cols-1 gap-6">
                       {extractedQuestions.map((question) => (
                         <div 
@@ -776,28 +776,28 @@ const QuestionnairesPage = () => {
                                   {question.confidence && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                                       {Math.round(question.confidence * 100)}% confidence
-                                    </span>
-                                  )}
+                      </span>
+                      )}
                                 </>
                               )}
                               {question.status === 'needs-support' && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
                                   <AlertCircle className="h-4 w-4 mr-1" />
                                   Needs Support
-                                </span>
-                              )}
+                      </span>
+                      )}
                             </div>
-                          </div>
+                    </div>
                     
                           {question.answer && (
                             <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
                               <h5 className="font-semibold text-purple-900 mb-2">AI Generated Answer:</h5>
                               <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
-                            </div>
+                  </div>
                           )}
                   
                           {question.status === 'pending' && (
-                            <button
+                    <button
                               onClick={() => generateAIResponses([question])}
                               disabled={isGeneratingAnswers}
                               className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center"
@@ -813,12 +813,12 @@ const QuestionnairesPage = () => {
                                   Generate AI Answer
                                 </>
                               )}
-                            </button>
+                    </button>
                           )}
 
                           {question.status === 'completed' && (
                             <div className="flex space-x-2">
-                              <button
+                    <button
                                 onClick={() => generateAIResponses([question])}
                                 disabled={isGeneratingAnswers}
                                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
@@ -836,7 +836,7 @@ const QuestionnairesPage = () => {
                                 <HelpCircle className="h-3 w-3 mr-1" />
                                 Need Help
                               </button>
-                            </div>
+                        </div>
                           )}
 
                           {question.status === 'needs-support' && (
@@ -849,7 +849,7 @@ const QuestionnairesPage = () => {
                             >
                               <HelpCircle className="h-4 w-4 mr-2" />
                               Request Help
-                            </button>
+                    </button>
                           )}
                   </div>
                       ))}
@@ -1013,8 +1013,8 @@ const QuestionnairesPage = () => {
                       <div className="text-center py-8 border border-gray-200 rounded-lg">
                         <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-500">No active support tickets</p>
-                    </div>
-                    ) : (
+                </div>
+              ) : (
                       <div className="space-y-4">
                         {supportTickets.map((ticket) => (
                           <div key={ticket.id} className="border border-gray-200 rounded-lg p-4">
@@ -1035,9 +1035,9 @@ const QuestionnairesPage = () => {
                           </div>
                         ))}
                       </div>
-                    )}
+              )}
+            </div>
                   </div>
-                </div>
               </div>
             </div>
           )}
@@ -1054,7 +1054,7 @@ const QuestionnairesPage = () => {
                 {confirmationDialog.message}
               </p>
               <div className="flex space-x-3">
-                <button
+                    <button
                   onClick={confirmationDialog.onConfirm}
                   disabled={confirmationDialog.isProcessing}
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -1067,7 +1067,7 @@ const QuestionnairesPage = () => {
                   ) : (
                     'Send to AI'
                   )}
-                </button>
+                    </button>
                 <button
                   onClick={confirmationDialog.onCancel}
                   disabled={confirmationDialog.isProcessing}
@@ -1075,9 +1075,9 @@ const QuestionnairesPage = () => {
                 >
                   Maybe Later
                 </button>
-              </div>
-            </div>
-          </div>
+                    </div>
+                  </div>
+                </div>
         )}
 
         {/* Support Modal */}

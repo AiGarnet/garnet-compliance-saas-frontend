@@ -1,12 +1,15 @@
-# Proxy API requests to Railway backend
-/api/*  https://garnet-compliance-saas-production.up.railway.app/api/:splat  200
-/ask    https://garnet-compliance-saas-production.up.railway.app/ask  200
-/status https://garnet-compliance-saas-production.up.railway.app/status  200
-/health https://garnet-compliance-saas-production.up.railway.app/health  200
-/ping   https://garnet-compliance-saas-production.up.railway.app/ping  200
+# API Proxy to Railway backend - with proper headers
+/api/*  https://garnet-compliance-saas-production.up.railway.app/api/:splat  200!
+/ask    https://garnet-compliance-saas-production.up.railway.app/ask  200!
+/status https://garnet-compliance-saas-production.up.railway.app/status  200!
+/health https://garnet-compliance-saas-production.up.railway.app/health  200!
+/ping   https://garnet-compliance-saas-production.up.railway.app/ping  200!
 
 # API redirects to Railway backend
 /api/vendors/* https://garnet-compliance-saas-production.up.railway.app/api/vendors/:splat 200
 
 # 404 fallback for non-existent pages only
-/404 /404.html 200 
+/404 /404.html 200
+
+# SPA fallback - only for non-API and non-static asset requests
+/*      /index.html   200 

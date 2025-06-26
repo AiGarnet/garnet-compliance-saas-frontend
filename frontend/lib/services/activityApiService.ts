@@ -202,17 +202,100 @@ class ActivityApiService {
       
       if (token) {
         headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn('No auth token found for API request:', endpoint);
       }
 
       const response = await fetch(url, {
         ...options,
-        headers
+        headers,
+        credentials: 'include' // Include cookies for CORS
       });
 
-      const data: ApiResponse<T> = await response.json();
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      let data: any;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Handle non-JSON responses (likely error pages)
+        const text = await response.text();
+        console.warn('Non-JSON response received:', text);
+        
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Authentication required. Please log in again.',
+              details: { status: response.status, text }
+            },
+            meta: {
+              timestamp: new Date().toISOString()
+            }
+          };
+        }
+        
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_RESPONSE',
+            message: 'Server returned invalid response format',
+            details: { status: response.status, text }
+          },
+          meta: {
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+      
+      // Handle HTTP error status codes
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Clear auth tokens on 401
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('authToken');
+          }
+          
+          return {
+            success: false,
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Authentication expired. Please log in again.',
+              details: data
+            },
+            meta: {
+              timestamp: new Date().toISOString()
+            }
+          };
+        }
+        
+        return {
+          success: false,
+          error: {
+            code: `HTTP_${response.status}`,
+            message: data?.message || `HTTP ${response.status} error`,
+            details: data
+          },
+          meta: {
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+      
+      // Ensure we return a proper ApiResponse format
+      const apiResponse: ApiResponse<T> = data?.success !== undefined ? data : {
+        success: true,
+        data: data,
+        meta: {
+          timestamp: new Date().toISOString()
+        }
+      };
       
       // Handle the response and show toasts
-      return this.handleApiResponse(data);
+      return this.handleApiResponse(apiResponse);
     } catch (error) {
       const errorResponse: ApiResponse<T> = {
         success: false,

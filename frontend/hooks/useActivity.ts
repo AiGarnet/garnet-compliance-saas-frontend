@@ -88,19 +88,29 @@ export function useActivity(filters?: ActivityFilters): UseActivityReturn {
         activityApiService.getRecentActivities(10, user?.id)
       ]);
       
-      if (activitiesResponse.success && activitiesResponse.data) {
+      // Handle activities response with null checks
+      if (activitiesResponse.success && activitiesResponse.data && Array.isArray(activitiesResponse.data)) {
         const transformedActivities = activitiesResponse.data.map(transformBackendActivity);
         setActivities(transformedActivities);
+      } else if (activitiesResponse.success && !activitiesResponse.data) {
+        // Empty response is valid
+        setActivities([]);
       } else {
-        throw new Error(activitiesResponse.error?.message || 'Failed to fetch activities');
+        console.warn('Activities API returned non-array data or failed:', activitiesResponse);
+        throw new Error(activitiesResponse.error?.message || 'Failed to fetch activities - invalid data format');
       }
 
-      if (recentResponse.success && recentResponse.data) {
+      // Handle recent activities response with null checks
+      if (recentResponse.success && recentResponse.data && Array.isArray(recentResponse.data)) {
         const transformedRecent = recentResponse.data.map(transformBackendActivity);
         setRecentActivities(transformedRecent);
+      } else if (recentResponse.success && !recentResponse.data) {
+        // Empty response is valid
+        setRecentActivities([]);
       } else {
-        console.warn('Failed to fetch recent activities:', recentResponse.error?.message);
-        // Don't throw error for recent activities, just log warning
+        console.warn('Recent activities API returned non-array data or failed:', recentResponse);
+        // Don't throw error for recent activities, just log warning and set empty array
+        setRecentActivities([]);
       }
 
     } catch (err) {
@@ -112,10 +122,13 @@ export function useActivity(filters?: ActivityFilters): UseActivityReturn {
       try {
         const allActivities = activityService.getActivities(filters);
         const recent = activityService.getRecentActivities(10);
-        setActivities(allActivities);
-        setRecentActivities(recent);
+        setActivities(allActivities || []);
+        setRecentActivities(recent || []);
       } catch (localError) {
         console.error('Local storage fallback also failed:', localError);
+        // Set empty arrays as final fallback
+        setActivities([]);
+        setRecentActivities([]);
       }
     } finally {
       setIsLoading(false);
