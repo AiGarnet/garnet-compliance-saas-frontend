@@ -53,6 +53,7 @@ interface ChecklistFile {
   uploadDate: Date;
   questions: ExtractedQuestion[];
   extractionStatus: 'uploading' | 'extracting' | 'completed' | 'error';
+  checklistId?: string;
 }
 
 interface SupportTicket {
@@ -121,6 +122,9 @@ const QuestionnairesPage = () => {
     onCancel: () => {},
     isProcessing: false
   });
+
+  // Add state for "Send to AI" functionality
+  const [sendingToAI, setSendingToAI] = useState(false);
   
   // File refs
   const checklistFileRef = useRef<HTMLInputElement>(null);
@@ -166,7 +170,7 @@ const QuestionnairesPage = () => {
     }
   };
 
-  // Enhanced file upload with real extraction
+  // Enhanced file upload with database integration
   const handleFileUpload = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     
@@ -179,122 +183,162 @@ const QuestionnairesPage = () => {
       return;
     }
 
+    if (!selectedVendorId) {
+      setUploadError('Please select a vendor first');
+      return;
+    }
+
     setIsUploading(true);
     setUploadError(null);
 
+    // Create initial checklist entry
+    const newChecklist: ChecklistFile = {
+      id: Date.now().toString(),
+      name: file.name,
+      type: file.type,
+      uploadDate: new Date(),
+      questions: [],
+      extractionStatus: 'uploading'
+    };
+
+    setChecklists(prev => [...prev, newChecklist]);
+    setSelectedChecklist(newChecklist);
+
     try {
-      const newChecklist: ChecklistFile = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: file.type,
-        uploadDate: new Date(),
-        questions: [],
-        extractionStatus: 'uploading'
-      };
-
-      setChecklists(prev => [...prev, newChecklist]);
-      setSelectedChecklist(newChecklist);
-
-      // Simulate upload progress
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Upload to backend and extract questions
+      const uploadResponse = await ChecklistService.uploadChecklist(file, selectedVendorId, file.name);
       
-      newChecklist.extractionStatus = 'extracting';
-      setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
+      // Convert database questions to our local format
+      const extractedQuestions: ExtractedQuestion[] = uploadResponse.questions.map(q => ({
+        id: q.id,
+        text: q.questionText,
+        status: q.status as any,
+        answer: q.aiAnswer,
+        confidence: q.confidenceScore,
+        requiresDoc: q.requiresDocument,
+        docDescription: q.documentDescription
+      }));
 
-      // Extract questions based on file type
-      const extractedText = await extractTextFromFile(file);
-      const questions = parseQuestionsFromText(extractedText);
-      
-      newChecklist.questions = questions;
+      // Update checklist with extracted questions and database ID
+      newChecklist.questions = extractedQuestions;
       newChecklist.extractionStatus = 'completed';
+      newChecklist.checklistId = uploadResponse.checklist.id;
       
       setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
-      setExtractedQuestions(questions);
-
-      // Show confirmation dialog after extraction
-      showExtractionConfirmation(questions);
       
     } catch (error) {
       console.error('Error processing file:', error);
       setUploadError('Failed to process file. Please try again.');
+      
+      // Update status to error
+      setChecklists(prev => prev.map(c => 
+        c.id === newChecklist.id ? { ...c, extractionStatus: 'error' } : c
+      ));
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Show confirmation dialog after question extraction
-  const showExtractionConfirmation = (questions: ExtractedQuestion[]) => {
-    setConfirmationDialog({
-      show: true,
-      title: 'Questions Extracted Successfully',
-      message: `We found ${questions.length} questions in your document. Would you like to send them to our AI for response generation?`,
-      questions,
-      onConfirm: () => startAIResponseGeneration(questions),
-      onCancel: () => {
-        setConfirmationDialog(prev => ({ ...prev, show: false }));
-      },
-      isProcessing: false
-    });
-  };
+  // New function to send questions to AI
+  const sendQuestionsToAI = async (checklist: ChecklistFile) => {
+    if (!checklist.checklistId || !selectedVendorId) {
+      setUploadError('Missing checklist or vendor information');
+      return;
+    }
 
-  // Start AI response generation process
-  const startAIResponseGeneration = async (questions: ExtractedQuestion[]) => {
-    setConfirmationDialog(prev => ({ ...prev, isProcessing: true }));
-    
+    setSendingToAI(true);
     try {
+      // Load questions from database to get latest data
+      const dbQuestions = await ChecklistService.getChecklistQuestions(checklist.checklistId, selectedVendorId);
+      
+      // Convert to our local format for AI questionnaire section
+      const questionsForAI: ExtractedQuestion[] = dbQuestions.map(q => ({
+        id: q.id,
+        text: q.questionText,
+        status: q.status as any,
+        answer: q.aiAnswer,
+        confidence: q.confidenceScore,
+        requiresDoc: q.requiresDocument,
+        docDescription: q.documentDescription
+      }));
+
+      // Set questions for AI section
+      setExtractedQuestions(questionsForAI);
+      
       // Switch to AI section
       setActiveSection('ai');
       
-      // Close confirmation dialog
-      setConfirmationDialog(prev => ({ ...prev, show: false }));
-      
-      // Start AI processing
-      await generateAIResponses(questions);
+      // Auto-generate AI answers for pending questions
+      const pendingQuestions = questionsForAI.filter(q => q.status === 'pending');
+      if (pendingQuestions.length > 0) {
+        await generateAIResponsesFromDatabase(checklist.checklistId, selectedVendorId);
+      }
       
     } catch (error) {
-      console.error('Error starting AI generation:', error);
-      setConfirmationDialog(prev => ({ ...prev, isProcessing: false }));
+      console.error('Error sending questions to AI:', error);
+      setUploadError('Failed to send questions to AI. Please try again.');
+    } finally {
+      setSendingToAI(false);
     }
   };
 
-  // Generate AI responses using actual API endpoints
-  const generateAIResponses = async (questions: ExtractedQuestion[]) => {
+  // Generate AI responses using database integration
+  const generateAIResponsesFromDatabase = async (checklistId: string, vendorId: string) => {
     setIsGeneratingAnswers(true);
-    setGenerationProgress({ current: 0, total: questions.length, currentQuestion: '' });
+    setGenerationProgress({ current: 0, total: 0, currentQuestion: 'Preparing...' });
 
     try {
-      // Update questions to in-progress status
-      const questionsInProgress = questions.map(q => ({ ...q, status: 'in-progress' as const }));
-      setExtractedQuestions(questionsInProgress);
+      // Generate answers using the checklist service
+      const response = await ChecklistService.generateAllPendingAnswers(vendorId, 'Security compliance questionnaire');
+      
+      // Reload questions from database to get updated answers
+      const updatedQuestions = await ChecklistService.getChecklistQuestions(checklistId, vendorId);
+      
+      // Convert back to local format
+      const questionsWithAnswers: ExtractedQuestion[] = updatedQuestions.map(q => ({
+        id: q.id,
+        text: q.questionText,
+        status: q.status as any,
+        answer: q.aiAnswer,
+        confidence: q.confidenceScore,
+        requiresDoc: q.requiresDocument,
+        docDescription: q.documentDescription
+      }));
 
-      if (questions.length === 1) {
-        // Use single question API
-        await generateSingleAnswer(questions[0]);
-      } else {
-        // Use batch API for multiple questions
-        await generateBatchAnswers(questions);
-      }
+      setExtractedQuestions(questionsWithAnswers);
+      setGenerationProgress({ 
+        current: questionsWithAnswers.filter(q => q.status === 'completed').length, 
+        total: questionsWithAnswers.length, 
+        currentQuestion: 'Completed' 
+      });
+      
     } catch (error) {
       console.error('Error generating AI responses:', error);
-      // Mark questions as needing support if AI fails
-      setExtractedQuestions(prev => prev.map(q => ({ ...q, status: 'needs-support' })));
+      setUploadError('Failed to generate AI responses. Please try again.');
     } finally {
       setIsGeneratingAnswers(false);
     }
   };
 
-  // Generate single answer using individual API
-  const generateSingleAnswer = async (question: ExtractedQuestion) => {
-    setGenerationProgress(prev => ({ ...prev, currentQuestion: question.text }));
+  // Generate AI answer for a single question
+  const generateSingleAIAnswer = async (question: ExtractedQuestion) => {
+    setIsGeneratingAnswers(true);
+    setGenerationProgress({ current: 0, total: 1, currentQuestion: question.text });
 
     try {
+      // Update question status to in-progress
+      setExtractedQuestions(prev => prev.map(q => 
+        q.id === question.id ? { ...q, status: 'in-progress' } : q
+      ));
+
+      // Generate answer using individual API call
       const response = await fetch('/api/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: question.text,
-          context: 'Compliance questionnaire response',
-          vendorId: selectedChecklist?.id || 'unknown'
+          context: 'Security compliance questionnaire',
+          vendorId: selectedVendorId
         })
       });
 
@@ -304,78 +348,81 @@ const QuestionnairesPage = () => {
 
       const data = await response.json();
       
-      // Update question with answer
+      // Update question with AI answer
       setExtractedQuestions(prev => prev.map(q => 
         q.id === question.id 
           ? { 
               ...q, 
               status: 'completed',
               answer: data.answer,
-              confidence: data.confidence
+              confidence: data.confidence || 0.8
             }
           : q
       ));
 
-      setGenerationProgress(prev => ({ ...prev, current: 1 }));
+      setGenerationProgress({ current: 1, total: 1, currentQuestion: 'Completed' });
       
     } catch (error) {
-      console.error('Error generating single answer:', error);
+      console.error('Error generating single AI answer:', error);
+      // Mark question as needing support
       setExtractedQuestions(prev => prev.map(q => 
         q.id === question.id ? { ...q, status: 'needs-support' } : q
       ));
+    } finally {
+      setIsGeneratingAnswers(false);
     }
   };
 
-  // Generate batch answers using batch API
-  const generateBatchAnswers = async (questions: ExtractedQuestion[]) => {
+  // Generate answers for all pending questions
+  const generateAllPendingAnswers = async () => {
+    if (!selectedVendorId) return;
+
+    const pendingQuestions = extractedQuestions.filter(q => q.status === 'pending');
+    setIsGeneratingAnswers(true);
+    setGenerationProgress({ current: 0, total: pendingQuestions.length, currentQuestion: 'Preparing...' });
+
     try {
-      const questionTexts = questions.map(q => q.text);
+      // Update all pending questions to in-progress
+      setExtractedQuestions(prev => prev.map(q => 
+        q.status === 'pending' ? { ...q, status: 'in-progress' } : q
+      ));
+
+      // Generate answers using the checklist service
+      await ChecklistService.generateAllPendingAnswers(selectedVendorId, 'Security compliance questionnaire');
       
-      const response = await fetch('/api/generate-answers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questions: questionTexts,
-          context: 'Compliance questionnaire response',
-          vendorId: selectedChecklist?.id || 'unknown'
-        })
+      // Reload questions from database to get the updated answers
+      const allQuestions = await ChecklistService.getVendorQuestions(selectedVendorId);
+      
+      // Convert back to local format and update only the questions we have in extractedQuestions
+      const questionMap = new Map(allQuestions.map(q => [q.id, q]));
+      
+      setExtractedQuestions(prev => prev.map(q => {
+        const dbQuestion = questionMap.get(q.id);
+        if (dbQuestion) {
+          return {
+            ...q,
+            status: dbQuestion.status as any,
+            answer: dbQuestion.aiAnswer,
+            confidence: dbQuestion.confidenceScore
+          };
+        }
+        return q;
+      }));
+
+      setGenerationProgress({ 
+        current: pendingQuestions.length, 
+        total: pendingQuestions.length, 
+        currentQuestion: 'Completed' 
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Update questions with answers
-      if (data.answers && Array.isArray(data.answers)) {
-        const updatedQuestions = questions.map((question, index) => {
-          const aiAnswer = data.answers[index];
-          if (aiAnswer && aiAnswer.success) {
-            return {
-              ...question,
-              status: 'completed' as const,
-              answer: aiAnswer.answer,
-              confidence: aiAnswer.confidence || 0.8
-            };
-          } else {
-            return {
-              ...question,
-              status: 'needs-support' as const
-            };
-          }
-        });
-
-        setExtractedQuestions(updatedQuestions);
-        
-        // Update progress
-        const successfulAnswers = data.metadata?.successfulAnswers || 0;
-        setGenerationProgress(prev => ({ ...prev, current: successfulAnswers }));
-      }
       
     } catch (error) {
-      console.error('Error generating batch answers:', error);
-      throw error;
+      console.error('Error generating all AI answers:', error);
+      // Mark questions as needing support
+      setExtractedQuestions(prev => prev.map(q => 
+        q.status === 'in-progress' ? { ...q, status: 'needs-support' } : q
+      ));
+    } finally {
+      setIsGeneratingAnswers(false);
     }
   };
 
@@ -655,44 +702,104 @@ const QuestionnairesPage = () => {
                       </div>
                 )}
 
-                {/* Uploaded Checklists */}
+                                {/* Uploaded Checklists */}
                 {checklists.length > 0 && (
                   <div className="mt-8">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">Uploaded Checklists</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-6">
                       {safeMap(checklists, (checklist: ChecklistFile) => (
                         <div 
                           key={checklist.id}
-                          className={`p-6 border rounded-lg cursor-pointer transition-colors ${
+                          className={`p-6 border rounded-lg transition-colors ${
                             selectedChecklist?.id === checklist.id 
                               ? 'border-blue-500 bg-blue-50' 
-                              : 'border-gray-200 hover:border-gray-300'
+                              : 'border-gray-200'
                           }`}
-                          onClick={() => {
-                            setSelectedChecklist(checklist);
-                            setExtractedQuestions(checklist.questions);
-                          }}
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          {/* Checklist Header */}
+                          <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center">
                               <FileCheck className="h-6 w-6 text-blue-600 mr-3" />
-                              <span className="font-medium">{checklist.name}</span>
+                              <div>
+                                <span className="font-medium text-gray-900">{checklist.name}</span>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {checklist.questions.length} questions extracted
+                                </p>
+                              </div>
                             </div>
-                            {checklist.extractionStatus === 'extracting' && (
-                              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                            )}
-                            {checklist.extractionStatus === 'completed' && (
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                            )}
+                            <div className="flex items-center space-x-3">
+                              {checklist.extractionStatus === 'extracting' && (
+                                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                              )}
+                              {checklist.extractionStatus === 'completed' && (
+                                <>
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <button
+                                    onClick={() => sendQuestionsToAI(checklist)}
+                                    disabled={sendingToAI || !checklist.checklistId}
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                  >
+                                    {sendingToAI ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Sending to AI...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Bot className="h-4 w-4 mr-2" />
+                                        Send to AI
+                                      </>
+                                    )}
+                                  </button>
+                                </>
+                              )}
+                              {checklist.extractionStatus === 'error' && (
+                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                              )}
+                            </div>
                           </div>
-                          <p className="text-gray-600">
-                            {checklist.questions.length} questions extracted
-                          </p>
+
+                          {/* Questions Preview */}
+                          {checklist.questions.length > 0 && (
+                            <div className="mt-4">
+                              <button
+                                onClick={() => {
+                                  setSelectedChecklist(checklist);
+                                }}
+                                className="text-sm text-blue-600 hover:text-blue-700 mb-3"
+                              >
+                                {selectedChecklist?.id === checklist.id ? 'Hide Questions' : 'View Questions'} 
+                                ({checklist.questions.length})
+                              </button>
+                              
+                              {selectedChecklist?.id === checklist.id && (
+                                <div className="border-t pt-4 space-y-3 max-h-60 overflow-y-auto">
+                                  {safeMap(checklist.questions.slice(0, 5), (question: ExtractedQuestion, index) => (
+                                    <div key={question.id} className="p-3 bg-gray-50 rounded-lg">
+                                      <p className="text-sm text-gray-900 font-medium">
+                                        {index + 1}. {question.text}
+                                      </p>
+                                      {question.requiresDoc && (
+                                        <p className="text-xs text-orange-600 mt-1">
+                                          📎 Requires supporting document
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {checklist.questions.length > 5 && (
+                                    <p className="text-sm text-gray-500 text-center">
+                                      ... and {checklist.questions.length - 5} more questions
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
-                        )}
+                )}
                       </div>
                     </div>
                   )}
@@ -775,11 +882,12 @@ const QuestionnairesPage = () => {
                       </div>
 
                       {/* Batch Actions */}
-                      {extractedQuestions.filter(q => q.status === 'pending').length > 1 && !isGeneratingAnswers && (
+                      {extractedQuestions.filter(q => q.status === 'pending').length > 0 && !isGeneratingAnswers && (
                         <div className="pt-4 border-t border-purple-200">
                           <button
-                            onClick={() => generateAIResponses(extractedQuestions.filter(q => q.status === 'pending'))}
-                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center mx-auto"
+                            onClick={() => generateAllPendingAnswers()}
+                            disabled={!selectedVendorId}
+                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center mx-auto"
                           >
                             <Brain className="h-4 w-4 mr-2" />
                             Generate All Answers ({extractedQuestions.filter(q => q.status === 'pending').length})
@@ -840,7 +948,7 @@ const QuestionnairesPage = () => {
                           
                           {question.status === 'pending' && (
                             <button
-                              onClick={() => generateAIResponses([question])}
+                              onClick={() => generateSingleAIAnswer(question)}
                               disabled={isGeneratingAnswers}
                               className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center"
                             >
@@ -861,7 +969,7 @@ const QuestionnairesPage = () => {
                           {question.status === 'completed' && (
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => generateAIResponses([question])}
+                                onClick={() => generateSingleAIAnswer(question)}
                                 disabled={isGeneratingAnswers}
                                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
                               >
