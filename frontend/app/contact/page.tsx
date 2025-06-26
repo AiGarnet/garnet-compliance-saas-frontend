@@ -315,7 +315,7 @@ const ContactPage = () => {
                   variants={itemVariants}
                 >
                   <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                    Let's Talk AI Compliance
+                    Let's Talk Security & Trust
                   </span>
                 </motion.h1>
                 <motion.p 
@@ -342,25 +342,7 @@ const ContactPage = () => {
                       <ContactIllustration variant="team" className="w-full h-full max-w-lg" />
                     </div>
                     
-                    {/* Floating Stats */}
-                    <motion.div
-                      className="absolute top-6 right-6 bg-white/95 backdrop-blur-md border border-white/40 rounded-xl p-4 shadow-lg"
-                      animate={{
-                        x: [0, 10, 0],
-                        y: [0, -5, 0],
-                      }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-5 w-5 text-purple-600" />
-                        <span className="text-sm font-semibold text-gray-700">1000+ Companies</span>
-                      </div>
-                    </motion.div>
+
 
                     <motion.div
                       className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-md border border-white/40 rounded-xl p-4 shadow-lg"
@@ -535,7 +517,7 @@ const ContactPage = () => {
                         className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 resize-none bg-white/80 backdrop-blur-sm ${
                           validationErrors.message ? 'border-red-300 bg-red-50/80' : 'border-white/50 focus:border-purple-500 hover:border-purple-300'
                         }`}
-                        placeholder="Tell us more about your AI compliance requirements..."
+                        placeholder="Tell us more about your security and compliance requirements..."
                       />
                       {validationErrors.message && (
                         <motion.p 

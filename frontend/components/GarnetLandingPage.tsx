@@ -1111,20 +1111,14 @@ const GarnetLandingPage = () => {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-purple-200"
+                className="group relative overflow-hidden bg-white rounded-2xl shadow-lg transition-all duration-500 border border-gray-100"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                whileHover={{ 
-                  y: -8,
-                  scale: 1.02,
-                  transition: { type: "spring", stiffness: 300, damping: 20 }
-                }}
-                onHoverStart={() => setActiveFeature(index)}
               >
                 {/* Background gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-purple-50/30 opacity-0 transition-opacity duration-500" />
                 
                 {/* Content */}
                 <div className="relative p-6 h-full flex flex-col">
@@ -1132,11 +1126,6 @@ const GarnetLandingPage = () => {
                   <div className="relative mb-6">
                     <motion.div 
                       className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white shadow-lg`}
-                      whileHover={{ 
-                        scale: 1.1, 
-                        rotate: [0, -5, 5, 0],
-                        transition: { duration: 0.5 }
-                      }}
                     >
                   {feature.icon}
                     </motion.div>
@@ -1157,7 +1146,7 @@ const GarnetLandingPage = () => {
                 </div>
                   
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-700 transition-colors duration-300">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 transition-colors duration-300">
                     {feature.title}
                   </h3>
                   
@@ -1168,7 +1157,7 @@ const GarnetLandingPage = () => {
                 </div>
                 
                 {/* Hover glow effect */}
-                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 pointer-events-none`} />
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 transition-opacity duration-500 pointer-events-none`} />
               </motion.div>
             ))}
           </div>
