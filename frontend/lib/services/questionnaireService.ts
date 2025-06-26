@@ -92,6 +92,11 @@ export const QuestionnaireService = {
       onProgress?.(questions.length, questions.length);
 
       // Ensure all answers have the fallback message for failed ones
+      if (!response.answers || !Array.isArray(response.answers)) {
+        console.error('API response.answers is not an array:', response.answers);
+        throw new Error('Invalid API response format - answers field is missing or not an array');
+      }
+
       const processedAnswers = response.answers.map(answer => ({
         question: answer.question,
         answer: answer.success === false ? 

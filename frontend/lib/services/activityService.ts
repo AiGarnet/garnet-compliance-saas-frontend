@@ -26,7 +26,6 @@ class ActivityService {
   // Load activities from localStorage
   private loadActivities(): void {
     if (!this.isLocalStorageAvailable()) {
-      console.warn('ActivityService: localStorage not available, using in-memory storage');
       return;
     }
 
@@ -34,6 +33,11 @@ class ActivityService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) {
+          console.warn('Stored activities data is not an array, resetting to empty array');
+          this.activities = [];
+          return;
+        }
         this.activities = parsed.map((activity: any) => ({
           ...activity,
           timestamp: new Date(activity.timestamp)

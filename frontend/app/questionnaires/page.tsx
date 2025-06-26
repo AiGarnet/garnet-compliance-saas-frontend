@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ClipboardList, 
@@ -23,11 +23,15 @@ import {
   Files,
   MessageSquare,
   RefreshCw,
-  Brain
+  Brain,
+  AlertTriangle,
+  RotateCcw,
+  ChevronDown
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { vendors as vendorAPI } from '@/lib/api';
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 interface ExtractedQuestion {
   id: string;
@@ -491,7 +495,7 @@ const QuestionnairesPage = () => {
                 {isLoadingVendors ? (
                   <option disabled>Loading vendors...</option>
                 ) : (
-                  vendors.map((vendor) => (
+                  safeMap(vendors, (vendor: any) => (
                     <option key={vendor.id} value={vendor.id}>
                       {vendor.name}
                     </option>
@@ -618,7 +622,7 @@ const QuestionnairesPage = () => {
                   <div className="mt-8">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">Uploaded Checklists</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {checklists.map((checklist) => (
+                      {safeMap(checklists, (checklist: ChecklistFile) => (
                         <div 
                           key={checklist.id}
                           className={`p-6 border rounded-lg cursor-pointer transition-colors ${
@@ -635,18 +639,18 @@ const QuestionnairesPage = () => {
                             <div className="flex items-center">
                               <FileCheck className="h-6 w-6 text-blue-600 mr-3" />
                               <span className="font-medium">{checklist.name}</span>
-                        </div>
+                            </div>
                             {checklist.extractionStatus === 'extracting' && (
                               <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                             )}
                             {checklist.extractionStatus === 'completed' && (
                               <CheckCircle className="h-5 w-5 text-green-600" />
                             )}
-                      </div>
+                          </div>
                           <p className="text-gray-600">
                             {checklist.questions.length} questions extracted
                           </p>
-                  </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -747,7 +751,7 @@ const QuestionnairesPage = () => {
                       </div>
                       
                     <div className="grid grid-cols-1 gap-6">
-                      {extractedQuestions.map((question) => (
+                      {safeMap(extractedQuestions, (question: ExtractedQuestion) => (
                         <div 
                           key={question.id}
                           className="border rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -776,28 +780,28 @@ const QuestionnairesPage = () => {
                                   {question.confidence && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                                       {Math.round(question.confidence * 100)}% confidence
-                      </span>
-                      )}
+                                    </span>
+                                  )}
                                 </>
                               )}
                               {question.status === 'needs-support' && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
                                   <AlertCircle className="h-4 w-4 mr-1" />
                                   Needs Support
-                      </span>
-                      )}
+                                </span>
+                              )}
                             </div>
-                    </div>
-                    
+                          </div>
+                          
                           {question.answer && (
                             <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
                               <h5 className="font-semibold text-purple-900 mb-2">AI Generated Answer:</h5>
                               <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
-                  </div>
+                            </div>
                           )}
-                  
+                          
                           {question.status === 'pending' && (
-                    <button
+                            <button
                               onClick={() => generateAIResponses([question])}
                               disabled={isGeneratingAnswers}
                               className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center"
@@ -813,12 +817,12 @@ const QuestionnairesPage = () => {
                                   Generate AI Answer
                                 </>
                               )}
-                    </button>
+                            </button>
                           )}
 
                           {question.status === 'completed' && (
                             <div className="flex space-x-2">
-                    <button
+                              <button
                                 onClick={() => generateAIResponses([question])}
                                 disabled={isGeneratingAnswers}
                                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
@@ -836,7 +840,7 @@ const QuestionnairesPage = () => {
                                 <HelpCircle className="h-3 w-3 mr-1" />
                                 Need Help
                               </button>
-                        </div>
+                            </div>
                           )}
 
                           {question.status === 'needs-support' && (
@@ -849,14 +853,14 @@ const QuestionnairesPage = () => {
                             >
                               <HelpCircle className="h-4 w-4 mr-2" />
                               Request Help
-                    </button>
+                            </button>
                           )}
-                  </div>
+                        </div>
                       ))}
-              </div>
-            </div>
+                    </div>
+                  </div>
                 )}
-          </div>
+              </div>
             </div>
           )}
 
@@ -921,7 +925,7 @@ const QuestionnairesPage = () => {
                             <div className="bg-gray-50 p-4 rounded-lg">
                               <h5 className="font-medium text-gray-700 mb-2">Uploaded Documents:</h5>
                               <div className="space-y-2">
-                                {question.supportingDocs.map((doc, index) => (
+                                {safeMap(question.supportingDocs, (doc: File, index: number) => (
                                   <div key={index} className="flex items-center text-gray-600">
                                     <FileText className="h-4 w-4 mr-2" />
                                     <span>{doc.name}</span>
@@ -1015,8 +1019,8 @@ const QuestionnairesPage = () => {
                         <p className="text-gray-500">No active support tickets</p>
                 </div>
               ) : (
-                      <div className="space-y-4">
-                        {supportTickets.map((ticket) => (
+                                            <div className="space-y-4">
+                        {safeMap(supportTickets, (ticket: SupportTicket) => (
                           <div key={ticket.id} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-semibold text-gray-900">#{ticket.id.slice(-6)}</span>
@@ -1027,7 +1031,7 @@ const QuestionnairesPage = () => {
                               }`}>
                                 {ticket.status.replace('-', ' ')}
                               </span>
-                  </div>
+                            </div>
                             <h4 className="font-medium text-gray-800 mb-1">{ticket.title}</h4>
                             <p className="text-sm text-gray-500">
                               Created {ticket.createdAt.toLocaleDateString()}
@@ -1107,12 +1111,12 @@ const QuestionnairesPage = () => {
                       setSelectedQuestionForSupport(question || null);
                     }}
                   >
-                    <option value="">General support request</option>
-                    {extractedQuestions.map((question) => (
+                                        <option value="">General support request</option>
+                    {safeMap(extractedQuestions, (question: ExtractedQuestion) => (
                       <option key={question.id} value={question.id}>
                         {question.text.substring(0, 50)}...
-                          </option>
-                        ))}
+                      </option>
+                    ))}
                       </select>
                     </div>
 

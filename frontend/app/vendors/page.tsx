@@ -13,6 +13,7 @@ import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasPermission } from "@/lib/auth/roles";
+import { safeMap } from '@/lib/utils/arrayUtils';
 
 // Simple vendor interface for this page
 interface SimpleVendor {
@@ -305,7 +306,7 @@ const VendorsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {vendors.map((vendor) => (
+                    {safeMap(vendors, (vendor: SimpleVendor) => (
                       <tr key={vendor.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
