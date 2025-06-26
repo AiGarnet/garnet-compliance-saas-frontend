@@ -32,6 +32,8 @@ import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { vendors as vendorAPI } from '@/lib/api';
 import { safeMap } from '@/lib/utils/arrayUtils';
+import { ChecklistService, ChecklistQuestion } from '@/lib/services/checklistService';
+import { QuestionsList } from '@/components/checklists/QuestionsList';
 
 interface ExtractedQuestion {
   id: string;
@@ -83,7 +85,7 @@ const QuestionnairesPage = () => {
   const [isLoadingVendors, setIsLoadingVendors] = useState<boolean>(false);
   
   // Active section state
-  const [activeSection, setActiveSection] = useState<'upload' | 'ai' | 'docs' | 'support'>('upload');
+  const [activeSection, setActiveSection] = useState<'upload' | 'ai' | 'docs' | 'support' | 'checklist'>('upload');
   
   // New 4-section states
   const [checklists, setChecklists] = useState<ChecklistFile[]>([]);
@@ -104,6 +106,10 @@ const QuestionnairesPage = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [selectedQuestionForSupport, setSelectedQuestionForSupport] = useState<ExtractedQuestion | null>(null);
   const [supportDescription, setSupportDescription] = useState('');
+  
+  // Checklist questions state
+  const [checklistQuestions, setChecklistQuestions] = useState<ChecklistQuestion[]>([]);
+  const [loadingChecklistQuestions, setLoadingChecklistQuestions] = useState(false);
   
   // Add confirmation dialog state
   const [confirmationDialog, setConfirmationDialog] = useState<ConfirmationDialog>({
@@ -127,6 +133,13 @@ const QuestionnairesPage = () => {
     loadVendors();
   }, []);
 
+  // Load checklist questions when vendor is selected
+  useEffect(() => {
+    if (selectedVendorId) {
+      loadChecklistQuestions();
+    }
+  }, [selectedVendorId]);
+
   const loadVendors = async () => {
     setIsLoadingVendors(true);
     try {
@@ -136,6 +149,20 @@ const QuestionnairesPage = () => {
       console.error('Error loading vendors:', error);
     } finally {
       setIsLoadingVendors(false);
+    }
+  };
+
+  const loadChecklistQuestions = async () => {
+    if (!selectedVendorId) return;
+
+    setLoadingChecklistQuestions(true);
+    try {
+      const questions = await ChecklistService.getVendorQuestions(selectedVendorId);
+      setChecklistQuestions(questions || []);
+    } catch (error) {
+      console.error('Error loading checklist questions:', error);
+    } finally {
+      setLoadingChecklistQuestions(false);
     }
   };
 
@@ -542,6 +569,17 @@ const QuestionnairesPage = () => {
               >
                 <FolderOpen className="w-4 h-4 inline mr-2" />
                 Supporting Documents
+                            </button>
+                            <button 
+                onClick={() => setActiveSection('checklist')}
+                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                  activeSection === 'checklist'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <Files className="w-4 h-4 inline mr-2" />
+                Checklist Questions
                             </button>
                             <button 
                 onClick={() => setActiveSection('support')}
@@ -1042,6 +1080,59 @@ const QuestionnairesPage = () => {
               )}
             </div>
                   </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section 5: Checklist Questions */}
+          {activeSection === 'checklist' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <Files className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Checklist Questions</h2>
+                  <p className="text-lg text-gray-600">Questions extracted from uploaded checklists with AI-generated answers</p>
+                </div>
+
+                {!selectedVendorId ? (
+                  <div className="text-center py-16">
+                    <Building2 className="h-24 w-24 text-gray-400 mx-auto mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-600 mb-2">Select a Vendor</h3>
+                    <p className="text-gray-500 mb-6">Choose a vendor to view their checklist questions</p>
+                  </div>
+                ) : (
+                  <QuestionsList
+                    questions={checklistQuestions}
+                    loading={loadingChecklistQuestions}
+                    onUpdateQuestion={async (questionId, updates) => {
+                      try {
+                        await ChecklistService.updateQuestion(questionId, selectedVendorId, updates);
+                        // Reload questions to get updated data
+                        await loadChecklistQuestions();
+                      } catch (error) {
+                        console.error('Error updating question:', error);
+                      }
+                    }}
+                    onUploadDocument={async (questionId, file) => {
+                      try {
+                        await ChecklistService.uploadSupportingDocument(questionId, selectedVendorId, file);
+                        // Reload questions to get updated data
+                        await loadChecklistQuestions();
+                      } catch (error) {
+                        console.error('Error uploading document:', error);
+                      }
+                    }}
+                    onGenerateAnswers={async () => {
+                      try {
+                        await ChecklistService.generateAllPendingAnswers(selectedVendorId);
+                        // Reload questions to get updated answers
+                        await loadChecklistQuestions();
+                      } catch (error) {
+                        console.error('Error generating answers:', error);
+                      }
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}
