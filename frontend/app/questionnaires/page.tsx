@@ -102,6 +102,7 @@ const QuestionnairesPage = () => {
   const [vendors, setVendors] = useState<any[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState<string>('');
   const [isLoadingVendors, setIsLoadingVendors] = useState<boolean>(false);
+  const [isLoadingChecklists, setIsLoadingChecklists] = useState<boolean>(false);
   
   // Active section state
   const [activeSection, setActiveSection] = useState<'upload' | 'ai' | 'docs' | 'support'>('upload');
@@ -164,8 +165,6 @@ const QuestionnairesPage = () => {
     loadVendors();
   }, []);
 
-
-
   const loadVendors = async () => {
     setIsLoadingVendors(true);
     try {
@@ -183,13 +182,6 @@ const QuestionnairesPage = () => {
         }));
         setVendors(transformedVendors);
         console.log('Successfully loaded vendors:', transformedVendors);
-        console.log('🔍 VENDOR ID MAPPING:', response.data.map((v: any) => ({
-          original: v,
-          mapped_id: v.uuid || v.id || v.vendorId?.toString(),
-          uuid: v.uuid,
-          id: v.id,
-          vendorId: v.vendorId
-        })));
       } else if (response && response.vendors && Array.isArray(response.vendors)) {
         // Handle response with .vendors structure
         const transformedVendors = response.vendors.map((vendor: any) => ({
@@ -220,7 +212,99 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Load existing checklists for selected vendor
+  const loadVendorChecklists = async (vendorId: string) => {
+    if (!vendorId || !isValidUUID(vendorId)) return;
+    
+    setIsLoadingChecklists(true);
+    try {
+      console.log(`📋 LOADING: Fetching existing checklists for vendor ${vendorId}`);
+      const existingChecklists = await ChecklistService.getVendorChecklists(vendorId);
+      console.log(`📋 LOADING: Found ${existingChecklists.length} existing checklists:`, existingChecklists);
+      
+      // Convert database checklists to our local format
+      const convertedChecklists: ChecklistFile[] = existingChecklists.map(checklist => ({
+        id: checklist.id,
+        name: checklist.name,
+        type: checklist.fileType,
+        uploadDate: new Date(checklist.uploadDate),
+        questions: [], // Will be loaded when needed
+        extractionStatus: checklist.extractionStatus as any,
+        checklistId: checklist.id
+      }));
+      
+      setChecklists(convertedChecklists);
+      console.log(`📋 LOADING: Successfully loaded ${convertedChecklists.length} checklists`);
+      
+      // If there are checklists, select the most recent one by default
+      if (convertedChecklists.length > 0) {
+        const mostRecent = convertedChecklists.sort((a, b) => 
+          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+        )[0];
+        setSelectedChecklist(mostRecent);
+        console.log(`📋 LOADING: Auto-selected most recent checklist: ${mostRecent.name}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading vendor checklists:', error);
+      setChecklists([]);
+    } finally {
+      setIsLoadingChecklists(false);
+    }
+  };
 
+  // Load questions for an existing checklist
+  const loadChecklistQuestions = async (checklist: ChecklistFile) => {
+    if (!checklist.checklistId || !selectedVendorId) return;
+    
+    setIsLoadingChecklists(true);
+    try {
+      console.log(`📋 LOADING: Fetching questions for checklist ${checklist.checklistId}`);
+      const questions = await ChecklistService.getChecklistQuestions(checklist.checklistId, selectedVendorId);
+      console.log(`📋 LOADING: Found ${questions.length} questions for checklist ${checklist.name}`);
+      
+      // Convert database questions to our local format
+      const convertedQuestions: ExtractedQuestion[] = questions.map(q => ({
+        id: q.id,
+        text: q.questionText,
+        status: q.status as any,
+        answer: q.aiAnswer,
+        confidence: q.confidenceScore,
+        requiresDoc: q.requiresDocument,
+        docDescription: q.documentDescription
+      }));
+      
+      // Update the checklist with loaded questions
+      setChecklists(prev => prev.map(c => 
+        c.id === checklist.id 
+          ? { ...c, questions: convertedQuestions }
+          : c
+      ));
+      
+      // Update selected checklist if it's the current one
+      if (selectedChecklist?.id === checklist.id) {
+        setSelectedChecklist({ ...checklist, questions: convertedQuestions });
+      }
+      
+      console.log(`📋 LOADING: Successfully loaded questions for ${checklist.name}`);
+      
+    } catch (error) {
+      console.error('❌ Error loading checklist questions:', error);
+      setUploadError('Failed to load checklist questions. Please try again.');
+    } finally {
+      setIsLoadingChecklists(false);
+    }
+  };
+
+  // Load checklists when vendor is selected
+  useEffect(() => {
+    if (selectedVendorId && isValidUUID(selectedVendorId)) {
+      loadVendorChecklists(selectedVendorId);
+    } else {
+      setChecklists([]);
+      setSelectedChecklist(null);
+    }
+  }, [selectedVendorId]);
 
   // CHECKLIST UPLOAD ONLY - Enhanced file upload with database integration
   const handleFileUpload = async (files: FileList | File[]) => {
@@ -251,10 +335,6 @@ const QuestionnairesPage = () => {
     }
 
     console.log(`📋 CHECKLIST UPLOAD: Starting upload for checklist file: ${file.name}`);
-    console.log(`📋 VENDOR DEBUG: selectedVendorId = "${selectedVendorId}"`);
-    console.log(`📋 VENDOR DEBUG: selectedVendorId type = ${typeof selectedVendorId}`);
-    console.log(`📋 VENDOR DEBUG: selectedVendorId length = ${selectedVendorId?.length || 'undefined'}`);
-    console.log(`📋 VENDOR DEBUG: Available vendors:`, vendors);
     
     setIsUploading(true);
     setUploadError(null);
@@ -361,32 +441,92 @@ const QuestionnairesPage = () => {
     setGenerationProgress({ current: 0, total: 0, currentQuestion: 'Preparing...' });
 
     try {
+      console.log(`🤖 AI GENERATION: Starting AI answer generation for checklist ${checklistId}`);
+      
+      // First, get the current questions to show progress
+      const initialQuestions = await ChecklistService.getChecklistQuestions(checklistId, vendorId);
+      const pendingQuestions = initialQuestions.filter(q => q.status === 'pending');
+      
+      setGenerationProgress({ 
+        current: 0, 
+        total: pendingQuestions.length, 
+        currentQuestion: `Found ${pendingQuestions.length} questions to process...` 
+      });
+
+      if (pendingQuestions.length === 0) {
+        console.log('🤖 AI GENERATION: No pending questions found');
+        setGenerationProgress({ current: 0, total: 0, currentQuestion: 'No questions need AI answers' });
+        return;
+      }
+
+      console.log(`🤖 AI GENERATION: Calling generateAllPendingAnswers for ${pendingQuestions.length} questions`);
+      
       // Generate answers using the checklist service
       const response = await ChecklistService.generateAllPendingAnswers(vendorId, 'Security compliance questionnaire', checklistId);
+      console.log('🤖 AI GENERATION: Generate answers response:', response);
       
-      // Reload questions from database to get updated answers
-      const updatedQuestions = await ChecklistService.getChecklistQuestions(checklistId, vendorId);
+      // Poll for updates every 2 seconds to show progress
+      let attempts = 0;
+      const maxAttempts = 30; // 1 minute timeout
       
-      // Convert back to local format
-      const questionsWithAnswers: ExtractedQuestion[] = updatedQuestions.map(q => ({
-        id: q.id,
-        text: q.questionText,
-        status: q.status as any,
-        answer: q.aiAnswer,
-        confidence: q.confidenceScore,
-        requiresDoc: q.requiresDocument,
-        docDescription: q.documentDescription
-      }));
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        
+        try {
+          // Reload questions from database to get updated answers
+          const updatedQuestions = await ChecklistService.getChecklistQuestions(checklistId, vendorId);
+          const completedQuestions = updatedQuestions.filter(q => q.status === 'completed');
+          const stillPending = updatedQuestions.filter(q => q.status === 'pending');
+          
+          console.log(`🤖 AI GENERATION: Poll ${attempts + 1}: ${completedQuestions.length}/${updatedQuestions.length} completed`);
+          
+          // Update progress
+          setGenerationProgress({ 
+            current: completedQuestions.length, 
+            total: updatedQuestions.length, 
+            currentQuestion: stillPending.length > 0 
+              ? `Processing: ${stillPending[0]?.questionText?.substring(0, 100)}...`
+              : 'Finalizing answers...'
+          });
+          
+          // Convert to local format and update UI
+          const questionsWithAnswers: ExtractedQuestion[] = updatedQuestions.map(q => ({
+            id: q.id,
+            text: q.questionText,
+            status: q.status as any,
+            answer: q.aiAnswer,
+            confidence: q.confidenceScore,
+            requiresDoc: q.requiresDocument,
+            docDescription: q.documentDescription
+          }));
 
-      setExtractedQuestions(questionsWithAnswers);
-      setGenerationProgress({ 
-        current: questionsWithAnswers.filter(q => q.status === 'completed').length, 
-        total: questionsWithAnswers.length, 
-        currentQuestion: 'Completed' 
-      });
+          setExtractedQuestions(questionsWithAnswers);
+          
+          // Check if all questions are processed
+          if (stillPending.length === 0) {
+            console.log('🤖 AI GENERATION: All questions completed!');
+            setGenerationProgress({ 
+              current: completedQuestions.length, 
+              total: updatedQuestions.length, 
+              currentQuestion: 'All answers generated successfully!' 
+            });
+            break;
+          }
+          
+        } catch (pollError) {
+          console.error('🤖 AI GENERATION: Error during polling:', pollError);
+        }
+        
+        attempts++;
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.warn('🤖 AI GENERATION: Timeout reached, some answers may still be processing');
+        setUploadError('AI answer generation is taking longer than expected. Some answers may still be processing in the background.');
+      }
       
     } catch (error) {
-      console.error('Error generating AI responses:', error);
+      console.error('❌ AI GENERATION: Error generating AI responses:', error);
       setUploadError('Failed to generate AI responses. Please try again.');
     } finally {
       setIsGeneratingAnswers(false);
@@ -948,10 +1088,23 @@ const QuestionnairesPage = () => {
                       </div>
                 )}
 
-                                {/* Uploaded Checklists */}
+                                {/* Loading Checklists */}
+                {isLoadingChecklists && checklists.length === 0 && (
+                  <div className="mt-8 flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-3" />
+                    <span className="text-lg text-gray-600">Loading existing checklists...</span>
+                  </div>
+                )}
+
+                {/* Uploaded Checklists */}
                 {checklists.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Uploaded Checklists</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                      Uploaded Checklists
+                      {isLoadingChecklists && (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2 inline" />
+                      )}
+                    </h3>
                     <div className="space-y-6">
                       {safeMap(checklists, (checklist: ChecklistFile) => (
                         <div 
@@ -986,6 +1139,26 @@ const QuestionnairesPage = () => {
                               {checklist.extractionStatus === 'completed' && (
                                 <>
                                   <CheckCircle className="h-5 w-5 text-green-600" />
+                                  {/* Load Questions Button for existing checklists */}
+                                  {checklist.questions.length === 0 && checklist.checklistId && (
+                                    <button
+                                      onClick={() => loadChecklistQuestions(checklist)}
+                                      disabled={isLoadingChecklists}
+                                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm mr-2"
+                                    >
+                                      {isLoadingChecklists ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                          Loading...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FileText className="h-4 w-4 mr-2" />
+                                          Load Questions
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => sendQuestionsToAI(checklist)}
                                     disabled={sendingToAI || !checklist.checklistId}
