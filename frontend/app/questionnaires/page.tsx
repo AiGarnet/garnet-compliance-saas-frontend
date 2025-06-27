@@ -815,14 +815,7 @@ const QuestionnairesPage = () => {
                   <Upload className="h-16 w-16 text-blue-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
                   <p className="text-lg text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-700">
-                      📋 <strong>Checklist files uploaded here go to:</strong> <code>checklists/</code> folder in DigitalOcean Spaces
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Supporting documents are uploaded separately in the "Supporting Documents" section
-                    </p>
-                  </div>
+
                               </div>
 
                 {/* Upload Area */}
@@ -1193,14 +1186,7 @@ const QuestionnairesPage = () => {
                   <FolderOpen className="h-16 w-16 text-green-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Supporting Documents</h2>
                   <p className="text-lg text-gray-600">Upload and manage supporting documents independently</p>
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-700">
-                      📁 <strong>Files uploaded here go to:</strong> <code>supporting-docs/</code> folder in DigitalOcean Spaces
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">
-                      Upload any supporting documents - they work independently of checklists
-                    </p>
-                  </div>
+
                 </div>
 
                 {/* Supporting Document Upload Error */}
