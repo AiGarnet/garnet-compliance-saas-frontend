@@ -26,7 +26,8 @@ import {
   Brain,
   AlertTriangle,
   RotateCcw,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -43,6 +44,8 @@ interface ExtractedQuestion {
   requiresDoc?: boolean;
   docDescription?: string;
   supportingDocs?: File[];
+  checklistId?: string;
+  checklistName?: string;
 }
 
 interface ChecklistFile {
@@ -271,7 +274,9 @@ const QuestionnairesPage = () => {
         answer: q.aiAnswer,
         confidence: q.confidenceScore,
         requiresDoc: q.requiresDocument,
-        docDescription: q.documentDescription
+        docDescription: q.documentDescription,
+        checklistId: q.checklistId,
+        checklistName: checklist.name
       }));
       
       // Update the checklist with loaded questions
@@ -369,7 +374,9 @@ const QuestionnairesPage = () => {
         answer: q.aiAnswer,
         confidence: q.confidenceScore,
         requiresDoc: q.requiresDocument,
-        docDescription: q.documentDescription
+        docDescription: q.documentDescription,
+        checklistId: q.checklistId,
+        checklistName: file.name
       }));
 
       // Update checklist with extracted questions and database ID
@@ -412,7 +419,9 @@ const QuestionnairesPage = () => {
         answer: q.aiAnswer,
         confidence: q.confidenceScore,
         requiresDoc: q.requiresDocument,
-        docDescription: q.documentDescription
+        docDescription: q.documentDescription,
+        checklistId: q.checklistId,
+        checklistName: checklist.name
       }));
 
       // Set questions for AI section
@@ -497,7 +506,9 @@ const QuestionnairesPage = () => {
             answer: q.aiAnswer,
             confidence: q.confidenceScore,
             requiresDoc: q.requiresDocument,
-            docDescription: q.documentDescription
+            docDescription: q.documentDescription,
+            checklistId: q.checklistId,
+            checklistName: 'Current Checklist' // We'll improve this with proper mapping later
           }));
 
           setExtractedQuestions(questionsWithAnswers);
@@ -930,6 +941,58 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Delete checklist
+  const deleteChecklist = async (checklist: ChecklistFile) => {
+    if (!checklist.checklistId || !selectedVendorId) return;
+    
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${checklist.name}"?\n\nThis will permanently remove:\n• The checklist file\n• All ${checklist.questions.length} extracted questions\n• Any AI-generated answers\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    try {
+      console.log(`🗑️ DELETING: Checklist ${checklist.checklistId}`);
+      await ChecklistService.deleteChecklist(checklist.checklistId, selectedVendorId);
+      
+      // Remove from local state
+      setChecklists(prev => prev.filter(c => c.id !== checklist.id));
+      
+      // Clear selected checklist if it was the deleted one
+      if (selectedChecklist?.id === checklist.id) {
+        setSelectedChecklist(null);
+        setExtractedQuestions([]);
+      }
+      
+      console.log(`✅ Successfully deleted checklist: ${checklist.name}`);
+      
+    } catch (error) {
+      console.error('❌ Error deleting checklist:', error);
+      setUploadError('Failed to delete checklist. Please try again.');
+    }
+  };
+
+  // Helper function to group questions by checklist
+  const groupQuestionsByChecklist = (questions: ExtractedQuestion[]) => {
+    const grouped = questions.reduce((acc, question) => {
+      const checklistId = question.checklistId || 'unknown';
+      const checklistName = question.checklistName || 'Unknown Checklist';
+      
+      if (!acc[checklistId]) {
+        acc[checklistId] = {
+          id: checklistId,
+          name: checklistName,
+          questions: []
+        };
+      }
+      
+      acc[checklistId].questions.push(question);
+      return acc;
+    }, {} as Record<string, { id: string; name: string; questions: ExtractedQuestion[] }>);
+    
+    return Object.values(grouped);
+  };
+
   if (authLoading || !hasMounted) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1122,7 +1185,10 @@ const QuestionnairesPage = () => {
                               <div>
                                 <span className="font-medium text-gray-900">{checklist.name}</span>
                                 <p className="text-sm text-gray-500 mt-1">
-                                  {checklist.questions.length} questions extracted
+                                  {checklist.questions.length > 0 
+                                    ? `${checklist.questions.length} questions loaded` 
+                                    : 'Questions ready to load'
+                                  }
                                   {checklist.extractionStatus === 'completed' && (
                                     <span className="ml-2 inline-flex items-center text-xs">
                                       <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
@@ -1139,43 +1205,56 @@ const QuestionnairesPage = () => {
                               {checklist.extractionStatus === 'completed' && (
                                 <>
                                   <CheckCircle className="h-5 w-5 text-green-600" />
-                                  {/* Load Questions Button for existing checklists */}
-                                  {checklist.questions.length === 0 && checklist.checklistId && (
+                                  <div className="flex items-center space-x-2">
+                                    {/* Load Questions Button for existing checklists */}
+                                    {checklist.questions.length === 0 && checklist.checklistId && (
+                                      <button
+                                        onClick={() => loadChecklistQuestions(checklist)}
+                                        disabled={isLoadingChecklists}
+                                        className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                        title="Load the extracted questions from this checklist to view and work with them"
+                                      >
+                                        {isLoadingChecklists ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Loading...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <FileText className="h-4 w-4 mr-2" />
+                                            Load Questions
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                     <button
-                                      onClick={() => loadChecklistQuestions(checklist)}
-                                      disabled={isLoadingChecklists}
-                                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm mr-2"
+                                      onClick={() => sendQuestionsToAI(checklist)}
+                                      disabled={sendingToAI || !checklist.checklistId}
+                                      className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                      title="Send questions to AI for automatic answer generation"
                                     >
-                                      {isLoadingChecklists ? (
+                                      {sendingToAI ? (
                                         <>
                                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                          Loading...
+                                          Sending to AI...
                                         </>
                                       ) : (
                                         <>
-                                          <FileText className="h-4 w-4 mr-2" />
-                                          Load Questions
+                                          <Bot className="h-4 w-4 mr-2" />
+                                          Send to AI
                                         </>
                                       )}
                                     </button>
-                                  )}
-                                  <button
-                                    onClick={() => sendQuestionsToAI(checklist)}
-                                    disabled={sendingToAI || !checklist.checklistId}
-                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center text-sm"
-                                  >
-                                    {sendingToAI ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Sending to AI...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Bot className="h-4 w-4 mr-2" />
-                                        Send to AI
-                                      </>
-                                    )}
-                                  </button>
+                                    {/* Delete Button */}
+                                    <button
+                                      onClick={() => deleteChecklist(checklist)}
+                                      className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center text-sm"
+                                      title="Permanently delete this checklist and all its data"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </button>
+                                  </div>
                                 </>
                               )}
                               {checklist.extractionStatus === 'error' && (
@@ -1347,8 +1426,47 @@ const QuestionnairesPage = () => {
                       )}
                       </div>
                       
-                    <div className="grid grid-cols-1 gap-6">
-                      {safeMap(extractedQuestions, (question: ExtractedQuestion) => (
+                    {/* Questions grouped by checklist */}
+                    <div className="space-y-8">
+                      {groupQuestionsByChecklist(extractedQuestions).map(checklistGroup => (
+                        <div key={checklistGroup.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                          {/* Checklist Header */}
+                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <FileCheck className="h-6 w-6 text-purple-600 mr-3" />
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900">{checklistGroup.name}</h3>
+                                  <p className="text-sm text-gray-600">
+                                    {checklistGroup.questions.length} questions • 
+                                    <span className="ml-1 text-green-600 font-medium">
+                                      {checklistGroup.questions.filter(q => q.status === 'completed').length} completed
+                                    </span> • 
+                                    <span className="ml-1 text-yellow-600 font-medium">
+                                      {checklistGroup.questions.filter(q => q.status === 'pending').length} pending
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-gray-500">
+                                  {Math.round((checklistGroup.questions.filter(q => q.status === 'completed').length / checklistGroup.questions.length) * 100)}% complete
+                                </span>
+                                <div className="w-20 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ 
+                                      width: `${(checklistGroup.questions.filter(q => q.status === 'completed').length / checklistGroup.questions.length) * 100}%` 
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Questions in this checklist */}
+                          <div className="divide-y divide-gray-100">
+                            {safeMap(checklistGroup.questions, (question: ExtractedQuestion) => (
                         <div 
                           key={question.id}
                           className="border rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -1452,6 +1570,9 @@ const QuestionnairesPage = () => {
                               Request Help
                             </button>
                           )}
+                        </div>
+                      ))}
+                          </div>
                         </div>
                       ))}
                     </div>
