@@ -335,7 +335,7 @@ const QuestionnairesPage = () => {
 
     try {
       // Generate answers using the checklist service
-      const response = await ChecklistService.generateAllPendingAnswers(vendorId, 'Security compliance questionnaire');
+      const response = await ChecklistService.generateAllPendingAnswers(vendorId, 'Security compliance questionnaire', checklistId);
       
       // Reload questions from database to get updated answers
       const updatedQuestions = await ChecklistService.getChecklistQuestions(checklistId, vendorId);
@@ -433,7 +433,7 @@ const QuestionnairesPage = () => {
         q.status === 'pending' ? { ...q, status: 'in-progress' } : q
       ));
 
-      // Generate answers using the checklist service
+      // Generate answers using the checklist service  
       await ChecklistService.generateAllPendingAnswers(selectedVendorId, 'Security compliance questionnaire');
       
       // Reload questions from database to get the updated answers
@@ -469,6 +469,63 @@ const QuestionnairesPage = () => {
       ));
     } finally {
       setIsGeneratingAnswers(false);
+    }
+  };
+
+  // Create questionnaire from AI responses
+  const createQuestionnaireFromAI = async () => {
+    if (!selectedVendorId || extractedQuestions.length === 0) {
+      setUploadError('No questions available to create questionnaire');
+      return;
+    }
+
+    setSendingToAI(true);
+    try {
+      // First, sync to questionnaire system if we have a checklist
+      const completedQuestions = extractedQuestions.filter(q => q.status === 'completed' && q.answer);
+      
+      if (completedQuestions.length === 0) {
+        setUploadError('No completed questions with AI answers to create questionnaire');
+        return;
+      }
+
+      // Use the checklist name for the questionnaire title
+      const checklistName = selectedChecklist?.name || 'AI Generated Questionnaire';
+      
+      // If we have a checklist ID, sync to questionnaire system
+      if (selectedChecklist?.checklistId) {
+        await ChecklistService.syncToQuestionnaire(selectedChecklist.checklistId, selectedVendorId);
+        
+        // Navigate to the questionnaire chat interface
+        router.push(`/questionnaires/${selectedVendorId}/chat`);
+      } else {
+        // Fallback: create questionnaire directly
+        const response = await fetch('/api/questionnaires', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: checklistName,
+            vendorId: selectedVendorId,
+            questions: completedQuestions.map(q => ({ questionText: q.text })),
+            generateAnswers: false // Don't regenerate, use existing answers
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create questionnaire');
+        }
+
+        const questionnaire = await response.json();
+        
+        // Navigate to the questionnaire chat interface
+        router.push(`/questionnaires/${questionnaire.id}/chat`);
+      }
+      
+    } catch (error) {
+      console.error('Error creating questionnaire:', error);
+      setUploadError('Failed to create questionnaire. Please try again.');
+    } finally {
+      setSendingToAI(false);
     }
   };
 
@@ -1060,6 +1117,32 @@ const QuestionnairesPage = () => {
                             <Brain className="h-4 w-4 mr-2" />
                             Generate All Answers ({extractedQuestions.filter(q => q.status === 'pending').length})
                           </button>
+                        </div>
+                      )}
+
+                      {/* Create Questionnaire Button */}
+                      {extractedQuestions.filter(q => q.status === 'completed' && q.answer).length > 0 && !isGeneratingAnswers && (
+                        <div className="pt-4 border-t border-purple-200">
+                          <button
+                            onClick={() => createQuestionnaireFromAI()}
+                            disabled={!selectedVendorId || sendingToAI}
+                            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center mx-auto"
+                          >
+                            {sendingToAI ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Creating Questionnaire...
+                              </>
+                            ) : (
+                              <>
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Create Questionnaire ({extractedQuestions.filter(q => q.status === 'completed' && q.answer).length} answers)
+                              </>
+                            )}
+                          </button>
+                          <p className="text-sm text-center text-gray-600 mt-2">
+                            This will create an interactive questionnaire with your AI-generated answers
+                          </p>
                         </div>
                       )}
                       </div>

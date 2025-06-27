@@ -241,7 +241,7 @@ export class ChecklistService {
   /**
    * Batch generate AI answers for all pending questions of a vendor
    */
-  static async generateAllPendingAnswers(vendorId: string, context?: string): Promise<GenerateAnswersResponse> {
+  static async generateAllPendingAnswers(vendorId: string, context?: string, checklistId?: string): Promise<GenerateAnswersResponse> {
     try {
       const pendingQuestions = await this.getPendingQuestions(vendorId);
       
@@ -252,12 +252,27 @@ export class ChecklistService {
       const request: GenerateAnswersRequest = {
         questions: pendingQuestions.map(q => q.questionText),
         context: context || 'Security compliance questionnaire',
-        vendorId
+        vendorId,
+        checklistId
       };
 
       return await this.generateAnswers(request);
     } catch (error) {
       console.error('Error generating all pending answers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync checklist questions to questionnaire system for chat interface
+   */
+  static async syncToQuestionnaire(checklistId: string, vendorId: string): Promise<{ message: string; questionCount: number }> {
+    try {
+      return await apiCall(`${this.BASE_URL}/${checklistId}/vendor/${vendorId}/sync-to-questionnaire`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Error syncing checklist to questionnaire:', error);
       throw error;
     }
   }
