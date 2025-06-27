@@ -458,17 +458,50 @@ const QuestionnairesPage = () => {
   // Support document functions
   const handleSupportDocUpload = async (questionId: string, files: FileList) => {
     if (!files || files.length === 0) return;
+    if (!selectedVendorId) {
+      setUploadError('Please select a vendor first');
+      return;
+    }
 
     const file = files[0];
-    setExtractedQuestions(prev => prev.map(q => 
-      q.id === questionId 
-        ? { 
-            ...q, 
-            supportingDocs: [...(q.supportingDocs || []), file],
-            status: q.status === 'pending' ? 'in-progress' : q.status
-          }
-        : q
-    ));
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!allowedTypes.includes(fileExtension)) {
+      setUploadError('Please upload a PDF, image, or document file');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      // Upload supporting document to DigitalOcean Spaces via backend
+      const uploadResult = await ChecklistService.uploadSupportingDocument(
+        questionId,
+        selectedVendorId,
+        file
+      );
+
+      // Update question status and add file reference
+      setExtractedQuestions(prev => prev.map(q => 
+        q.id === questionId 
+          ? { 
+              ...q, 
+              supportingDocs: [...(q.supportingDocs || []), file],
+              status: q.status === 'pending' ? 'in-progress' : q.status
+            }
+          : q
+      ));
+
+      console.log('Supporting document uploaded successfully:', uploadResult);
+      
+    } catch (error) {
+      console.error('Error uploading supporting document:', error);
+      setUploadError('Failed to upload supporting document. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Support ticket functions
@@ -693,6 +726,12 @@ const QuestionnairesPage = () => {
                                 <span className="font-medium text-gray-900">{checklist.name}</span>
                                 <p className="text-sm text-gray-500 mt-1">
                                   {checklist.questions.length} questions extracted
+                                  {checklist.extractionStatus === 'completed' && (
+                                    <span className="ml-2 inline-flex items-center text-xs">
+                                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                      Stored securely
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -1025,15 +1064,29 @@ const QuestionnairesPage = () => {
                             type="file"
                             className="hidden"
                             id={`support-doc-${question.id}`}
-                            multiple
+                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
                             onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                            disabled={isUploading}
                           />
                           <label
                             htmlFor={`support-doc-${question.id}`}
-                            className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 cursor-pointer transition-colors"
+                            className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
+                              isUploading 
+                                ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
                           >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload Document
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload Document
+                              </>
+                            )}
                           </label>
                           
                           {question.supportingDocs && question.supportingDocs.length > 0 && (

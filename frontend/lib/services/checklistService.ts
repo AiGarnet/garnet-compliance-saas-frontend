@@ -12,6 +12,8 @@ export interface Checklist {
   uploadDate: string;
   createdAt: string;
   updatedAt: string;
+  spacesKey?: string;
+  spacesUrl?: string;
 }
 
 export interface ChecklistQuestion {
@@ -39,6 +41,8 @@ export interface SupportingDocument {
   fileSize?: number;
   filePath?: string;
   uploadedAt: string;
+  spacesKey?: string;
+  spacesUrl?: string;
 }
 
 export interface ChecklistUploadResponse {
