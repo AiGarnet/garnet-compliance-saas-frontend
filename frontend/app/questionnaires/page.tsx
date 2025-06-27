@@ -98,6 +98,11 @@ const QuestionnairesPage = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   
+  // Supporting document upload states
+  const [isUploadingSupportDoc, setIsUploadingSupportDoc] = useState(false);
+  const [supportDocUploadError, setSupportDocUploadError] = useState<string | null>(null);
+  const [uploadingQuestionId, setUploadingQuestionId] = useState<string | null>(null);
+  
   // AI processing states
   const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentQuestion: '' });
@@ -139,10 +144,45 @@ const QuestionnairesPage = () => {
   const loadVendors = async () => {
     setIsLoadingVendors(true);
     try {
+      console.log('Loading vendors from API...');
       const response = await vendorAPI.getAll();
-      setVendors(response || []);
+      console.log('Vendor API response:', response);
+      
+      // Handle the API response structure properly (like in vendors page)
+      if (response && response.data && Array.isArray(response.data)) {
+        // Handle response with .data structure
+        const transformedVendors = response.data.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Active'
+        }));
+        setVendors(transformedVendors);
+        console.log('Successfully loaded vendors:', transformedVendors);
+      } else if (response && response.vendors && Array.isArray(response.vendors)) {
+        // Handle response with .vendors structure
+        const transformedVendors = response.vendors.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Active'
+        }));
+        setVendors(transformedVendors);
+        console.log('Successfully loaded vendors:', transformedVendors);
+      } else if (response && Array.isArray(response)) {
+        // Handle case where response is directly an array
+        const transformedVendors = response.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Active'
+        }));
+        setVendors(transformedVendors);
+        console.log('Successfully loaded vendors:', transformedVendors);
+      } else {
+        console.log('No vendors found or unexpected response structure');
+        setVendors([]);
+      }
     } catch (error) {
       console.error('Error loading vendors:', error);
+      setVendors([]);
     } finally {
       setIsLoadingVendors(false);
     }
@@ -150,7 +190,7 @@ const QuestionnairesPage = () => {
 
 
 
-  // Enhanced file upload with database integration
+  // CHECKLIST UPLOAD ONLY - Enhanced file upload with database integration
   const handleFileUpload = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     
@@ -168,6 +208,8 @@ const QuestionnairesPage = () => {
       return;
     }
 
+    console.log(`📋 CHECKLIST UPLOAD: Starting upload for checklist file: ${file.name}`);
+    
     setIsUploading(true);
     setUploadError(null);
 
@@ -185,8 +227,13 @@ const QuestionnairesPage = () => {
     setSelectedChecklist(newChecklist);
 
     try {
-      // Upload to backend and extract questions
+      console.log(`📋 CHECKLIST: Calling ChecklistService.uploadChecklist()`);
+      console.log(`📋 API Call: POST /api/checklists/upload`);
+      
+      // Upload to backend and extract questions (goes to checklists/ folder)
       const uploadResponse = await ChecklistService.uploadChecklist(file, selectedVendorId, file.name);
+      
+      console.log('📋 CHECKLIST: Upload successful, file stored in checklists/ folder:', uploadResponse);
       
       // Convert database questions to our local format
       const extractedQuestions: ExtractedQuestion[] = uploadResponse.questions.map(q => ({
@@ -455,11 +502,11 @@ const QuestionnairesPage = () => {
     return requirements[Math.floor(Math.random() * requirements.length)];
   };
 
-  // Support document functions
+  // Support document functions - COMPLETELY SEPARATE FROM CHECKLIST UPLOAD
   const handleSupportDocUpload = async (questionId: string, files: FileList) => {
     if (!files || files.length === 0) return;
     if (!selectedVendorId) {
-      setUploadError('Please select a vendor first');
+      setSupportDocUploadError('Please select a vendor first');
       return;
     }
 
@@ -468,20 +515,29 @@ const QuestionnairesPage = () => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
     if (!allowedTypes.includes(fileExtension)) {
-      setUploadError('Please upload a PDF, image, or document file');
+      setSupportDocUploadError('Please upload a PDF, image, or document file');
       return;
     }
 
-    setIsUploading(true);
-    setUploadError(null);
+    console.log(`🔹 SUPPORTING DOCUMENT UPLOAD: Starting upload for question ${questionId}, file: ${file.name}`);
+    
+    setIsUploadingSupportDoc(true);
+    setUploadingQuestionId(questionId);
+    setSupportDocUploadError(null);
 
     try {
-      // Upload supporting document to DigitalOcean Spaces via backend
+      console.log(`🔹 SUPPORTING DOCUMENT: Calling ChecklistService.uploadSupportingDocument()`);
+      console.log(`🔹 API Call: POST /api/checklists/questions/${questionId}/documents/vendor/${selectedVendorId}`);
+      
+      // Upload supporting document to DigitalOcean Spaces via backend (supporting-docs/ folder)
       const uploadResult = await ChecklistService.uploadSupportingDocument(
         questionId,
         selectedVendorId,
         file
       );
+
+      console.log('🔹 SUPPORTING DOCUMENT: Upload successful:', uploadResult);
+      console.log('🔹 File stored in: supporting-docs/ folder');
 
       // Update question status and add file reference
       setExtractedQuestions(prev => prev.map(q => 
@@ -494,13 +550,14 @@ const QuestionnairesPage = () => {
           : q
       ));
 
-      console.log('Supporting document uploaded successfully:', uploadResult);
+      console.log('✅ Supporting document uploaded successfully to DigitalOcean Spaces!');
       
     } catch (error) {
-      console.error('Error uploading supporting document:', error);
-      setUploadError('Failed to upload supporting document. Please try again.');
+      console.error('❌ Error uploading supporting document:', error);
+      setSupportDocUploadError('Failed to upload supporting document. Please try again.');
     } finally {
-      setIsUploading(false);
+      setIsUploadingSupportDoc(false);
+      setUploadingQuestionId(null);
     }
   };
 
@@ -526,14 +583,18 @@ const QuestionnairesPage = () => {
     ));
   };
 
-  // Drag and drop handlers
+  // Drag and drop handlers for CHECKLIST UPLOAD ONLY
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+    
+    // Only activate drag for upload section
+    if (activeSection === 'upload') {
+      if (e.type === "dragenter" || e.type === "dragover") {
+        setDragActive(true);
+      } else if (e.type === "dragleave") {
+        setDragActive(false);
+      }
     }
   };
 
@@ -542,7 +603,8 @@ const QuestionnairesPage = () => {
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    // Only handle drop for checklist upload in upload section
+    if (activeSection === 'upload' && e.dataTransfer.files && e.dataTransfer.files[0]) {
       await handleFileUpload(e.dataTransfer.files);
     }
   };
@@ -656,6 +718,14 @@ const QuestionnairesPage = () => {
                   <Upload className="h-16 w-16 text-blue-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
                   <p className="text-lg text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      📋 <strong>Checklist files uploaded here go to:</strong> <code>checklists/</code> folder in DigitalOcean Spaces
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Supporting documents are uploaded separately in the "Supporting Documents" section
+                    </p>
+                  </div>
                               </div>
 
                 {/* Upload Area */}
@@ -1025,8 +1095,23 @@ const QuestionnairesPage = () => {
                 <div className="text-center mb-8">
                   <FolderOpen className="h-16 w-16 text-green-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Supporting Documents</h2>
-                  <p className="text-lg text-gray-600">Upload supporting documents for questions that require evidence</p>
+                  <p className="text-lg text-gray-600">Upload evidence files for questions that require supporting documents</p>
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-700">
+                      📁 <strong>Files uploaded here go to:</strong> <code>supporting-docs/</code> folder in DigitalOcean Spaces
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      This is separate from checklist uploads which go to the <code>checklists/</code> folder
+                    </p>
+                  </div>
                 </div>
+
+                {/* Supporting Document Upload Error */}
+                {supportDocUploadError && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700">{supportDocUploadError}</p>
+                  </div>
+                )}
 
                 {extractedQuestions.length === 0 ? (
                   <div className="text-center py-16">
@@ -1066,25 +1151,25 @@ const QuestionnairesPage = () => {
                             id={`support-doc-${question.id}`}
                             accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
                             onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
-                            disabled={isUploading}
+                            disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
                           />
                           <label
                             htmlFor={`support-doc-${question.id}`}
                             className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-                              isUploading 
+                              isUploadingSupportDoc && uploadingQuestionId === question.id
                                 ? 'bg-gray-400 text-white cursor-not-allowed' 
                                 : 'bg-green-600 text-white hover:bg-green-700'
                             }`}
                           >
-                            {isUploading ? (
+                            {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Uploading...
+                                Uploading to supporting-docs/...
                               </>
                             ) : (
                               <>
                                 <Upload className="h-4 w-4 mr-2" />
-                                Upload Document
+                                Upload Supporting Document
                               </>
                             )}
                           </label>
