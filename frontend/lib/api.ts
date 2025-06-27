@@ -119,8 +119,18 @@ export async function uploadFile(endpoint: string, file: File, additionalData: R
   const token = getAuthToken();
   const headers: Record<string, string> = {};
   
+  console.log('🔐 UPLOAD AUTH CHECK:', {
+    endpoint,
+    url,
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN FOUND',
+    localStorage_authToken: typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : 'N/A'
+  });
+  
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.error('❌ NO AUTH TOKEN FOUND - User needs to log in');
   }
 
   const response = await fetch(url, {

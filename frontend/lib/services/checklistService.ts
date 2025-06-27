@@ -77,13 +77,6 @@ export class ChecklistService {
     name?: string
   ): Promise<ChecklistUploadResponse> {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('vendorId', vendorId);
-      if (name) {
-        formData.append('name', name);
-      }
-
       // Use the uploadFile helper from api.ts which handles Railway URL routing
       const { uploadFile } = await import('../api');
       return await uploadFile(`${this.BASE_URL}/upload`, file, { vendorId, ...(name && { name }) });
