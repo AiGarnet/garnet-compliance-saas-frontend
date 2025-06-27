@@ -6,10 +6,19 @@ export function getApiEndpoint(path: string): string {
      window.location.hostname.includes('garnetai.net') ||
      window.location.hostname.includes('testinggarnet.netlify.app'));
   
-  // For vendor API calls AND auth calls, always use Railway backend (even on Netlify)
-  // This ensures JWT token compatibility between auth and vendor endpoints
-  if (path.startsWith('/api/vendors') || path.startsWith('/api/auth/')) {
+  // For vendor API calls, auth calls, AND checklist calls, always use Railway backend (even on Netlify)
+  // This ensures JWT token compatibility and proper API routing
+  if (path.startsWith('/api/vendors') || 
+      path.startsWith('/api/auth/') || 
+      path.startsWith('/api/checklists') || 
+      path.startsWith('/api/questionnaires') ||
+      path.startsWith('/api/ai') ||
+      path.startsWith('/api/analytics') ||
+      path.startsWith('/api/activities') ||
+      path.startsWith('/api/evidence') ||
+      path.startsWith('/api/trust-portal')) {
     const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+    console.log(`🚂 API ROUTING: ${path} → ${RAILWAY_URL}${path}`);
     return `${RAILWAY_URL}${path}`;
   }
   

@@ -84,20 +84,9 @@ export class ChecklistService {
         formData.append('name', name);
       }
 
-      const response = await fetch(`${this.BASE_URL}/upload`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          // Don't set Content-Type for FormData, browser will set it with boundary
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      return await response.json();
+      // Use the uploadFile helper from api.ts which handles Railway URL routing
+      const { uploadFile } = await import('../api');
+      return await uploadFile(`${this.BASE_URL}/upload`, file, { vendorId, ...(name && { name }) });
     } catch (error) {
       console.error('Error uploading checklist:', error);
       throw error;
@@ -212,22 +201,9 @@ export class ChecklistService {
     file: File
   ): Promise<SupportingDocument> {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`${this.BASE_URL}/questions/${questionId}/documents/vendor/${vendorId}`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Document upload failed: ${response.statusText}`);
-      }
-
-      return await response.json();
+      // Use the uploadFile helper from api.ts which handles Railway URL routing
+      const { uploadFile } = await import('../api');
+      return await uploadFile(`${this.BASE_URL}/questions/${questionId}/documents/vendor/${vendorId}`, file);
     } catch (error) {
       console.error('Error uploading supporting document:', error);
       throw error;
