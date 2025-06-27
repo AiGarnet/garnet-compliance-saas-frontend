@@ -88,6 +88,12 @@ interface ConfirmationDialog {
   isProcessing: boolean;
 }
 
+// Helper function to validate UUID format
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 const QuestionnairesPage = () => {
   const router = useRouter();
   
@@ -177,6 +183,13 @@ const QuestionnairesPage = () => {
         }));
         setVendors(transformedVendors);
         console.log('Successfully loaded vendors:', transformedVendors);
+        console.log('🔍 VENDOR ID MAPPING:', response.data.map((v: any) => ({
+          original: v,
+          mapped_id: v.uuid || v.id || v.vendorId?.toString(),
+          uuid: v.uuid,
+          id: v.id,
+          vendorId: v.vendorId
+        })));
       } else if (response && response.vendors && Array.isArray(response.vendors)) {
         // Handle response with .vendors structure
         const transformedVendors = response.vendors.map((vendor: any) => ({
@@ -222,12 +235,26 @@ const QuestionnairesPage = () => {
       return;
     }
 
-    if (!selectedVendorId) {
+    if (!selectedVendorId || selectedVendorId.trim() === '') {
       setUploadError('Please select a vendor first');
       return;
     }
 
+    if (!isValidUUID(selectedVendorId)) {
+      setUploadError(`Invalid vendor ID format: "${selectedVendorId}". Please refresh the page and try again.`);
+      console.error('❌ INVALID VENDOR UUID:', {
+        selectedVendorId,
+        isValid: false,
+        vendors: vendors
+      });
+      return;
+    }
+
     console.log(`📋 CHECKLIST UPLOAD: Starting upload for checklist file: ${file.name}`);
+    console.log(`📋 VENDOR DEBUG: selectedVendorId = "${selectedVendorId}"`);
+    console.log(`📋 VENDOR DEBUG: selectedVendorId type = ${typeof selectedVendorId}`);
+    console.log(`📋 VENDOR DEBUG: selectedVendorId length = ${selectedVendorId?.length || 'undefined'}`);
+    console.log(`📋 VENDOR DEBUG: Available vendors:`, vendors);
     
     setIsUploading(true);
     setUploadError(null);
