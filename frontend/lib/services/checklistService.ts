@@ -204,6 +204,18 @@ export class ChecklistService {
   }
 
   /**
+   * Get all supporting documents for a vendor
+   */
+  static async getVendorSupportingDocuments(vendorId: string): Promise<SupportingDocument[]> {
+    try {
+      return await apiCall(`${this.BASE_URL}/vendor/${vendorId}/documents`);
+    } catch (error) {
+      console.error('Error fetching vendor supporting documents:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a checklist and all its data
    */
   static async deleteChecklist(checklistId: string, vendorId: string): Promise<void> {

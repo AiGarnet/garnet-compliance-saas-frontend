@@ -301,13 +301,47 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Load supporting documents for selected vendor
+  const loadVendorSupportingDocuments = async (vendorId: string) => {
+    if (!vendorId || !isValidUUID(vendorId)) return;
+    
+    try {
+      console.log(`📁 LOADING: Fetching supporting documents for vendor ${vendorId}`);
+      const documents = await ChecklistService.getVendorSupportingDocuments(vendorId);
+      console.log(`📁 LOADING: Found ${documents.length} supporting documents:`, documents);
+      
+      // Convert database documents to our local format
+      const convertedDocs: UploadedSupportingDocument[] = documents.map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        originalName: doc.filename, // Backend only stores filename
+        fileType: doc.fileType,
+        fileSize: doc.fileSize || 0,
+        uploadDate: new Date(doc.uploadedAt),
+        spacesUrl: doc.spacesUrl,
+        spacesKey: doc.spacesKey,
+        description: 'Uploaded document', // Default description
+        category: 'General' // Default category
+      }));
+      
+      setUploadedSupportingDocs(convertedDocs);
+      console.log(`📁 LOADING: Successfully loaded ${convertedDocs.length} supporting documents`);
+      
+    } catch (error) {
+      console.error('❌ Error loading supporting documents:', error);
+      setUploadedSupportingDocs([]);
+    }
+  };
+
   // Load checklists when vendor is selected
   useEffect(() => {
     if (selectedVendorId && isValidUUID(selectedVendorId)) {
       loadVendorChecklists(selectedVendorId);
+      loadVendorSupportingDocuments(selectedVendorId);
     } else {
       setChecklists([]);
       setSelectedChecklist(null);
+      setUploadedSupportingDocs([]);
     }
   }, [selectedVendorId]);
 
@@ -794,21 +828,8 @@ const QuestionnairesPage = () => {
       console.log('📁 STANDALONE: Upload successful:', uploadResult);
       console.log('📁 File stored in: supporting-docs/ folder');
 
-      // Add to our independent list
-      const newDoc: UploadedSupportingDocument = {
-        id: Date.now().toString(),
-        filename: uploadResult.filename || file.name,
-        originalName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        uploadDate: new Date(),
-        spacesUrl: uploadResult.spacesUrl,
-        spacesKey: uploadResult.spacesKey,
-        description: supportDocDescription || '',
-        category: supportDocCategory || 'General'
-      };
-
-      setUploadedSupportingDocs(prev => [...prev, newDoc]);
+      // Refresh the documents list from the database instead of just adding locally
+      await loadVendorSupportingDocuments(selectedVendorId);
       
       // Clear form
       setSupportDocDescription('');
