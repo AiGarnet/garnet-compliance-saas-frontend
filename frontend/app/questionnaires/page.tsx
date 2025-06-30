@@ -851,8 +851,33 @@ const QuestionnairesPage = () => {
   };
 
   // Delete standalone supporting document
-  const deleteStandaloneSupportDoc = (docId: string) => {
-    setUploadedSupportingDocs(prev => prev.filter(doc => doc.id !== docId));
+  const deleteStandaloneSupportDoc = async (docId: string) => {
+    if (!selectedVendorId) {
+      console.error('No vendor selected for deletion');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      'Are you sure you want to delete this supporting document?\n\nThis action cannot be undone.'
+    );
+    
+    if (!confirmDelete) return;
+
+    try {
+      console.log(`🗑️ DELETING: Supporting document ${docId} for vendor ${selectedVendorId}`);
+      
+      // Call API to delete from database and DigitalOcean Spaces
+      await ChecklistService.deleteSupportingDocument(docId, selectedVendorId);
+      
+      // Refresh the documents list from the database
+      await loadVendorSupportingDocuments(selectedVendorId);
+      
+      console.log('✅ Supporting document deleted successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error deleting supporting document:', error);
+      setSupportDocUploadError('Failed to delete supporting document. Please try again.');
+    }
   };
 
   // Support document functions - COMPLETELY SEPARATE FROM CHECKLIST UPLOAD
@@ -1760,16 +1785,14 @@ const QuestionnairesPage = () => {
                             </div>
 
                             <div className="flex items-center space-x-2 ml-4">
-                              {doc.spacesUrl && (
-                                <a
-                                  href={doc.spacesUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-green-600 hover:text-green-700 text-sm font-medium"
-                                >
-                                  View
-                                </a>
-                              )}
+                              <a
+                                href={`/api/checklists/documents/${doc.id}/download`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-700 text-sm font-medium"
+                              >
+                                View
+                              </a>
                               
                               <button
                                 onClick={() => deleteStandaloneSupportDoc(doc.id)}

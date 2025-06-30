@@ -216,6 +216,20 @@ export class ChecklistService {
   }
 
   /**
+   * Delete a supporting document
+   */
+  static async deleteSupportingDocument(documentId: string, vendorId: string): Promise<void> {
+    try {
+      await apiCall(`${this.BASE_URL}/documents/${documentId}/vendor/${vendorId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Error deleting supporting document:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a checklist and all its data
    */
   static async deleteChecklist(checklistId: string, vendorId: string): Promise<void> {
