@@ -177,6 +177,59 @@ const QuestionnairesPage = () => {
     }
   }, [selectedVendorId]);
 
+  // New function to load all checklist questions for AI Questionnaire section
+  const loadAllVendorQuestionsForAI = async (vendorId: string) => {
+    if (!vendorId || !isValidUUID(vendorId)) return;
+    
+    try {
+      console.log(`🤖 AI QUESTIONNAIRE: Loading all questions for vendor ${vendorId}`);
+      
+      // Get all checklists for this vendor
+      const vendorChecklists = await ChecklistService.getVendorChecklists(vendorId);
+      console.log(`🤖 AI QUESTIONNAIRE: Found ${vendorChecklists.length} checklists`);
+      
+      // Load questions from all checklists
+      const allQuestions: ExtractedQuestion[] = [];
+      
+      for (const checklist of vendorChecklists) {
+        try {
+          const questions = await ChecklistService.getChecklistQuestions(checklist.id, vendorId);
+          
+          // Convert to our format
+          const convertedQuestions: ExtractedQuestion[] = questions.map(q => ({
+            id: q.id,
+            text: q.questionText,
+            status: q.aiAnswer ? 'completed' : 'pending',
+            answer: q.aiAnswer || '',
+            confidence: q.confidenceScore,
+            requiresDoc: q.requiresDocument,
+            docDescription: q.documentDescription,
+            checklistId: q.checklistId,
+            checklistName: checklist.name,
+            isDone: !!q.aiAnswer,
+            isEditing: false
+          }));
+          
+          allQuestions.push(...convertedQuestions);
+          
+        } catch (error) {
+          console.error(`Failed to load questions for checklist ${checklist.id}:`, error);
+        }
+      }
+      
+      console.log(`🤖 AI QUESTIONNAIRE: Loaded ${allQuestions.length} total questions`);
+      
+      // Set the questions for AI Questionnaire section
+      setExtractedQuestions(allQuestions);
+      
+      // Also update questionnaire answers from backend
+      await loadVendorQuestionnaireAnswers(vendorId);
+      
+    } catch (error) {
+      console.error('Error loading vendor questions for AI:', error);
+    }
+  };
+
   // New function to load all vendor-specific data
   const loadVendorData = async () => {
     if (!selectedVendorId) return;
@@ -187,11 +240,11 @@ const QuestionnairesPage = () => {
       // Load checklists from bucket and database
       await loadVendorChecklists(selectedVendorId);
       
+      // Load ALL questions for AI Questionnaire section automatically
+      await loadAllVendorQuestionsForAI(selectedVendorId);
+      
       // Sync any existing checklist questions to questionnaire system
       await syncChecklistToQuestionnaire(selectedVendorId);
-      
-      // Load any existing questionnaire answers from database
-      await loadVendorQuestionnaireAnswers(selectedVendorId);
       
       // Load supporting documents
       await loadVendorSupportingDocuments(selectedVendorId);
@@ -611,9 +664,17 @@ const QuestionnairesPage = () => {
   // Load checklists when vendor is selected
   useEffect(() => {
     if (selectedVendorId && isValidUUID(selectedVendorId)) {
-      loadVendorChecklists(selectedVendorId);
-      loadVendorSupportingDocuments(selectedVendorId);
+      // Clear previous vendor's data first
+      setExtractedQuestions([]);
+      setChecklists([]);
+      setSelectedChecklist(null);
+      setUploadedSupportingDocs([]);
+      
+      // Load all data for the new vendor
+      loadVendorData();
     } else {
+      // Clear all data when no vendor is selected
+      setExtractedQuestions([]);
       setChecklists([]);
       setSelectedChecklist(null);
       setUploadedSupportingDocs([]);
@@ -697,8 +758,8 @@ const QuestionnairesPage = () => {
       
       setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
       
-      // Auto-load questions into the AI section
-      setExtractedQuestions(extractedQuestions);
+      // Refresh the AI Questionnaire section with ALL vendor questions (including the new one)
+      await loadAllVendorQuestionsForAI(selectedVendorId);
       
     } catch (error) {
       console.error('Error processing file:', error);
@@ -1300,6 +1361,8 @@ const QuestionnairesPage = () => {
       // Force reload vendor checklists to ensure fresh data
       if (selectedVendorId) {
         await loadVendorChecklists(selectedVendorId);
+        // Also refresh AI Questionnaire section
+        await loadAllVendorQuestionsForAI(selectedVendorId);
       }
       
       console.log(`✅ Successfully deleted checklist: ${checklist.name}`);
@@ -1311,6 +1374,8 @@ const QuestionnairesPage = () => {
       // Force reload on error to ensure UI state matches backend
       if (selectedVendorId) {
         await loadVendorChecklists(selectedVendorId);
+        // Also refresh AI Questionnaire section
+        await loadAllVendorQuestionsForAI(selectedVendorId);
       }
     }
   };
