@@ -38,7 +38,7 @@ import { ChecklistService } from '@/lib/services/checklistService';
 interface ExtractedQuestion {
   id: string;
   text: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'needs-support';
+  status: 'pending' | 'in-progress' | 'completed' | 'needs-support' | 'done' | 'edit';
   answer?: string;
   confidence?: number;
   requiresDoc?: boolean;
@@ -46,6 +46,8 @@ interface ExtractedQuestion {
   supportingDocs?: File[];
   checklistId?: string;
   checklistName?: string;
+  isDone?: boolean;
+  isEditing?: boolean;
 }
 
 interface ChecklistFile {
@@ -167,6 +169,169 @@ const QuestionnairesPage = () => {
     setHasMounted(true);
     loadVendors();
   }, []);
+
+  // Load vendor-specific data when vendor is selected
+  useEffect(() => {
+    if (selectedVendorId && selectedVendorId.trim() !== '') {
+      loadVendorData();
+    }
+  }, [selectedVendorId]);
+
+  // New function to load all vendor-specific data
+  const loadVendorData = async () => {
+    if (!selectedVendorId) return;
+    
+    try {
+      setIsLoadingChecklists(true);
+      
+      // Load checklists from bucket and database
+      await loadVendorChecklists(selectedVendorId);
+      
+      // Sync any existing checklist questions to questionnaire system
+      await syncChecklistToQuestionnaire(selectedVendorId);
+      
+      // Load any existing questionnaire answers from database
+      await loadVendorQuestionnaireAnswers(selectedVendorId);
+      
+      // Load supporting documents
+      await loadVendorSupportingDocuments(selectedVendorId);
+      
+    } catch (error) {
+      console.error('Error loading vendor data:', error);
+      setUploadError('Failed to load vendor data');
+    } finally {
+      setIsLoadingChecklists(false);
+    }
+  };
+
+  // New function to sync checklist questions to questionnaire system
+  const syncChecklistToQuestionnaire = async (vendorId: string, checklistId?: string) => {
+    try {
+      const response = await fetch('/api/questionnaires/sync-checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorId, checklistId })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Synced checklist questions:', result);
+        
+        if (result.syncedCount > 0) {
+          console.log(`🔄 Synced ${result.syncedCount} questions to questionnaire system`);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing checklist to questionnaire:', error);
+    }
+  };
+
+  // New function to load questionnaire answers from database
+  const loadVendorQuestionnaireAnswers = async (vendorId: string) => {
+    try {
+      const response = await fetch(`/api/questionnaires/vendor/${vendorId}/answers`);
+      if (response.ok) {
+        const answers: any[] = await response.json();
+        
+        // Update extracted questions with saved answers
+        setExtractedQuestions(prev => {
+          const answerMap = new Map(answers.map((a: any) => [a.question_id, a]));
+          
+          return prev.map(q => {
+            const savedAnswer = answerMap.get(q.id);
+            if (savedAnswer && savedAnswer.answer && savedAnswer.status) {
+              return {
+                ...q,
+                answer: savedAnswer.answer,
+                status: savedAnswer.status === 'Completed' ? 'done' : 
+                       savedAnswer.status === 'In Progress' ? 'in-progress' : 
+                       savedAnswer.status === 'Pending' ? 'pending' : 'needs-support',
+                isDone: savedAnswer.status === 'Completed'
+              };
+            }
+            return q;
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error loading questionnaire answers:', error);
+    }
+  };
+
+  // New function to save questionnaire answer to database
+  const saveQuestionnaireAnswer = async (question: ExtractedQuestion) => {
+    if (!selectedVendorId || !question.answer) return;
+    
+    try {
+      const response = await fetch('/api/questionnaires/answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: selectedVendorId,
+          questionId: question.id,
+          question: question.text,
+          answer: question.answer,
+          status: question.isDone ? 'Completed' : 'In Progress',
+          questionTitle: question.checklistName || 'Questionnaire'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save answer');
+      }
+      
+      console.log('✅ Saved answer to database for question:', question.id);
+    } catch (error) {
+      console.error('❌ Error saving questionnaire answer:', error);
+    }
+  };
+
+  // New function to mark question as done
+  const markQuestionAsDone = async (questionId: string) => {
+    const question = extractedQuestions.find(q => q.id === questionId);
+    if (!question || !question.answer) return;
+    
+    setExtractedQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { ...q, isDone: true, status: 'done', isEditing: false }
+        : q
+    ));
+    
+    // Save to database
+    await saveQuestionnaireAnswer({
+      ...question,
+      isDone: true,
+      status: 'done'
+    });
+  };
+
+  // New function to toggle edit mode
+  const toggleEditMode = (questionId: string) => {
+    setExtractedQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { ...q, isEditing: !q.isEditing, isDone: false, status: 'edit' }
+        : q
+    ));
+  };
+
+  // New function to update question answer
+  const updateQuestionAnswer = async (questionId: string, newAnswer: string) => {
+    const question = extractedQuestions.find(q => q.id === questionId);
+    if (!question) return;
+    
+    setExtractedQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { ...q, answer: newAnswer, status: 'in-progress' }
+        : q
+    ));
+    
+    // Save to database
+    await saveQuestionnaireAnswer({
+      ...question,
+      answer: newAnswer,
+      status: 'in-progress'
+    });
+  };
 
   const loadVendors = async () => {
     setIsLoadingVendors(true);
@@ -395,7 +560,7 @@ const QuestionnairesPage = () => {
       console.log(`📋 CHECKLIST: Calling ChecklistService.uploadChecklist()`);
       console.log(`📋 API Call: POST /api/checklists/upload`);
       
-      // Upload to backend and extract questions (goes to checklists/ folder)
+      // Upload to backend and extract questions (goes to checklists/ folder in bucket)
       const uploadResponse = await ChecklistService.uploadChecklist(file, selectedVendorId, file.name);
       
       console.log('📋 CHECKLIST: Upload successful, file stored in checklists/ folder:', uploadResponse);
@@ -410,7 +575,9 @@ const QuestionnairesPage = () => {
         requiresDoc: q.requiresDocument,
         docDescription: q.documentDescription,
         checklistId: q.checklistId,
-        checklistName: file.name
+        checklistName: file.name,
+        isDone: false,
+        isEditing: false
       }));
 
       // Update checklist with extracted questions and database ID
@@ -419,6 +586,9 @@ const QuestionnairesPage = () => {
       newChecklist.checklistId = uploadResponse.checklist.id;
       
       setChecklists(prev => prev.map(c => c.id === newChecklist.id ? newChecklist : c));
+      
+      // Auto-load questions into the AI section
+      setExtractedQuestions(extractedQuestions);
       
     } catch (error) {
       console.error('Error processing file:', error);
@@ -908,6 +1078,7 @@ const QuestionnairesPage = () => {
       console.log(`🔹 API Call: POST /api/checklists/questions/${questionId}/documents/vendor/${selectedVendorId}`);
       
       // Upload supporting document to DigitalOcean Spaces via backend (supporting-docs/ folder)
+      // Note: Additional linking to questionnaire will be handled in backend
       const uploadResult = await ChecklistService.uploadSupportingDocument(
         questionId,
         selectedVendorId,
@@ -915,7 +1086,7 @@ const QuestionnairesPage = () => {
       );
 
       console.log('🔹 SUPPORTING DOCUMENT: Upload successful:', uploadResult);
-      console.log('🔹 File stored in: supporting-docs/ folder');
+      console.log('🔹 File stored in: supporting-docs/ folder, linked to vendor and questionnaire');
 
       // Update question status and add file reference
       setExtractedQuestions(prev => prev.map(q => 
@@ -928,7 +1099,10 @@ const QuestionnairesPage = () => {
           : q
       ));
 
-      console.log('✅ Supporting document uploaded successfully to DigitalOcean Spaces!');
+      // Refresh supporting documents list
+      await loadVendorSupportingDocuments(selectedVendorId);
+
+      console.log('✅ Supporting document uploaded successfully to DigitalOcean Spaces and linked to vendor!');
       
     } catch (error) {
       console.error('❌ Error uploading supporting document:', error);
@@ -1420,13 +1594,19 @@ const QuestionnairesPage = () => {
                         <div className="flex items-center">
                           <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                           <span className="text-gray-700">
-                            {extractedQuestions.filter(q => q.status === 'completed').length} Completed
+                            {extractedQuestions.filter(q => q.status === 'completed' || q.status === 'done').length} Completed
                           </span>
                           </div>
                         <div className="flex items-center">
                           <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
                           <span className="text-gray-700">
                             {extractedQuestions.filter(q => q.status === 'needs-support').length} Needs Support
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Sparkles className="h-5 w-5 text-purple-600 mr-2" />
+                          <span className="text-gray-700">
+                            {extractedQuestions.filter(q => q.isDone).length} Done
                           </span>
                         </div>
                       </div>
@@ -1557,7 +1737,41 @@ const QuestionnairesPage = () => {
                           {question.answer && (
                             <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
                               <h5 className="font-semibold text-purple-900 mb-2">AI Generated Answer:</h5>
-                              <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
+                              {question.isEditing ? (
+                                <div className="space-y-3">
+                                  <textarea
+                                    className="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-purple-800"
+                                    rows={4}
+                                    value={question.answer}
+                                    onChange={(e) => updateQuestionAnswer(question.id, e.target.value)}
+                                    placeholder="Edit the answer..."
+                                  />
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => toggleEditMode(question.id)}
+                                      className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={() => markQuestionAsDone(question.id)}
+                                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                                    >
+                                      Save & Mark Done
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
+                                  {question.isDone && (
+                                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Marked as Done
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                           
@@ -1581,8 +1795,28 @@ const QuestionnairesPage = () => {
                             </button>
                           )}
 
-                          {question.status === 'completed' && (
+                          {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
+                              {!question.isDone && (
+                                <>
+                                  <button
+                                    onClick={() => markQuestionAsDone(question.id)}
+                                    disabled={!question.answer}
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Mark as Done
+                                  </button>
+                                  <button
+                                    onClick={() => toggleEditMode(question.id)}
+                                    disabled={!question.answer}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                  >
+                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                    Edit Answer
+                                  </button>
+                                </>
+                              )}
                               <button
                                 onClick={() => generateSingleAIAnswer(question)}
                                 disabled={isGeneratingAnswers}
