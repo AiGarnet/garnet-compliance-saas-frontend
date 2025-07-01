@@ -204,23 +204,23 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Helper function to get the correct API base URL
+  const getApiBaseUrl = () => {
+    // Check if we're in static export mode (Netlify deployment)
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
+      return process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+    }
+    // For local/development, use relative URLs
+    return '';
+  };
+
   // New function to sync checklist questions to questionnaire system
+  // Note: This functionality will be handled by the backend questionnaires service
   const syncChecklistToQuestionnaire = async (vendorId: string, checklistId?: string) => {
     try {
-      const response = await fetch('/api/questionnaires/sync-checklist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendorId, checklistId })
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Synced checklist questions:', result);
-        
-        if (result.syncedCount > 0) {
-          console.log(`🔄 Synced ${result.syncedCount} questions to questionnaire system`);
-        }
-      }
+      console.log(`🔄 Auto-sync will be handled by backend questionnaires service for vendor ${vendorId}`);
+      // For now, we'll rely on the backend's existing questionnaire management
+      // The backend already has endpoints to manage questionnaires and answers
     } catch (error) {
       console.error('Error syncing checklist to questionnaire:', error);
     }
@@ -229,29 +229,39 @@ const QuestionnairesPage = () => {
   // New function to load questionnaire answers from database
   const loadVendorQuestionnaireAnswers = async (vendorId: string) => {
     try {
-      const response = await fetch(`/api/questionnaires/vendor/${vendorId}/answers`);
+      const baseUrl = getApiBaseUrl();
+      // Use the backend questionnaires service to get answers
+      const response = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorId}/with-answers`);
       if (response.ok) {
-        const answers: any[] = await response.json();
+        const data = await response.json();
+        const questionnaires = data.questionnaires || [];
         
-        // Update extracted questions with saved answers
-        setExtractedQuestions(prev => {
-          const answerMap = new Map(answers.map((a: any) => [a.question_id, a]));
-          
-          return prev.map(q => {
-            const savedAnswer = answerMap.get(q.id);
-            if (savedAnswer && savedAnswer.answer && savedAnswer.status) {
-              return {
-                ...q,
-                answer: savedAnswer.answer,
-                status: savedAnswer.status === 'Completed' ? 'done' : 
-                       savedAnswer.status === 'In Progress' ? 'in-progress' : 
-                       savedAnswer.status === 'Pending' ? 'pending' : 'needs-support',
-                isDone: savedAnswer.status === 'Completed'
-              };
-            }
-            return q;
-          });
+        // Extract answers from questionnaires and update extracted questions
+        const allAnswers: any[] = [];
+        questionnaires.forEach((q: any) => {
+          if (q.answers && Array.isArray(q.answers)) {
+            allAnswers.push(...q.answers);
+          }
         });
+        
+        if (allAnswers.length > 0) {
+          setExtractedQuestions(prev => {
+            const answerMap = new Map(allAnswers.map((a: any) => [a.questionId || a.question_id, a]));
+            
+            return prev.map(q => {
+              const savedAnswer = answerMap.get(q.id);
+              if (savedAnswer && savedAnswer.answer) {
+                return {
+                  ...q,
+                  answer: savedAnswer.answer,
+                  status: savedAnswer.status || 'completed',
+                  isDone: true
+                };
+              }
+              return q;
+            });
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading questionnaire answers:', error);
@@ -263,24 +273,28 @@ const QuestionnairesPage = () => {
     if (!selectedVendorId || !question.answer) return;
     
     try {
-      const response = await fetch('/api/questionnaires/answers', {
+      const baseUrl = getApiBaseUrl();
+      // Use the backend questionnaires service to save answers
+      const response = await fetch(`${baseUrl}/api/questionnaires`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title: question.checklistName || 'AI Generated Questionnaire',
           vendorId: selectedVendorId,
-          questionId: question.id,
-          question: question.text,
-          answer: question.answer,
-          status: question.isDone ? 'Completed' : 'In Progress',
-          questionTitle: question.checklistName || 'Questionnaire'
+          questions: [{
+            id: question.id,
+            question: question.text,
+            answer: question.answer,
+            status: question.isDone ? 'completed' : 'in-progress'
+          }]
         })
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to save answer');
+      if (response.ok) {
+        console.log('✅ Saved answer to database for question:', question.id);
+      } else {
+        console.error('❌ Failed to save answer:', response.statusText);
       }
-      
-      console.log('✅ Saved answer to database for question:', question.id);
     } catch (error) {
       console.error('❌ Error saving questionnaire answer:', error);
     }

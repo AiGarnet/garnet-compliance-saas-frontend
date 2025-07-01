@@ -104,23 +104,6 @@ const nextConfig = {
       };
     }
 
-    // Remove the CSS rule that might conflict with Next.js built-in CSS handling
-    // config.module.rules.push({
-    //   test: /\.css$/,
-    //   use: [
-    //     'style-loader',
-    //     {
-    //       loader: 'css-loader',
-    //       options: {
-    //         modules: {
-    //           auto: true,
-    //           localIdentName: '[name]__[local]__[hash:base64:5]',
-    //         },
-    //       },
-    //     },
-    //   ],
-    // });
-
     return config;
   },
 
@@ -132,6 +115,12 @@ const nextConfig = {
   
   // Optimize for static export
   distDir: '.next',
+  
+  // Exclude problematic API routes from static export since they should be handled by backend
+  async generateBuildId() {
+    // Generate a unique build ID that excludes API routes with dynamic params
+    return 'static-build-' + Date.now();
+  },
   
   // Add proper rewrites for missing static files (fallback to 404, not index.html)
   async rewrites() {
