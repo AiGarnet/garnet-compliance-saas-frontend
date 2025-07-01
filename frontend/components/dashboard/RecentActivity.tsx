@@ -125,8 +125,17 @@ export function RecentActivity({
   const displayedActivities = recentActivities.slice(0, limit);
 
   const handleViewAll = () => {
-    // TODO: Navigate to full activity page or open modal
+    // For now, open activities in a new modal or show all activities in current component
+    // Future: navigate to /activities page
     console.log('View all activities clicked');
+    
+    // Trigger a modal or expand the current view
+    if (typeof window !== 'undefined') {
+      // For now, we'll expand the limit to show more activities
+      window.dispatchEvent(new CustomEvent('expandActivities', { 
+        detail: { showAll: true } 
+      }));
+    }
   };
 
   const handleAddSample = () => {

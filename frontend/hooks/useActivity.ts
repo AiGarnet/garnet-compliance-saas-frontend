@@ -32,16 +32,70 @@ export interface UseActivityReturn {
 
 // Transform backend activity to frontend activity format
 function transformBackendActivity(backendActivity: BackendActivity): Activity {
+  const activityType = backendActivity.type as ActivityType;
+  
+  // Map activity types to icons and colors
+  const getIconAndColor = (type: string) => {
+    switch (type) {
+      case 'client_created':
+      case 'vendor_created':
+        return {
+          icon: { name: 'UserPlus', type: 'lucide' as const },
+          color: { bg: 'bg-green-100', text: 'text-green-600' }
+        };
+      case 'client_updated':
+      case 'vendor_updated':
+        return {
+          icon: { name: 'Edit', type: 'lucide' as const },
+          color: { bg: 'bg-blue-100', text: 'text-blue-600' }
+        };
+      case 'client_deleted':
+      case 'vendor_deleted':
+        return {
+          icon: { name: 'Trash2', type: 'lucide' as const },
+          color: { bg: 'bg-red-100', text: 'text-red-600' }
+        };
+      case 'questionnaire_submitted':
+        return {
+          icon: { name: 'FileText', type: 'lucide' as const },
+          color: { bg: 'bg-purple-100', text: 'text-purple-600' }
+        };
+      case 'checklist_uploaded':
+      case 'evidence_uploaded':
+        return {
+          icon: { name: 'Upload', type: 'lucide' as const },
+          color: { bg: 'bg-orange-100', text: 'text-orange-600' }
+        };
+      case 'user_login':
+        return {
+          icon: { name: 'LogIn', type: 'lucide' as const },
+          color: { bg: 'bg-green-100', text: 'text-green-600' }
+        };
+      case 'user_logout':
+        return {
+          icon: { name: 'LogOut', type: 'lucide' as const },
+          color: { bg: 'bg-gray-100', text: 'text-gray-600' }
+        };
+      default:
+        return {
+          icon: { name: 'Activity', type: 'lucide' as const },
+          color: { bg: 'bg-blue-100', text: 'text-blue-600' }
+        };
+    }
+  };
+
+  const iconAndColor = getIconAndColor(backendActivity.type);
+
   return {
     id: backendActivity.id,
-    type: backendActivity.type as ActivityType,
+    type: activityType,
     userId: backendActivity.userId || '',
-    userName: backendActivity.userName || 'Unknown User',
+    userName: backendActivity.userName || backendActivity.userEmail || 'Unknown User',
     description: backendActivity.description,
     metadata: backendActivity.metadata,
     timestamp: new Date(backendActivity.createdAt),
-    icon: { name: 'Activity', type: 'lucide' }, // Default icon, could be enhanced
-    color: { bg: 'bg-blue-100', text: 'text-blue-600' } // Default color, could be enhanced
+    icon: iconAndColor.icon,
+    color: iconAndColor.color
   };
 }
 
