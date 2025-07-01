@@ -242,26 +242,9 @@ export function VendorList({
     }
   };
 
-  // Render filter pills
+  // Render filter pills - hidden for now
   const renderFilterPills = () => {
-    const statuses: (VendorStatus | 'All')[] = ['All', VendorStatus.QUESTIONNAIRE_PENDING, VendorStatus.IN_REVIEW, VendorStatus.APPROVED];
-    const translatedStatuses = statuses.map(status => ({
-      value: status,
-      label: getStatusI18nKey(status)
-    }));
-    
-    return (
-      <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100">
-        <label className="block text-sm font-medium text-gray-700 mb-2">{t.filter.label}</label>
-        <FilterPills
-          options={translatedStatuses}
-          selectedOption={statusFilter}
-          onChange={handleStatusFilterChange}
-          className="flex flex-wrap gap-2"
-          label={t.filter.label}
-        />
-      </div>
-    );
+    return null;
   };
 
   // Render search bar
@@ -393,17 +376,7 @@ export function VendorList({
                     <ArrowUpDown className={`ml-2 h-4 w-4 ${sortField === 'name' ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true" />
                   </div>
                 </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors w-1/6 py-4"
-                  onClick={() => handleSort('status')}
-                  aria-sort={sortField === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                  scope="col"
-                >
-                  <div className="flex items-center">
-                    <span className="font-semibold text-gray-700">{t.table.status}</span>
-                    <ArrowUpDown className={`ml-2 h-4 w-4 ${sortField === 'status' ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true" />
-                  </div>
-                </TableHead>
+{/* Status column hidden for now */}
                 <TableHead className="w-1/3 text-right py-4" scope="col">
                   <span className="font-semibold text-gray-700">{t.table.actions}</span>
                 </TableHead>
@@ -427,9 +400,7 @@ export function VendorList({
                       <span>{vendor.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
-                    <StatusBadge status={vendor.status} />
-                  </TableCell>
+{/* Status cell hidden for now */}
                   <TableCell className="text-right py-4">
                     <div className="flex justify-end items-center gap-2">
                       {/* Edit Button - Available for both Sales Professional and Founder */}
@@ -507,7 +478,7 @@ export function VendorList({
                     </div>
                     <span className="text-gray-800 font-semibold text-lg">{vendor.name}</span>
                   </div>
-                  <StatusBadge status={vendor.status} />
+{/* Status badge hidden for now */}
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-2">
                   {/* Action Buttons */}
