@@ -709,7 +709,7 @@ const GarnetLandingPage = () => {
                   className="relative group bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full font-semibold text-sm lg:text-base shadow-lg hover:shadow-xl transition-all transform hover:scale-105 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                 >
                   <span className="relative z-10 flex items-center">
-                    📞 Contact Us
+                    Contact Us
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Link>
