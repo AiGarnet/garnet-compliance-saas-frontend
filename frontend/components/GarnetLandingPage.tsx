@@ -706,9 +706,12 @@ const GarnetLandingPage = () => {
               >
                 <Link 
                   href="/contact" 
-                  className="text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base font-medium px-3 py-2 rounded-md hover:bg-purple-50"
+                  className="relative group bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full font-semibold text-sm lg:text-base shadow-lg hover:shadow-xl transition-all transform hover:scale-105 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                 >
-                  Contact
+                  <span className="relative z-10 flex items-center">
+                    📞 Contact Us
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Link>
               </motion.div>
               
@@ -788,9 +791,12 @@ const GarnetLandingPage = () => {
               >
                 <Link 
                   href="/contact" 
-                  className="text-gray-700 hover:text-purple-600 transition-colors text-sm font-medium px-3 py-2 rounded-md hover:bg-purple-50"
+                  className="relative group bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm shadow-lg hover:shadow-xl transition-all transform hover:scale-105 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                 >
-                  Contact
+                  <span className="relative z-10 flex items-center">
+                    Contact
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Link>
               </motion.div>
               
@@ -1086,7 +1092,7 @@ const GarnetLandingPage = () => {
         </div>
       </section>
 
-      <CountdownTimer />
+      {/* <CountdownTimer /> */}
 
       {/* Features Section */}
       <section id="features" className="py-20 bg-gray-50">
