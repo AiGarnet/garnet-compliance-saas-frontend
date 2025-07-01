@@ -230,23 +230,42 @@ const QuestionnairesPage = () => {
   const loadVendorQuestionnaireAnswers = async (vendorId: string) => {
     try {
       const baseUrl = getApiBaseUrl();
-      // Use the backend questionnaires service to get answers
-      const response = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorId}/with-answers`);
+      // Convert UUID to vendor ID for backend call
+      const vendorIdInteger = await getVendorIdFromUuid(vendorId);
+      if (!vendorIdInteger) {
+        console.error('Could not convert vendor UUID to ID');
+        return;
+      }
+      
+      // Use the correct backend endpoint
+      const response = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}/with-answers`);
       if (response.ok) {
         const data = await response.json();
         const questionnaires = data.questionnaires || [];
         
+        console.log('✅ Loaded questionnaires with answers:', questionnaires);
+        
         // Extract answers from questionnaires and update extracted questions
         const allAnswers: any[] = [];
         questionnaires.forEach((q: any) => {
-          if (q.answers && Array.isArray(q.answers)) {
-            allAnswers.push(...q.answers);
+          if (q.questions && Array.isArray(q.questions)) {
+            q.questions.forEach((question: any) => {
+              if (question.answer) {
+                allAnswers.push({
+                  questionId: question.id || question.questionId,
+                  question: question.questionText || question.question,
+                  answer: question.answer,
+                  status: 'completed'
+                });
+              }
+            });
           }
         });
         
         if (allAnswers.length > 0) {
+          console.log('📊 Found saved answers:', allAnswers);
           setExtractedQuestions(prev => {
-            const answerMap = new Map(allAnswers.map((a: any) => [a.questionId || a.question_id, a]));
+            const answerMap = new Map(allAnswers.map((a: any) => [a.questionId, a]));
             
             return prev.map(q => {
               const savedAnswer = answerMap.get(q.id);
@@ -254,7 +273,7 @@ const QuestionnairesPage = () => {
                 return {
                   ...q,
                   answer: savedAnswer.answer,
-                  status: savedAnswer.status || 'completed',
+                  status: 'completed',
                   isDone: true
                 };
               }
@@ -262,9 +281,39 @@ const QuestionnairesPage = () => {
             });
           });
         }
+      } else {
+        console.log('No existing questionnaires found for vendor');
       }
     } catch (error) {
       console.error('Error loading questionnaire answers:', error);
+    }
+  };
+
+  // Helper function to convert vendor UUID to integer ID (for backend compatibility)
+  const getVendorIdFromUuid = async (vendorUuid: string): Promise<number | null> => {
+    // If it's already a number, return it
+    if (/^\d+$/.test(vendorUuid)) {
+      return parseInt(vendorUuid);
+    }
+    
+    try {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/vendors`);
+      if (response.ok) {
+        const data = await response.json();
+        const vendors = data.vendors || data.data || data;
+        
+        if (Array.isArray(vendors)) {
+          const vendor = vendors.find((v: any) => v.uuid === vendorUuid);
+          if (vendor && vendor.id) {
+            return vendor.id;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error converting vendor UUID to ID:', error);
+      return null;
     }
   };
 
@@ -274,26 +323,73 @@ const QuestionnairesPage = () => {
     
     try {
       const baseUrl = getApiBaseUrl();
-      // Use the backend questionnaires service to save answers
-      const response = await fetch(`${baseUrl}/api/questionnaires`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: question.checklistName || 'AI Generated Questionnaire',
-          vendorId: selectedVendorId,
-          questions: [{
-            id: question.id,
-            question: question.text,
-            answer: question.answer,
-            status: question.isDone ? 'completed' : 'in-progress'
-          }]
-        })
-      });
+      const vendorIdInteger = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdInteger) {
+        console.error('Could not convert vendor UUID to ID');
+        return;
+      }
       
-      if (response.ok) {
-        console.log('✅ Saved answer to database for question:', question.id);
-      } else {
-        console.error('❌ Failed to save answer:', response.statusText);
+      // First, check if a questionnaire exists for this vendor
+      let questionnaire: any = null;
+      try {
+        const getResponse = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}`);
+        if (getResponse.ok) {
+          const data = await getResponse.json();
+          const questionnaires = data.questionnaires || [];
+          // Find a questionnaire with the same checklist name, or use the first one
+          questionnaire = questionnaires.find((q: any) => 
+            q.title === (question.checklistName || 'AI Generated Questionnaire')
+          ) || questionnaires[0];
+        }
+      } catch (error) {
+        console.log('No existing questionnaire found, will create new one');
+      }
+      
+      if (!questionnaire) {
+        // Create new questionnaire with proper DTO format
+        const createResponse = await fetch(`${baseUrl}/api/questionnaires`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: question.checklistName || 'AI Generated Questionnaire',
+            vendorId: vendorIdInteger,
+            questions: [{
+              questionText: question.text,
+              questionOrder: 1,
+              isRequired: false
+            }],
+            generateAnswers: false
+          })
+        });
+        
+        if (createResponse.ok) {
+          const createData = await createResponse.json();
+          questionnaire = createData.questionnaire;
+          console.log('✅ Created new questionnaire:', questionnaire);
+        } else {
+          const errorText = await createResponse.text();
+          console.error('❌ Failed to create questionnaire:', errorText);
+          return;
+        }
+      }
+      
+      // Save the answer to the questionnaire
+      if (questionnaire && questionnaire.id) {
+        const saveResponse = await fetch(`${baseUrl}/api/questionnaires/${questionnaire.id}/vendor/${vendorIdInteger}/answers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify([{
+            question: question.text,
+            answer: question.answer
+          }])
+        });
+        
+        if (saveResponse.ok) {
+          console.log('✅ Saved answer to database for question:', question.id);
+        } else {
+          const errorText = await saveResponse.text();
+          console.error('❌ Failed to save answer:', errorText);
+        }
       }
     } catch (error) {
       console.error('❌ Error saving questionnaire answer:', error);
@@ -1189,7 +1285,7 @@ const QuestionnairesPage = () => {
       console.log(`🗑️ DELETING: Checklist ${checklist.checklistId}`);
       await ChecklistService.deleteChecklist(checklist.checklistId, selectedVendorId);
       
-      // Remove from local state
+      // Clear all related state immediately
       setChecklists(prev => prev.filter(c => c.id !== checklist.id));
       
       // Clear selected checklist if it was the deleted one
@@ -1198,11 +1294,24 @@ const QuestionnairesPage = () => {
         setExtractedQuestions([]);
       }
       
+      // Remove questions from extractedQuestions that belong to this checklist
+      setExtractedQuestions(prev => prev.filter(q => q.checklistId !== checklist.checklistId));
+      
+      // Force reload vendor checklists to ensure fresh data
+      if (selectedVendorId) {
+        await loadVendorChecklists(selectedVendorId);
+      }
+      
       console.log(`✅ Successfully deleted checklist: ${checklist.name}`);
       
     } catch (error) {
       console.error('❌ Error deleting checklist:', error);
       setUploadError('Failed to delete checklist. Please try again.');
+      
+      // Force reload on error to ensure UI state matches backend
+      if (selectedVendorId) {
+        await loadVendorChecklists(selectedVendorId);
+      }
     }
   };
 
