@@ -11,6 +11,7 @@ interface User {
   full_name: string;
   role: UserRole;
   organization?: string;
+  organization_id?: string; // New field for organization linking
   created_at: string;
 }
 

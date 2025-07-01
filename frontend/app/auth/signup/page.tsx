@@ -256,6 +256,9 @@ export default function SignupPage() {
                   placeholder="Enter your organization name"
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Team members with the same organization name will be automatically linked together
+              </p>
             </div>
 
             {/* Password Field */}
