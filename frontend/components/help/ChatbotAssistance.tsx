@@ -348,7 +348,7 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
                 <h4 className="font-bold text-white text-lg">Previous Conversations</h4>
                 <button
                   onClick={startNewConversation}
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm"
+                  className="bg-white text-blue-600 hover:bg-gray-100 font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm border border-gray-200"
                 >
                   + New Chat
                 </button>
@@ -369,22 +369,22 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
                   {chatHistory.map((item, index) => (
                     <div 
                       key={index} 
-                      className="bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg p-4 cursor-pointer transition-all duration-200 border border-white border-opacity-20 hover:border-opacity-40"
+                      className="bg-white rounded-lg p-4 cursor-pointer transition-all duration-200 border border-gray-200 hover:border-gray-300 hover:shadow-md"
                       onClick={() => loadPreviousConversation(item)}
                     >
                       <div className="flex items-start space-x-3">
-                        <User className="h-5 w-5 mt-0.5 text-white flex-shrink-0" />
+                        <User className="h-5 w-5 mt-0.5 text-blue-600 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-white mb-2">{item.userQuestion}</p>
+                          <p className="text-sm font-bold text-gray-900 mb-2">{item.userQuestion}</p>
                           <div className="flex items-start space-x-2 mb-3">
-                            <Bot className="h-4 w-4 text-white opacity-80 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-white opacity-90 font-medium line-clamp-2">{item.aiResponse}</p>
+                            <Bot className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-gray-700 font-medium line-clamp-2">{item.aiResponse}</p>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-white opacity-75 font-semibold">
+                            <span className="text-xs text-gray-500 font-semibold">
                               {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString()}
                             </span>
-                            <span className="text-xs bg-white bg-opacity-20 text-white font-bold px-2 py-1 rounded">{item.category}</span>
+                            <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded">{item.category}</span>
                           </div>
                         </div>
                       </div>

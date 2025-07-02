@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   RotateCcw,
   ChevronDown,
+  ChevronRight,
   Trash2
 } from "lucide-react";
 import Header from '@/components/Header';
@@ -135,6 +136,9 @@ const QuestionnairesPage = () => {
   const [manualQuestionRequiresDoc, setManualQuestionRequiresDoc] = useState(false);
   const [manualQuestionDocDescription, setManualQuestionDocDescription] = useState('');
   const [isAddingManualQuestion, setIsAddingManualQuestion] = useState(false);
+  
+  // Question expansion states
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   
   // Independent supporting documents state
   const [uploadedSupportingDocs, setUploadedSupportingDocs] = useState<UploadedSupportingDocument[]>([]);
@@ -1383,6 +1387,19 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Toggle question expansion
+  const toggleQuestionExpansion = (questionId: string) => {
+    setExpandedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
+  };
+
   // Delete checklist
   const deleteChecklist = async (checklist: ChecklistFile) => {
     if (!checklist.checklistId || !selectedVendorId) return;
@@ -1952,7 +1969,22 @@ const QuestionnairesPage = () => {
                           className="border rounded-lg p-6 hover:shadow-md transition-shadow"
                         >
                           <div className="flex items-start justify-between mb-4">
-                            <h4 className="text-lg font-medium text-gray-800 flex-1 pr-4">{question.text}</h4>
+                            <div className="flex items-start space-x-3 flex-1">
+                              {question.answer && (
+                                <button
+                                  onClick={() => toggleQuestionExpansion(question.id)}
+                                  className="mt-1 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                  title={expandedQuestions.has(question.id) ? "Hide answer" : "Show answer"}
+                                >
+                                  {expandedQuestions.has(question.id) ? (
+                                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                                  )}
+                                </button>
+                              )}
+                              <h4 className="text-lg font-medium text-gray-800 flex-1 pr-4">{question.text}</h4>
+                            </div>
                             <div className="flex items-center space-x-2">
                               {question.status === 'pending' && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
@@ -1988,7 +2020,7 @@ const QuestionnairesPage = () => {
                             </div>
                           </div>
                           
-                          {question.answer && (
+                          {question.answer && expandedQuestions.has(question.id) && (
                             <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
                               <h5 className="font-semibold text-purple-900 mb-2">Compliance Response:</h5>
                               {question.isEditing ? (
@@ -2026,6 +2058,15 @@ const QuestionnairesPage = () => {
                                   )}
                                 </div>
                               )}
+                            </div>
+                          )}
+                          
+                          {/* Show a preview hint when answer exists but is collapsed */}
+                          {question.answer && !expandedQuestions.has(question.id) && (
+                            <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg mb-4">
+                              <p className="text-sm text-gray-600 italic">
+                                Answer available - click the arrow to expand
+                              </p>
                             </div>
                           )}
                           
