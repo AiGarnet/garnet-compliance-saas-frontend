@@ -153,7 +153,7 @@ const QuestionnairesPage = () => {
     isProcessing: false
   });
 
-  // Add state for "Send to AI" functionality
+  // Add state for "Generate Responses" functionality
   const [sendingToAI, setSendingToAI] = useState(false);
   
   // File refs
@@ -1627,7 +1627,7 @@ const QuestionnairesPage = () => {
                                       ) : (
                                         <>
                                           <Bot className="h-4 w-4 mr-2" />
-                                          Send to AI
+                                          Generate Responses
                                         </>
                                       )}
                                     </button>
@@ -1902,7 +1902,7 @@ const QuestionnairesPage = () => {
                           
                           {question.answer && (
                             <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg mb-4">
-                              <h5 className="font-semibold text-purple-900 mb-2">AI Generated Answer:</h5>
+                              <h5 className="font-semibold text-purple-900 mb-2">Compliance Response:</h5>
                               {question.isEditing ? (
                                 <div className="space-y-3">
                                   <textarea
@@ -2316,7 +2316,7 @@ const QuestionnairesPage = () => {
                       Processing...
                     </>
                   ) : (
-                    'Send to AI'
+                                            'Generate Responses'
                   )}
                     </button>
                 <button

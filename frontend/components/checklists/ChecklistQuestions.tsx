@@ -208,7 +208,7 @@ export const ChecklistQuestions: React.FC<ChecklistQuestionsProps> = ({
                     <Bot className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-sm font-medium text-blue-900">AI Generated Answer</h5>
+                        <h5 className="text-sm font-medium text-blue-900">Compliance Response</h5>
                         {question.confidenceScore && (
                           <span className={`text-sm font-medium ${getConfidenceColor(question.confidenceScore)}`}>
                             {Math.round(question.confidenceScore * 100)}% confidence
