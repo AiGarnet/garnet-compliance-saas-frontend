@@ -16,7 +16,8 @@ export function getApiEndpoint(path: string): string {
       path.startsWith('/api/analytics') ||
       path.startsWith('/api/activities') ||
       path.startsWith('/api/evidence') ||
-      path.startsWith('/api/trust-portal')) {
+      path.startsWith('/api/trust-portal') ||
+      path.startsWith('/api/help')) {
     const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
     console.log(`🚂 API ROUTING: ${path} → ${RAILWAY_URL}${path}`);
     return `${RAILWAY_URL}${path}`;

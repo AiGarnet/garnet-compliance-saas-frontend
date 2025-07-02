@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Lightbulb
 } from 'lucide-react';
+import { apiCall } from '../../lib/api';
 
 interface ChatMessage {
   id: string;
@@ -79,22 +80,13 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/help/chat', {
+      const data = await apiCall('/api/help/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           question: inputMessage,
           vendorId: vendorId,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const data = await response.json();
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -145,22 +137,13 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/help/chat', {
+      const data = await apiCall('/api/help/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           question: userMessage.content,
           vendorId: vendorId,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to regenerate response');
-      }
-
-      const data = await response.json();
 
       const newBotMessage: ChatMessage = {
         id: Date.now().toString(),
