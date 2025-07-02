@@ -77,25 +77,6 @@ export default function TrustPortalPage() {
     vendor.region?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Get status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-      case 'compliant':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'in review':
-      case 'pending review':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'rejected':
-      case 'non-compliant':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'questionnaire pending':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-    }
-  };
-
   useEffect(() => {
     // Fetch vendors immediately since trust portal is public
     fetchVendors();
@@ -125,7 +106,7 @@ export default function TrustPortalPage() {
               <Shield className="h-8 w-8 text-primary mr-3" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Trust Portal</h1>
-                <p className="text-gray-600">Browse all vendors and explore their compliance portfolios, certifications, and trust information</p>
+                <p className="text-gray-600">Browse vendors and explore their trust information</p>
               </div>
             </div>
 
@@ -144,8 +125,8 @@ export default function TrustPortalPage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Stats Card - Only showing Total Vendors */}
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8 max-w-md">
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -158,42 +139,6 @@ export default function TrustPortalPage() {
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {vendors.length}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Compliant Vendors
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {vendors.filter(v => ['approved', 'compliant'].includes(v.status.toLowerCase())).length}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <FileText className="h-8 w-8 text-purple-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Active Portfolios
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {vendors.filter(v => v.status !== 'Questionnaire Pending').length}
                     </dd>
                   </dl>
                 </div>
@@ -244,7 +189,7 @@ export default function TrustPortalPage() {
                   <p className="text-gray-600">
                     {searchTerm 
                       ? 'Try adjusting your search terms or browse all vendors.' 
-                      : 'Check back later as vendors complete their compliance documentation.'
+                      : 'Check back later as vendors complete their documentation.'
                     }
                   </p>
                 </div>
@@ -262,9 +207,6 @@ export default function TrustPortalPage() {
                               <p className="text-sm text-gray-600">{vendor.industry}</p>
                             )}
                           </div>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(vendor.status)}`}>
-                            {vendor.status}
-                          </span>
                         </div>
 
                         {vendor.description && (
@@ -272,24 +214,6 @@ export default function TrustPortalPage() {
                             {vendor.description}
                           </p>
                         )}
-
-                        {/* Trust Portal Content Indicators */}
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Shield className="h-3 w-3 mr-1" />
-                            <span>Compliance Data</span>
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <FileText className="h-3 w-3 mr-1" />
-                            <span>Portfolio</span>
-                          </div>
-                          {vendor.website && (
-                            <div className="flex items-center text-xs text-green-600">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              <span>Verified</span>
-                            </div>
-                          )}
-                        </div>
 
                         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                           {vendor.region && (
