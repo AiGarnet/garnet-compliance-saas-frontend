@@ -44,6 +44,22 @@ function getAuthToken(): string | null {
   return localStorage.getItem('authToken');
 }
 
+// Helper function to check if user is authenticated
+function isAuthenticated(): boolean {
+  const token = getAuthToken();
+  if (!token) return false;
+  
+  try {
+    // Basic JWT validation - check if token is expired
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const now = Date.now() / 1000;
+    return payload.exp > now;
+  } catch (error) {
+    console.error('Invalid JWT token:', error);
+    return false;
+  }
+}
+
 // API helper functions
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const url = getApiEndpoint(endpoint);
@@ -57,8 +73,20 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
   
   // Add Authorization header if token exists and this isn't a public auth endpoint
   if (token && !endpoint.includes('/api/auth/')) {
+    // Validate token before using it
+    if (!isAuthenticated()) {
+      console.error('❌ EXPIRED OR INVALID TOKEN - Redirecting to login');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      // Only redirect if we're in the browser
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+      throw new Error('Authentication session expired. Please log in again.');
+    }
+    
     headers['Authorization'] = `Bearer ${token}`;
-    console.log('API Call Debug:', {
+    console.log('🔐 API Call with Authentication:', {
       endpoint,
       url,
       hasToken: !!token,
@@ -66,7 +94,7 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
       headers: { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined }
     });
   } else {
-    console.log('API Call Debug:', {
+    console.log('📤 API Call without Authentication:', {
       endpoint,
       url,
       hasToken: !!token,
@@ -75,33 +103,69 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     });
   }
   
-  const response = await fetch(url, {
-    headers,
-    ...options,
-  });
+  try {
+    const response = await fetch(url, {
+      headers,
+      ...options,
+    });
 
-  if (!response.ok) {
-    console.error('API Error Response:', {
+    if (!response.ok) {
+      console.error('❌ API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        endpoint
+      });
+      
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      console.error('❌ API Error Details:', error);
+      
+      // Handle specific authentication errors
+      if (response.status === 401) {
+        console.error('🔒 Authentication failed - clearing tokens and redirecting');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        
+        const authError = new Error(error.message || error.error || 'Authentication failed. Please log in again.');
+        authError.name = 'AuthenticationError';
+        
+        // Only redirect if we're in the browser and not already on login page
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/login')) {
+          setTimeout(() => {
+            window.location.href = '/auth/login';
+          }, 1000);
+        }
+        
+        throw authError;
+      }
+      
+      // Handle organization access errors
+      if (response.status === 403 && error.code === 'MISSING_ORGANIZATION') {
+        console.error('🏢 Organization access required');
+        const orgError = new Error('Organization access required. Please contact your administrator.');
+        orgError.name = 'OrganizationError';
+        throw orgError;
+      }
+      
+      throw new Error(error.message || error.error || `HTTP ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log('✅ API Success Response:', {
+      endpoint,
       status: response.status,
-      statusText: response.statusText,
-      url,
-      endpoint
+      dataType: typeof responseData,
+      hasData: !!responseData
     });
     
-    const error = await response.json().catch(() => ({ error: 'Network error' }));
-    console.error('API Error Details:', error);
-    
-    // Provide more specific error messages for authentication issues
-    if (response.status === 401) {
-      const authError = new Error(error.message || error.error || 'Authentication failed. Please log in again.');
-      authError.name = 'AuthenticationError';
-      throw authError;
+    return responseData;
+  } catch (fetchError) {
+    if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+      console.error('🌐 Network Error - Server may be unreachable:', fetchError);
+      throw new Error('Unable to connect to server. Please check your internet connection and try again.');
     }
-    
-    throw new Error(error.message || error.error || `HTTP ${response.status}`);
+    throw fetchError;
   }
-
-  return response.json();
 }
 
 // File upload helper for evidence files

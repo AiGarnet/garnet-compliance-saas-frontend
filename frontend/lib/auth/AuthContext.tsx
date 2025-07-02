@@ -64,14 +64,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedToken = localStorage.getItem('authToken');
         const storedUser = localStorage.getItem('userData');
 
+        console.log('🔍 Initializing Auth Context:', {
+          hasStoredToken: !!storedToken,
+          hasStoredUser: !!storedUser,
+          tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'none'
+        });
+
         if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-          // Also set cookie for middleware access
-          setCookie('authToken', storedToken);
+          // Validate JWT token
+          try {
+            const payload = JSON.parse(atob(storedToken.split('.')[1]));
+            const now = Date.now() / 1000;
+            
+            if (payload.exp <= now) {
+              console.error('🔒 Stored token is expired, clearing auth data');
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('userData');
+              removeCookie('authToken');
+              return;
+            }
+            
+            console.log('✅ Valid token found, setting user state');
+            setToken(storedToken);
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            // Also set cookie for middleware access
+            setCookie('authToken', storedToken);
+            
+            console.log('👤 User authenticated:', {
+              userId: userData.id,
+              email: userData.email,
+              role: userData.role,
+              organizationId: userData.organization_id,
+              organization: userData.organization
+            });
+          } catch (tokenError) {
+            console.error('🔒 Invalid JWT token format:', tokenError);
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            removeCookie('authToken');
+          }
+        } else {
+          console.log('📝 No stored authentication found');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('❌ Error initializing auth:', error);
         // Clear invalid data
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
@@ -86,10 +123,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔑 Attempting login for:', email);
       const data = await auth.login({ email, password });
+
+      console.log('✅ Login successful, processing response:', {
+        hasAccessToken: !!data.access_token,
+        hasToken: !!data.token,
+        hasUser: !!data.user,
+        userEmail: data.user?.email,
+        userRole: data.user?.role,
+        organizationId: data.user?.organization_id,
+        organization: data.user?.organization
+      });
 
       // The backend returns 'access_token', not 'token'
       const token = data.access_token || data.token; // Support both for compatibility
+      
+      if (!token) {
+        throw new Error('No authentication token received from server');
+      }
+      
+      if (!data.user) {
+        throw new Error('No user data received from server');
+      }
       
       // Store auth data in both localStorage and cookies
       localStorage.setItem('authToken', token);
@@ -99,17 +155,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(token);
       setUser(data.user);
 
+      console.log('💾 Authentication data stored successfully');
+
       // Check for redirect parameter
       const urlParams = new URLSearchParams(window.location.search);
       const redirectTo = urlParams.get('redirect');
       
       if (redirectTo) {
+        console.log('↩️ Redirecting to:', redirectTo);
         router.push(redirectTo);
       } else {
         // Default redirect based on role
-        router.push(getDefaultRoute(data.user.role));
+        const defaultRoute = getDefaultRoute(data.user.role);
+        console.log('🏠 Redirecting to default route:', defaultRoute);
+        router.push(defaultRoute);
       }
     } catch (error) {
+      console.error('❌ Login failed:', error);
       throw error;
     }
   };

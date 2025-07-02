@@ -141,6 +141,19 @@ function DashboardContent() {
 
   // Initial fetch on component mount
   useEffect(() => {
+    // Debug authentication state
+    console.log('🔍 Dashboard Authentication Check:', {
+      user,
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      userRole: user?.role,
+      organizationId: user?.organization_id,
+      organization: user?.organization,
+      authToken: typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : 'N/A',
+      userData: typeof window !== 'undefined' ? !!localStorage.getItem('userData') : 'N/A'
+    });
+    
     fetchVendors();
   }, []);
 
@@ -290,7 +303,23 @@ function DashboardContent() {
 
   const handleAddVendor = async (vendorData: any) => {
     try {
-      console.log('Creating vendor with data:', vendorData);
+      console.log('🔄 Creating vendor with data:', vendorData);
+      console.log('👤 Current user context:', {
+        userId: user?.id,
+        userEmail: user?.email,
+        organizationId: user?.organization_id,
+        organization: user?.organization,
+        role: user?.role
+      });
+      
+      // Check if user is authenticated and has organization
+      if (!user) {
+        throw new Error('You must be logged in to create vendors');
+      }
+      
+      if (!user.organization_id) {
+        throw new Error('You must be associated with an organization to create vendors');
+      }
       
       // Map form data to API format
       const apiData = {
@@ -304,7 +333,9 @@ function DashboardContent() {
         status: vendorData.status || 'Questionnaire Pending'
       };
       
+      console.log('📤 Sending vendor creation request:', apiData);
       const result = await vendorAPI.create(apiData);
+      console.log('📥 Vendor creation response:', result);
       
       if (result.success && result.data) {
         addToast({
@@ -321,14 +352,37 @@ function DashboardContent() {
         throw new Error(result.error?.message || 'Failed to create vendor');
       }
     } catch (error: any) {
-      console.error('Error adding vendor:', error);
+      console.error('❌ Error adding vendor:', error);
+      
+      let errorMessage = 'Failed to add client. Please try again.';
+      let errorTitle = 'Error';
+      
+      // Handle specific error types
+      if (error.name === 'AuthenticationError') {
+        errorTitle = 'Authentication Required';
+        errorMessage = 'Your session has expired. Please log in again.';
+      } else if (error.name === 'OrganizationError') {
+        errorTitle = 'Organization Access Required';
+        errorMessage = 'You need to be associated with an organization to create clients.';
+      } else if (error.message.includes('organization')) {
+        errorTitle = 'Organization Required';
+        errorMessage = 'Organization access is required to create clients.';
+      } else if (error.message.includes('authentication') || error.message.includes('login')) {
+        errorTitle = 'Authentication Required';
+        errorMessage = 'Please log in to continue.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       addToast({
         type: 'error',
-        title: 'Error',
-        message: error.message || 'Failed to add client. Please try again.',
-        duration: 5000
+        title: errorTitle,
+        message: errorMessage,
+        duration: 7000
       });
-      throw error;
+      
+      // Don't throw the error to prevent the modal from staying open unnecessarily
+      // throw error;
     }
   };
 
