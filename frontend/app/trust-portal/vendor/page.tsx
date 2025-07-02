@@ -21,7 +21,9 @@ import {
   Clock,
   User,
   MessageCircle,
-  ArrowLeft
+  ArrowLeft,
+  List,
+  HelpCircle
 } from 'lucide-react';
 import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -61,6 +63,11 @@ function VendorTrustPortalContent() {
   });
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // New state for real-time trust portal data
+  const [trustPortalItems, setTrustPortalItems] = useState<any[]>([]);
+  const [checklistsCount, setChecklistsCount] = useState(0);
+  const [documentsCount, setDocumentsCount] = useState(0);
+
   // Fetch vendor trust portal data
   const fetchVendorData = async () => {
     if (!vendorId) {
@@ -92,12 +99,49 @@ function VendorTrustPortalContent() {
           console.log('Could not fetch feedback - user may not have permission');
         }
       }
+
+      // Fetch real-time trust portal items (questionnaires sent to trust portal)
+      await fetchTrustPortalItems();
       
     } catch (err: any) {
       console.error('Error fetching vendor data:', err);
       setError('Failed to load vendor trust portal. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fetch trust portal items that were explicitly sent to trust portal
+  const fetchTrustPortalItems = async () => {
+    if (!vendorId) return;
+
+    try {
+      // Fetch trust portal items (questionnaires/checklists sent to trust portal)
+      const response = await fetch(`/api/trust-portal/vendor/${vendorId}`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Filter for questionnaire items only (sent via "Send to Trust Portal")
+        const questionnaireItems = (data.trustPortalItems || []).filter((item: any) => 
+          item.isQuestionnaireAnswer === true || 
+          item.category === 'Compliance Questionnaire'
+        );
+        
+        setTrustPortalItems(questionnaireItems);
+        
+        // Count checklists and documents that were sent to trust portal
+        const checklistItems = questionnaireItems.filter((item: any) => 
+          item.category === 'Compliance Questionnaire'
+        );
+        const documentItems = (data.sharedDocuments || []).filter((doc: any) => 
+          doc.shareToTrustPortal === true
+        );
+        
+        setChecklistsCount(checklistItems.length);
+        setDocumentsCount(documentItems.length);
+      }
+    } catch (error) {
+      console.error('Error fetching trust portal items:', error);
     }
   };
 
@@ -171,7 +215,7 @@ function VendorTrustPortalContent() {
     );
   }
 
-  const { vendor, sharedDocuments, vendorWorks } = vendorData;
+  const { vendor } = vendorData;
 
   return (
     <>
@@ -258,7 +302,7 @@ function VendorTrustPortalContent() {
                   </h2>
                 </div>
                 <div className="p-6">
-                  {sharedDocuments.length === 0 ? (
+                  {trustPortalItems.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No documents shared</h3>
@@ -266,33 +310,33 @@ function VendorTrustPortalContent() {
                     </div>
                   ) : (
                     <div className="grid gap-4">
-                      {sharedDocuments.map((doc) => (
-                        <div key={doc.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      {trustPortalItems.map((item) => (
+                        <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <h4 className="text-lg font-medium text-gray-900 mb-1">
-                                {doc.documentTitle}
+                                {item.title}
                               </h4>
-                              {doc.documentDescription && (
+                              {item.description && (
                                 <p className="text-sm text-gray-600 mb-2">
-                                  {doc.documentDescription}
+                                  {item.description}
                                 </p>
                               )}
                               <div className="flex items-center space-x-4 text-xs text-gray-500">
                                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                  {doc.documentCategory}
+                                  {item.category}
                                 </span>
-                                {doc.fileType && (
-                                  <span>{doc.fileType.toUpperCase()}</span>
+                                {item.fileType && (
+                                  <span>{item.fileType.toUpperCase()}</span>
                                 )}
-                                {doc.fileSize && (
-                                  <span>{Math.round(doc.fileSize / 1024)} KB</span>
+                                {item.fileSize && (
+                                  <span>{Math.round(item.fileSize / 1024)} KB</span>
                                 )}
                               </div>
                             </div>
-                            {doc.fileUrl && (
+                            {item.fileUrl && (
                               <a
-                                href={doc.fileUrl}
+                                href={item.fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="ml-4 flex items-center text-blue-600 hover:text-blue-800 text-sm"
@@ -309,68 +353,87 @@ function VendorTrustPortalContent() {
                 </div>
               </div>
 
-              {/* Vendor Works */}
+              {/* Questionnaires */}
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                    <Star className="h-6 w-6 mr-2 text-yellow-600" />
-                    Portfolio & Case Studies
+                    <HelpCircle className="h-6 w-6 mr-2 text-blue-600" />
+                    Questionnaires
                   </h2>
                 </div>
                 <div className="p-6">
-                  {vendorWorks.length === 0 ? (
+                  {trustPortalItems.length === 0 ? (
                     <div className="text-center py-8">
-                      <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No portfolio items</h3>
-                      <p className="text-gray-600">This vendor hasn't shared any portfolio items yet.</p>
+                      <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No questionnaires shared</h3>
+                      <p className="text-gray-600">This vendor hasn't submitted any questionnaires to the trust portal yet.</p>
                     </div>
                   ) : (
-                    <div className="grid gap-6">
-                      {vendorWorks.map((work) => (
-                        <div key={work.id} className="border border-gray-200 rounded-lg p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h4 className="text-xl font-semibold text-gray-900 mb-2">
-                                {work.projectName}
-                              </h4>
-                              {work.clientName && (
+                    <div className="space-y-6">
+                      {trustPortalItems.map((questionnaire) => {
+                        let content;
+                        try {
+                          content = questionnaire.content ? JSON.parse(questionnaire.content) : null;
+                        } catch (e) {
+                          content = null;
+                        }
+                        
+                        return (
+                          <div key={questionnaire.id} className="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                                  {questionnaire.title}
+                                </h4>
                                 <p className="text-sm text-gray-600 mb-2">
-                                  Client: {work.clientName}
+                                  {questionnaire.description}
                                 </p>
-                              )}
+                              </div>
+                              <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+                                {content?.status || 'Submitted'}
+                              </span>
                             </div>
-                            <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
-                              {work.status}
-                            </span>
-                          </div>
-                          
-                          <p className="text-gray-700 mb-4">{work.description}</p>
-                          
-                          <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
-                            <span className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {new Date(work.startDate).toLocaleDateString()}
-                              {work.endDate && ` - ${new Date(work.endDate).toLocaleDateString()}`}
-                            </span>
-                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {work.category}
-                            </span>
-                          </div>
-                          
-                          {Array.isArray(work.technologies) && work.technologies.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {safeMap(work.technologies, (tech: string, index) => (
-                                <span
-                                  key={index}
-                                  className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded"
-                                >
-                                  {tech}
+                            
+                            {content && (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-blue-600">{content.questionCount || 0}</div>
+                                  <div className="text-sm text-gray-600">Total Questions</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-green-600">{content.completedQuestions || 0}</div>
+                                  <div className="text-sm text-gray-600">Completed</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-purple-600">{content.checklistName ? 1 : 0}</div>
+                                  <div className="text-sm text-gray-600">Checklists</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm text-gray-600">Submitted</div>
+                                  <div className="text-sm font-medium">{new Date(questionnaire.createdAt).toLocaleDateString()}</div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4 text-sm">
+                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                  {questionnaire.category}
                                 </span>
-                              ))}
+                                {content?.checklistName && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                    From: {content.checklistName}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                {new Date(questionnaire.createdAt).toLocaleDateString()}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -403,29 +466,17 @@ function VendorTrustPortalContent() {
                 </div>
               </div>
 
-              {/* Compliance Status */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Status</h3>
-                <div className="flex items-center">
-                  <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
-                  <div>
-                    <p className="font-medium text-gray-900">{vendor.status || 'Under Review'}</p>
-                    <p className="text-sm text-gray-600">Last updated: {new Date().toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Quick Stats */}
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Documents Shared:</span>
-                    <span className="font-medium">{sharedDocuments.length}</span>
+                    <span className="font-medium">{documentsCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Portfolio Items:</span>
-                    <span className="font-medium">{vendorWorks.length}</span>
+                    <span className="text-gray-600">Checklists Uploaded:</span>
+                    <span className="font-medium">{checklistsCount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Last Updated:</span>

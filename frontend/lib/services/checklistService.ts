@@ -391,4 +391,75 @@ export class ChecklistService {
       throw error;
     }
   }
+
+  /**
+   * Check if checklist is ready to send to trust portal
+   * (all questions completed, all required documents uploaded)
+   */
+  static async checkChecklistCompletionStatus(checklistId: string, vendorId: string): Promise<{
+    isComplete: boolean;
+    totalQuestions: number;
+    completedQuestions: number;
+    questionsNeedingDocs: number;
+    questionsWithDocs: number;
+    incompleteQuestions: ChecklistQuestion[];
+  }> {
+    try {
+      const questions = await this.getChecklistQuestions(checklistId, vendorId);
+      const completedQuestions = questions.filter(q => q.status === 'completed' && q.aiAnswer?.trim());
+      const questionsNeedingDocs = questions.filter(q => q.requiresDocument);
+      
+      // Check which questions needing docs actually have docs
+      const questionsWithDocs: ChecklistQuestion[] = [];
+      for (const question of questionsNeedingDocs) {
+        const docs = await this.getVendorSupportingDocuments(vendorId);
+        // Filter docs for this specific question
+        const questionDocs = docs.filter(doc => doc.questionId === question.id);
+        if (questionDocs.length > 0) {
+          questionsWithDocs.push(question);
+        }
+      }
+      
+      const incompleteQuestions = questions.filter(q => {
+        const hasAnswer = q.status === 'completed' && q.aiAnswer?.trim();
+        const needsDoc = q.requiresDocument;
+        const hasDoc = questionsWithDocs.some(qwd => qwd.id === q.id);
+        
+        return !hasAnswer || (needsDoc && !hasDoc);
+      });
+      
+      return {
+        isComplete: incompleteQuestions.length === 0 && questions.length > 0,
+        totalQuestions: questions.length,
+        completedQuestions: completedQuestions.length,
+        questionsNeedingDocs: questionsNeedingDocs.length,
+        questionsWithDocs: questionsWithDocs.length,
+        incompleteQuestions
+      };
+    } catch (error) {
+      console.error('Error checking checklist completion:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send completed checklist to Trust Portal
+   */
+  static async sendChecklistToTrustPortal(
+    checklistId: string, 
+    vendorId: string, 
+    submitData?: { message?: string; title?: string }
+  ): Promise<{ trustPortalId: string; itemCount: number }> {
+    try {
+      const response = await apiCall(`${this.BASE_URL}/${checklistId}/vendor/${vendorId}/send-to-trust-portal`, {
+        method: 'POST',
+        body: JSON.stringify(submitData || {}),
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Error sending checklist to Trust Portal:', error);
+      throw error;
+    }
+  }
 } 
