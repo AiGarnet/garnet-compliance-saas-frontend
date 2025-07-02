@@ -184,11 +184,15 @@ const QuestionnairesPage = () => {
 
   useEffect(() => {
     setHasMounted(true);
-    // Only load vendors after authentication is ready
-    if (!authLoading && token) {
+  }, []);
+
+  // Separate effect for loading vendors after authentication is ready
+  useEffect(() => {
+    if (!authLoading && hasMounted) {
+      // Load vendors when auth is ready (token will be handled by apiCall)
       loadVendors();
     }
-  }, [authLoading, token]);
+  }, [authLoading, hasMounted]);
 
   // Load vendor-specific data when vendor is selected
   useEffect(() => {
@@ -1524,7 +1528,8 @@ const QuestionnairesPage = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/trust-portal/items', {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/trust-portal/items`, {
         method: 'POST',
         headers,
         body: JSON.stringify(trustPortalData),
@@ -1592,7 +1597,8 @@ const QuestionnairesPage = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/trust-portal/items', {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/trust-portal/items`, {
         method: 'POST',
         headers,
         body: JSON.stringify(trustPortalData),
