@@ -365,4 +365,30 @@ export class ChecklistService {
       throw error;
     }
   }
+
+  /**
+   * Get total checklist count for an organization
+   */
+  static async getOrganizationChecklistCount(organizationId: string): Promise<number> {
+    try {
+      const response = await apiCall(`${this.BASE_URL}/organizations/${organizationId}/count`);
+      return response.count || 0;
+    } catch (error) {
+      console.error('Error fetching organization checklist count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total supporting documents count for an organization
+   */
+  static async getOrganizationSupportingDocumentsCount(organizationId: string): Promise<number> {
+    try {
+      const response = await apiCall(`${this.BASE_URL}/organizations/${organizationId}/supporting-documents/count`);
+      return response.count || 0;
+    } catch (error) {
+      console.error('Error fetching organization supporting documents count:', error);
+      throw error;
+    }
+  }
 } 

@@ -376,6 +376,9 @@ export const evidence = {
   
   // Get evidence count for a vendor
   getCount: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/evidence/count`),
+
+  // Get total evidence count for an organization
+  getOrganizationCount: (organizationId: string) => apiCall(`/api/organizations/${organizationId}/evidence/count`),
   
   // Download evidence file
   download: async (vendorId: string, evidenceId: string) => {

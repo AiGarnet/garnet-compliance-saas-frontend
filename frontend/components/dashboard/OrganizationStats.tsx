@@ -11,10 +11,14 @@ import {
   Eye,
   FileText,
   Shield,
-  Activity
+  Activity,
+  Upload,
+  List
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import activityApiService from '@/lib/services/activityApiService';
+import { ChecklistService } from '@/lib/services/checklistService';
+import { evidence } from '@/lib/api';
 
 interface OrganizationStatsData {
   totalVendors: number;
@@ -24,8 +28,8 @@ interface OrganizationStatsData {
   totalQuestionnaires: number;
   completedQuestionnaires: number;
   pendingQuestionnaires: number;
-  totalTrustPortalViews: number;
-  complianceScore: number;
+  supportingDocumentsCount: number;
+  checklistsUploadedCount: number;
   organizationName: string;
   recentActivity: number;
 }
@@ -117,8 +121,18 @@ export const OrganizationStats: React.FC = () => {
       setIsLoading(true);
       setError('');
 
-      // Fetch vendors for the organization
-      const vendorsResponse = await activityApiService.getVendors();
+      // Fetch data in parallel for better performance
+      const [
+        vendorsResponse,
+        activityResponse,
+        supportingDocsCountResponse,
+        checklistsCountResponse
+      ] = await Promise.all([
+        activityApiService.getVendors(),
+        activityApiService.getRecentActivities(10, user.id),
+        ChecklistService.getOrganizationSupportingDocumentsCount(user.organization_id).catch(() => 0),
+        ChecklistService.getOrganizationChecklistCount(user.organization_id).catch(() => 0)
+      ]);
       
       if (!vendorsResponse.success) {
         throw new Error(vendorsResponse.error?.message || 'Failed to fetch vendor data');
@@ -133,29 +147,24 @@ export const OrganizationStats: React.FC = () => {
         return acc;
       }, {});
 
-      // Fetch recent activity count
-      const activityResponse = await activityApiService.getRecentActivities(10, user.id);
       const recentActivityCount = activityResponse.success ? (activityResponse.data?.length || 0) : 0;
 
-      // Calculate compliance score based on vendor statuses
+      // Calculate total vendors
       const totalVendors = vendors.length;
-      const approvedVendors = vendorsByStatus['Approved'] || 0;
-      const complianceScore = totalVendors > 0 ? Math.round((approvedVendors / totalVendors) * 100) : 0;
 
-      // Mock data for features not yet implemented
-      const mockStats: OrganizationStatsData = {
+      const organizationStats: OrganizationStatsData = {
         totalVendors,
         vendorsByStatus,
         totalQuestionnaires: vendors.length * 2, // Assume 2 questionnaires per vendor
-        completedQuestionnaires: approvedVendors * 2,
-        pendingQuestionnaires: (totalVendors - approvedVendors) * 2,
-        totalTrustPortalViews: Math.floor(Math.random() * 500) + 100, // Mock data
-        complianceScore,
+        completedQuestionnaires: (vendorsByStatus['Approved'] || 0) * 2,
+        pendingQuestionnaires: (totalVendors - (vendorsByStatus['Approved'] || 0)) * 2,
+        supportingDocumentsCount: supportingDocsCountResponse,
+        checklistsUploadedCount: checklistsCountResponse,
         organizationName: user.organization || 'Your Organization',
         recentActivity: recentActivityCount
       };
 
-      setStats(mockStats);
+      setStats(organizationStats);
     } catch (err: any) {
       console.error('Error fetching organization stats:', err);
       setError(err.message || 'Failed to load organization statistics');
@@ -166,6 +175,17 @@ export const OrganizationStats: React.FC = () => {
 
   useEffect(() => {
     fetchOrganizationStats();
+  }, [user?.organization_id]);
+
+  // Set up auto-refresh every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (user?.organization_id) {
+        fetchOrganizationStats();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, [user?.organization_id]);
 
   if (error) {
@@ -201,7 +221,7 @@ export const OrganizationStats: React.FC = () => {
                 {isLoading ? 'Loading...' : (stats?.organizationName || 'Organization Dashboard')}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Real-time organizational metrics and compliance overview
+                Comprehensive compliance overview across all vendors
               </p>
             </div>
           </div>
@@ -229,12 +249,20 @@ export const OrganizationStats: React.FC = () => {
         />
 
         <StatCard
-          title="Compliance Score"
-          value={`${stats?.complianceScore || 0}%`}
-          subtitle={`${stats?.vendorsByStatus?.['Approved'] || 0} approved vendors`}
-          icon={<Shield className="w-6 h-6" />}
-          color={stats && stats.complianceScore >= 80 ? 'success' : stats && stats.complianceScore >= 60 ? 'warning' : 'danger'}
-          trend={stats && stats.complianceScore >= 70 ? '+12% this month' : undefined}
+          title="Supporting Documents Uploaded"
+          value={stats?.supportingDocumentsCount || 0}
+          subtitle="Across all vendors"
+          icon={<Upload className="w-6 h-6" />}
+          color="success"
+          isLoading={isLoading}
+        />
+
+        <StatCard
+          title="Checklists Uploaded"
+          value={stats?.checklistsUploadedCount || 0}
+          subtitle="Organization-wide total"
+          icon={<List className="w-6 h-6" />}
+          color="info"
           isLoading={isLoading}
         />
 
@@ -243,49 +271,10 @@ export const OrganizationStats: React.FC = () => {
           value={stats?.completedQuestionnaires || 0}
           subtitle={`${stats?.pendingQuestionnaires || 0} pending completion`}
           icon={<FileText className="w-6 h-6" />}
-          color="info"
-          isLoading={isLoading}
-        />
-
-        <StatCard
-          title="Trust Portal Views"
-          value={stats?.totalTrustPortalViews || 0}
-          subtitle="+24% from last week"
-          icon={<Eye className="w-6 h-6" />}
-          color="success"
-          trend="+24%"
+          color="warning"
           isLoading={isLoading}
         />
       </div>
-
-      {/* Vendor Status Breakdown */}
-      {!isLoading && stats && Object.keys(stats.vendorsByStatus).length > 0 && (
-        <div className="bg-white dark:bg-card-bg p-6 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Vendor Status Breakdown
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(stats.vendorsByStatus).map(([status, count]) => {
-              const getStatusColor = (status: string) => {
-                switch (status.toLowerCase()) {
-                  case 'approved': return 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400';
-                  case 'in review': return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
-                  case 'pending review': return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400';
-                  case 'questionnaire pending': return 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400';
-                  default: return 'text-gray-600 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-400';
-                }
-              };
-
-              return (
-                <div key={status} className={`p-4 rounded-lg ${getStatusColor(status)}`}>
-                  <div className="text-2xl font-bold mb-1">{count}</div>
-                  <div className="text-sm font-medium">{status}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }; 
