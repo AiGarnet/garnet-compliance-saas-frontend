@@ -34,6 +34,7 @@ import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { vendors as vendorAPI } from '@/lib/api';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
+import ChatbotAssistance from '@/components/help/ChatbotAssistance';
 
 interface ExtractedQuestion {
   id: string;
@@ -137,10 +138,7 @@ const QuestionnairesPage = () => {
   const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentQuestion: '' });
   
-  // Support states
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const [selectedQuestionForSupport, setSelectedQuestionForSupport] = useState<ExtractedQuestion | null>(null);
-  const [supportDescription, setSupportDescription] = useState('');
+
   
 
   
@@ -1284,27 +1282,7 @@ const QuestionnairesPage = () => {
     }
   };
 
-  // Support ticket functions
-  const createSupportTicket = (question: ExtractedQuestion) => {
-    const newTicket: SupportTicket = {
-      id: `ticket-${Date.now()}`,
-      questionId: question.id,
-      title: `Help with: ${question.text.substring(0, 50)}...`,
-      status: 'open',
-      priority: 'medium',
-      createdAt: new Date()
-    };
 
-    setSupportTickets(prev => [...prev, newTicket]);
-    setShowSupportModal(false);
-    setSupportDescription('');
-    
-    setExtractedQuestions(prev => prev.map(q => 
-      q.id === question.id 
-        ? { ...q, status: 'needs-support' }
-        : q
-    ));
-  };
 
   // Drag and drop handlers for CHECKLIST UPLOAD ONLY
   const handleDrag = (e: React.DragEvent) => {
@@ -2013,31 +1991,11 @@ const QuestionnairesPage = () => {
                                 <RefreshCw className="h-3 w-3 mr-1" />
                                 Regenerate
                               </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedQuestionForSupport(question);
-                                  setShowSupportModal(true);
-                                }}
-                                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center text-sm"
-                              >
-                                <HelpCircle className="h-3 w-3 mr-1" />
-                                Need Help
-                              </button>
+
                             </div>
                           )}
 
-                          {question.status === 'needs-support' && (
-                            <button
-                              onClick={() => {
-                                setSelectedQuestionForSupport(question);
-                                setShowSupportModal(true);
-                              }}
-                              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
-                            >
-                              <HelpCircle className="h-4 w-4 mr-2" />
-                              Request Help
-                            </button>
-                          )}
+
                         </div>
                       ))}
                           </div>
@@ -2313,90 +2271,22 @@ const QuestionnairesPage = () => {
                 <div className="text-center mb-8">
                   <LifeBuoy className="h-16 w-16 text-orange-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Request Assistance</h2>
-                  <p className="text-lg text-gray-600">Get help from our compliance experts when you need it</p>
+                  <p className="text-lg text-gray-600">Get instant help from our compliance experts using our AI-powered assistant</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Create Support Ticket */}
-                  <div className="space-y-6">
-                    <div className="bg-orange-50 p-6 rounded-lg">
-                      <HelpCircle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-center mb-4">Need Help?</h3>
-                      <p className="text-gray-600 text-center mb-6">
-                        Our compliance experts are here to help you with any questions or challenges
-                      </p>
-                      
-                  <button
-                        onClick={() => setShowSupportModal(true)}
-                        className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
-                  >
-                        <MessageCircle className="h-5 w-5 mr-2" />
-                        Open Support Ticket
-                  </button>
-                </div>
-
-                    {/* Quick Actions */}
-                    <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-gray-900">Quick Actions</h4>
-                      <div className="space-y-3">
-                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                          <MessageSquare className="h-5 w-5 mr-3 text-gray-600" />
-                          <div>
-                            <div className="font-medium">Start Live Chat</div>
-                            <div className="text-sm text-gray-500">Get instant help from our team</div>
-            </div>
-                        </button>
-                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                          <FileText className="h-5 w-5 mr-3 text-gray-600" />
-                  <div>
-                            <div className="font-medium">View Documentation</div>
-                            <div className="text-sm text-gray-500">Browse our compliance guides</div>
+                {selectedVendorId ? (
+                  <ChatbotAssistance vendorId={selectedVendorId} />
+                ) : (
+                  <div className="text-center py-12 border border-gray-200 rounded-lg">
+                    <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Select a Vendor First
+                    </h3>
+                    <p className="text-gray-500">
+                      Please select a vendor from the dropdown above to request assistance.
+                    </p>
                   </div>
-                    </button>
-                        <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                          <Download className="h-5 w-5 mr-3 text-gray-600" />
-                          <div>
-                            <div className="font-medium">Download Templates</div>
-                            <div className="text-sm text-gray-500">Get compliance templates and checklists</div>
-                          </div>
-                        </button>
-                    </div>
-                  </div>
-                </div>
-                
-                  {/* Active Support Tickets */}
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-semibold text-gray-900">Active Support Tickets</h3>
-                    
-                    {supportTickets.length === 0 ? (
-                      <div className="text-center py-8 border border-gray-200 rounded-lg">
-                        <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">No active support tickets</p>
-                </div>
-              ) : (
-                                            <div className="space-y-4">
-                        {safeMap(supportTickets, (ticket: SupportTicket) => (
-                          <div key={ticket.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-gray-900">#{ticket.id.slice(-6)}</span>
-                              <span className={`px-3 py-1 rounded-full text-sm ${
-                                ticket.status === 'open' ? 'bg-red-100 text-red-800' :
-                                ticket.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {ticket.status.replace('-', ' ')}
-                              </span>
-                            </div>
-                            <h4 className="font-medium text-gray-800 mb-1">{ticket.title}</h4>
-                            <p className="text-sm text-gray-500">
-                              Created {ticket.createdAt.toLocaleDateString()}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-              )}
-            </div>
-                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2441,91 +2331,7 @@ const QuestionnairesPage = () => {
                 </div>
         )}
 
-        {/* Support Modal */}
-        {showSupportModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Request Assistance</h3>
-                    <button
-                  onClick={() => setShowSupportModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                    >
-                  <X className="h-5 w-5" />
-                    </button>
-                  </div>
-              
-                  <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Question (Optional)
-                      </label>
-                      <select
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    onChange={(e) => {
-                      const questionId = e.target.value;
-                      const question = extractedQuestions.find(q => q.id === questionId);
-                      setSelectedQuestionForSupport(question || null);
-                    }}
-                  >
-                                        <option value="">General support request</option>
-                    {safeMap(extractedQuestions, (question: ExtractedQuestion) => (
-                      <option key={question.id} value={question.id}>
-                        {question.text.substring(0, 50)}...
-                      </option>
-                    ))}
-                      </select>
-                    </div>
 
-                          <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issue Description
-                  </label>
-                  <textarea
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    rows={3}
-                    placeholder="Describe what you need help with..."
-                    value={supportDescription}
-                    onChange={(e) => setSupportDescription(e.target.value)}
-                  />
-                          </div>
-                
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setShowSupportModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (selectedQuestionForSupport) {
-                        createSupportTicket(selectedQuestionForSupport);
-                      } else {
-                        // Create general support ticket
-                        const generalTicket: SupportTicket = {
-                          id: `ticket-${Date.now()}`,
-                          questionId: 'general',
-                          title: 'General support request',
-                          status: 'open',
-                          priority: 'medium',
-                          createdAt: new Date()
-                        };
-                        setSupportTickets(prev => [...prev, generalTicket]);
-                        setShowSupportModal(false);
-                        setSupportDescription('');
-                      }
-                    }}
-                    disabled={!supportDescription.trim()}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
-                  >
-                    Create Ticket
-                  </button>
-                  </div>
-              </div>
-              </div>
-            </div>
-          )}
         </main>
     </>
   );
