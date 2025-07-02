@@ -167,6 +167,12 @@ const QuestionnairesPage = () => {
   // Add state for "Generate Responses" functionality
   const [sendingToAI, setSendingToAI] = useState(false);
   
+  // NEW: Add state for trust portal functionality
+  const [sendingToTrustPortal, setSendingToTrustPortal] = useState(false);
+  const [sendingQuestionId, setSendingQuestionId] = useState<string | null>(null);
+  const [sendingDocumentId, setSendingDocumentId] = useState<string | null>(null);
+  const [trustPortalProgress, setTrustPortalProgress] = useState({ current: 0, total: 0, item: '' });
+  
   // File refs
   const checklistFileRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -1450,23 +1456,231 @@ const QuestionnairesPage = () => {
 
   // Helper function to group questions by checklist
   const groupQuestionsByChecklist = (questions: ExtractedQuestion[]) => {
-    const grouped = questions.reduce((acc, question) => {
-      const checklistId = question.checklistId || 'unknown';
-      const checklistName = question.checklistName || 'Unknown Checklist';
+    const checklistMap = new Map();
+    
+    questions.forEach(question => {
+      const checklistId = question.checklistId || 'manual';
+      const checklistName = question.checklistName || 'Manual Questions';
       
-      if (!acc[checklistId]) {
-        acc[checklistId] = {
+      if (!checklistMap.has(checklistId)) {
+        checklistMap.set(checklistId, {
           id: checklistId,
           name: checklistName,
           questions: []
-        };
+        });
       }
       
-      acc[checklistId].questions.push(question);
-      return acc;
-    }, {} as Record<string, { id: string; name: string; questions: ExtractedQuestion[] }>);
+      checklistMap.get(checklistId).questions.push(question);
+    });
     
-    return Object.values(grouped);
+    return Array.from(checklistMap.values());
+  };
+
+  // NEW: Trust Portal Functions
+
+  /**
+   * Send supporting document to trust portal (one-click)
+   */
+  const sendSupportingDocumentToTrustPortal = async (document: UploadedSupportingDocument) => {
+    if (!selectedVendorId) {
+      setUploadError('Please select a vendor first');
+      return;
+    }
+
+    setSendingDocumentId(document.id);
+    setSendingToTrustPortal(true);
+
+    try {
+      // Create trust portal entry for supporting document
+      const trustPortalData = {
+        title: `Supporting Document: ${document.originalName}`,
+        description: document.description || `Supporting document uploaded for compliance review`,
+        category: document.category || 'Supporting Documents',
+        fileUrl: document.spacesUrl,
+        fileType: document.fileType,
+        fileSize: document.fileSize.toString(),
+        vendorId: parseInt(selectedVendorId),
+        isQuestionnaireAnswer: false,
+        content: JSON.stringify({
+          documentId: document.id,
+          filename: document.filename,
+          originalName: document.originalName,
+          uploadDate: document.uploadDate,
+          description: document.description,
+          category: document.category
+        })
+      };
+
+      const response = await fetch('/api/trust-portal/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trustPortalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send document to trust portal');
+      }
+
+      alert('Document successfully sent to Trust Portal!');
+
+    } catch (error) {
+      console.error('Error sending document to trust portal:', error);
+      alert('Failed to send document to trust portal. Please try again.');
+    } finally {
+      setSendingDocumentId(null);
+      setSendingToTrustPortal(false);
+    }
+  };
+
+  /**
+   * Send individual question to trust portal (for manual questions)
+   */
+  const sendQuestionToTrustPortal = async (question: ExtractedQuestion) => {
+    if (!selectedVendorId) {
+      setUploadError('Please select a vendor first');
+      return;
+    }
+
+    if (!question.answer || question.answer.trim() === '') {
+      alert('Question must have an answer before sending to trust portal');
+      return;
+    }
+
+    setSendingQuestionId(question.id);
+    setSendingToTrustPortal(true);
+
+    try {
+      // Create trust portal entry for individual question
+      const trustPortalData = {
+        title: `Question: ${question.text.length > 100 ? question.text.substring(0, 100) + '...' : question.text}`,
+        description: question.answer,
+        category: 'Individual Question',
+        vendorId: parseInt(selectedVendorId),
+        isQuestionnaireAnswer: true,
+        questionnaireId: question.id,
+        content: JSON.stringify({
+          questionId: question.id,
+          questionText: question.text,
+          answer: question.answer,
+          status: question.status,
+          confidence: question.confidence,
+          checklistId: question.checklistId,
+          checklistName: question.checklistName,
+          isManualQuestion: !question.checklistId || question.checklistId === 'manual',
+          submissionDate: new Date().toISOString()
+        })
+      };
+
+      const response = await fetch('/api/trust-portal/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trustPortalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send question to trust portal');
+      }
+
+      alert('Question successfully sent to Trust Portal!');
+
+    } catch (error) {
+      console.error('Error sending question to trust portal:', error);
+      alert('Failed to send question to trust portal. Please try again.');
+    } finally {
+      setSendingQuestionId(null);
+      setSendingToTrustPortal(false);
+    }
+  };
+
+  /**
+   * Check if checklist is ready for trust portal (all questions completed)
+   */
+  const checkChecklistReadyForTrustPortal = async (checklistId: string): Promise<{
+    isReady: boolean;
+    completionStatus: any;
+  }> => {
+    if (!selectedVendorId || !checklistId || checklistId === 'manual') {
+      return { isReady: false, completionStatus: null };
+    }
+
+    try {
+      const completionStatus = await ChecklistService.checkChecklistCompletionStatus(checklistId, selectedVendorId);
+      return {
+        isReady: completionStatus.isComplete,
+        completionStatus
+      };
+    } catch (error) {
+      console.error('Error checking checklist completion:', error);
+      return { isReady: false, completionStatus: null };
+    }
+  };
+
+  /**
+   * Send complete checklist to trust portal (when all questions are completed)
+   */
+  const sendChecklistToTrustPortal = async (checklistGroup: any) => {
+    if (!selectedVendorId) {
+      setUploadError('Please select a vendor first');
+      return;
+    }
+
+    if (checklistGroup.id === 'manual') {
+      alert('Manual questions cannot be sent as a group. Please send individual questions separately.');
+      return;
+    }
+
+    setSendingToTrustPortal(true);
+    setTrustPortalProgress({ current: 0, total: 3, item: 'Checking completion status...' });
+
+    try {
+      // Step 1: Check if checklist is ready
+      setTrustPortalProgress({ current: 1, total: 3, item: 'Validating checklist completion...' });
+      const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
+
+      if (!isReady) {
+        const incomplete = completionStatus?.incompleteQuestions?.length || 0;
+        const needingDocs = completionStatus?.questionsNeedingDocs - completionStatus?.questionsWithDocs || 0;
+        
+        let message = `Checklist is not ready for Trust Portal:\n`;
+        if (incomplete > 0) {
+          message += `• ${incomplete} questions need answers\n`;
+        }
+        if (needingDocs > 0) {
+          message += `• ${needingDocs} questions need supporting documents\n`;
+        }
+        message += `\nPlease complete all requirements before sending to Trust Portal.`;
+        
+        alert(message);
+        return;
+      }
+
+      // Step 2: Send to trust portal
+      setTrustPortalProgress({ current: 2, total: 3, item: 'Sending to Trust Portal...' });
+      
+      const submitData = {
+        title: `${checklistGroup.name} - Complete Compliance Questionnaire`,
+        message: `Completed compliance questionnaire with ${checklistGroup.questions.length} answered questions`
+      };
+
+      await ChecklistService.sendChecklistToTrustPortal(checklistGroup.id, selectedVendorId, submitData);
+
+      setTrustPortalProgress({ current: 3, total: 3, item: 'Successfully sent!' });
+      
+      // Show success message with details
+      alert(`✅ Checklist "${checklistGroup.name}" successfully sent to Trust Portal!\n\n` +
+            `📊 Summary:\n` +
+            `• ${completionStatus.totalQuestions} questions completed\n` +
+            `• ${completionStatus.questionsWithDocs} supporting documents uploaded\n` +
+            `• Ready for enterprise review`);
+
+    } catch (error) {
+      console.error('Error sending checklist to trust portal:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to send checklist to Trust Portal:\n${errorMessage}`);
+    } finally {
+      setSendingToTrustPortal(false);
+      setTrustPortalProgress({ current: 0, total: 0, item: '' });
+    }
   };
 
   if (authLoading || !hasMounted) {
@@ -1937,26 +2151,49 @@ const QuestionnairesPage = () => {
                                   <p className="text-sm text-gray-600">
                                     {checklistGroup.questions.length} questions • 
                                     <span className="ml-1 text-green-600 font-medium">
-                                      {checklistGroup.questions.filter(q => q.status === 'completed').length} completed
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length} completed
                                     </span> • 
                                     <span className="ml-1 text-yellow-600 font-medium">
-                                      {checklistGroup.questions.filter(q => q.status === 'pending').length} pending
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'pending').length} pending
                                     </span>
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <span className="text-xs text-gray-500">
-                                  {Math.round((checklistGroup.questions.filter(q => q.status === 'completed').length / checklistGroup.questions.length) * 100)}% complete
+                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length / checklistGroup.questions.length) * 100)}% complete
                                 </span>
                                 <div className="w-20 bg-gray-200 rounded-full h-2">
                                   <div 
                                     className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: `${(checklistGroup.questions.filter(q => q.status === 'completed').length / checklistGroup.questions.length) * 100}%` 
+                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length / checklistGroup.questions.length) * 100}%` 
                                     }}
                                   ></div>
                                 </div>
+                                
+                                {/* Send Checklist to Trust Portal Button */}
+                                {checklistGroup.id !== 'manual' && 
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length === checklistGroup.questions.length &&
+                                 checklistGroup.questions.length > 0 && (
+                                  <button
+                                    onClick={() => sendChecklistToTrustPortal(checklistGroup)}
+                                    disabled={sendingToTrustPortal}
+                                    className="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center text-xs font-medium"
+                                  >
+                                    {sendingToTrustPortal && trustPortalProgress.item ? (
+                                      <>
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                        {trustPortalProgress.item}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Send to Trust Portal
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -2120,6 +2357,27 @@ const QuestionnairesPage = () => {
                                 <RefreshCw className="h-3 w-3 mr-1" />
                                 Regenerate
                               </button>
+
+                              {/* Send to Trust Portal - for Manual Questions */}
+                              {(!question.checklistId || question.checklistId === 'manual') && question.answer && (
+                                <button
+                                  onClick={() => sendQuestionToTrustPortal(question)}
+                                  disabled={sendingQuestionId === question.id || sendingToTrustPortal}
+                                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                >
+                                  {sendingQuestionId === question.id ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      Sending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Send to Trust Portal
+                                    </>
+                                  )}
+                                </button>
+                              )}
 
                             </div>
                           )}
@@ -2302,6 +2560,24 @@ const QuestionnairesPage = () => {
                               >
                                 View
                               </a>
+                              
+                              <button
+                                onClick={() => sendSupportingDocumentToTrustPortal(doc)}
+                                disabled={sendingDocumentId === doc.id || sendingToTrustPortal}
+                                className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center"
+                              >
+                                {sendingDocumentId === doc.id ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    Send to Trust Portal
+                                  </>
+                                )}
+                              </button>
                               
                               <button
                                 onClick={() => deleteStandaloneSupportDoc(doc.id)}
