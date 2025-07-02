@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { vendors as vendorAPI } from '@/lib/api';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
@@ -179,11 +180,15 @@ const QuestionnairesPage = () => {
   const standaloneSupportDocRef = useRef<HTMLInputElement>(null);
 
   const { isLoading: authLoading } = useAuthGuard();
+  const { token } = useAuth();
 
   useEffect(() => {
     setHasMounted(true);
-    loadVendors();
-  }, []);
+    // Only load vendors after authentication is ready
+    if (!authLoading && token) {
+      loadVendors();
+    }
+  }, [authLoading, token]);
 
   // Load vendor-specific data when vendor is selected
   useEffect(() => {
@@ -1511,9 +1516,17 @@ const QuestionnairesPage = () => {
         })
       };
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/trust-portal/items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(trustPortalData),
       });
 
@@ -1571,9 +1584,17 @@ const QuestionnairesPage = () => {
         })
       };
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/trust-portal/items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(trustPortalData),
       });
 
