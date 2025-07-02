@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Eye, PlusCircle, LogOut, User, CheckCircle } from "lucide-react";
+import { AlertTriangle, Eye, PlusCircle, LogOut, User, CheckCircle, Shield } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ComplianceCard } from "@/components/dashboard/ComplianceCard";
 import { QuestionnaireCard } from "@/components/dashboard/QuestionnaireCard";
 import { VendorList } from "@/components/dashboard/VendorList";
+import { OrganizationStats } from "@/components/dashboard/OrganizationStats";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
@@ -142,6 +143,44 @@ function DashboardContent() {
   useEffect(() => {
     fetchVendors();
   }, []);
+
+  // SECURITY: Check if user has organization access
+  if (user && !user.organization_id) {
+    return (
+      <div className="min-h-screen bg-body-bg dark:bg-body-bg flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8">
+          <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Organization Access Required
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            You need to be associated with an organization to access the dashboard. 
+            Please contact your administrator to set up your organization access.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Refresh Page
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem('authToken');
+                sessionStorage.removeItem('authToken');
+                window.location.href = '/auth/login';
+              }}
+              className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Handler for editing a vendor
   const handleEditVendor = (vendorId: string) => {
@@ -301,8 +340,12 @@ function DashboardContent() {
         {/* Top bar with conditional dev mode toggle */}
         <div className="flex justify-between items-center">
           <section className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">Welcome back, {user?.full_name || user?.email || 'User'}</h1>
-            <p className="text-gray-600 dark:text-gray-300">Here's an overview of your compliance status</p>
+            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">
+              Welcome back, {user?.full_name || user?.email || 'User'}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              {user?.organization ? `${user.organization} - ` : ''}Here's an overview of your organization's compliance status
+            </p>
           </section>
           {/* Dev mode toggle - hidden for both Sales Professional and Founder */}
           {!isSalesProfessional && !isFounder && (
@@ -310,44 +353,8 @@ function DashboardContent() {
           )}
         </div>
         
-        {/* Stat Cards - Role-based filtering */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {/* Compliance Card - Hidden for Sales Professional */}
-          {!isSalesProfessional && (
-            <ComplianceCard percentage={78} change="+12% from last month" />
-          )}
-          
-          {/* Questionnaire Card - Always visible */}
-          <QuestionnaireCard count={5} dueSoon="2 due this week" />
-          
-          {/* High-Risk Vendors Card - Hidden for both Sales Professional and Founder */}
-          {!isSalesProfessional && !isFounder && (
-            <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">Compliance Status</h2>
-                <div className="w-12 h-12 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-success dark:text-success-color" />
-                </div>
-              </div>
-              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">85%</p>
-              <p className="text-sm text-success dark:text-success-color">Overall compliance score</p>
-            </div>
-          )}
-          
-          {/* Trust Portal Views Card - Hidden for both Sales Professional and Founder */}
-          {!isSalesProfessional && !isFounder && (
-            <div className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-base font-medium text-gray-600 dark:text-gray-300">Trust Portal Views</h2>
-                <div className="w-12 h-12 rounded-full bg-success-light dark:bg-success-light flex items-center justify-center">
-                  <Eye className="w-6 h-6 text-success dark:text-success-color" />
-                </div>
-              </div>
-              <p className="text-4xl font-semibold text-gray-800 dark:text-white mb-4">127</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">+24% from last week</p>
-            </div>
-          )}
-        </section>
+        {/* Enhanced Organization Stats - Shows real-time data */}
+        <OrganizationStats />
         
         {/* Debug controls for testing - only visible in dev mode and not for Sales Professional or Founder */}
         {isDevMode && !isSalesProfessional && !isFounder && (
