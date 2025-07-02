@@ -523,9 +523,10 @@ const QuestionnairesPage = () => {
   const loadVendors = async () => {
     setIsLoadingVendors(true);
     try {
-      console.log('Loading vendors from API...');
+      console.log('🔄 Loading vendors from API...');
+      console.log('🔐 Auth state:', { authLoading, hasToken: !!token });
       const response = await vendorAPI.getAll();
-      console.log('Vendor API response:', response);
+      console.log('✅ Vendor API response:', response);
       
       // Handle the API response structure properly (like in vendors page)
       if (response && response.data && Array.isArray(response.data)) {
@@ -1500,15 +1501,22 @@ const QuestionnairesPage = () => {
     setSendingToTrustPortal(true);
 
     try {
+      // Convert selectedVendorId (UUID) to numeric ID
+      const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdNumber) {
+        setUploadError('Invalid vendor selected. Please select a valid vendor.');
+        return;
+      }
+
       // Create trust portal entry for supporting document
       const trustPortalData = {
         title: `Supporting Document: ${document.originalName}`,
         description: document.description || `Supporting document uploaded for compliance review`,
-        category: document.category || 'Supporting Documents',
+        category: 'Evidence', // Use valid category from DTO
         fileUrl: document.spacesUrl,
         fileType: document.fileType,
         fileSize: document.fileSize.toString(),
-        vendorId: parseInt(selectedVendorId),
+        vendorId: vendorIdNumber, // Ensure it's a number
         isQuestionnaireAnswer: false,
         content: JSON.stringify({
           documentId: document.id,
@@ -1519,6 +1527,8 @@ const QuestionnairesPage = () => {
           category: document.category
         })
       };
+
+      console.log('🔄 Sending trust portal data:', trustPortalData);
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
@@ -1568,12 +1578,18 @@ const QuestionnairesPage = () => {
     setSendingToTrustPortal(true);
 
     try {
+      // Convert selectedVendorId (UUID) to numeric ID
+      const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdNumber) {
+        setUploadError('Invalid vendor selected. Please select a valid vendor.');
+        return;
+      }
       // Create trust portal entry for individual question
       const trustPortalData = {
         title: `Question: ${question.text.length > 100 ? question.text.substring(0, 100) + '...' : question.text}`,
         description: question.answer,
-        category: 'Individual Question',
-        vendorId: parseInt(selectedVendorId),
+        category: 'Questionnaire', // Use valid category from DTO
+        vendorId: vendorIdNumber, // Ensure it's a number
         isQuestionnaireAnswer: true,
         questionnaireId: question.id,
         content: JSON.stringify({
