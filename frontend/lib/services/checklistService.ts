@@ -129,6 +129,36 @@ export class ChecklistService {
   }
 
   /**
+   * Add a manual question to a checklist
+   */
+  static async addManualQuestion(
+    checklistId: string,
+    vendorId: string,
+    questionText: string,
+    requiresDocument: boolean = false,
+    documentDescription?: string
+  ): Promise<ChecklistQuestion> {
+    try {
+      const questionData = {
+        questionText,
+        requiresDocument,
+        documentDescription
+      };
+      
+      return await apiCall(`${this.BASE_URL}/${checklistId}/questions/vendor/${vendorId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(questionData)
+      });
+    } catch (error) {
+      console.error('Error adding manual question:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get all questions for a vendor (for AI questionnaire section)
    */
   static async getVendorQuestions(

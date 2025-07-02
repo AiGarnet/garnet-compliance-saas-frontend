@@ -129,6 +129,13 @@ const QuestionnairesPage = () => {
   const [supportDocUploadError, setSupportDocUploadError] = useState<string | null>(null);
   const [uploadingQuestionId, setUploadingQuestionId] = useState<string | null>(null);
   
+  // Manual question states
+  const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
+  const [manualQuestionText, setManualQuestionText] = useState('');
+  const [manualQuestionRequiresDoc, setManualQuestionRequiresDoc] = useState(false);
+  const [manualQuestionDocDescription, setManualQuestionDocDescription] = useState('');
+  const [isAddingManualQuestion, setIsAddingManualQuestion] = useState(false);
+  
   // Independent supporting documents state
   const [uploadedSupportingDocs, setUploadedSupportingDocs] = useState<UploadedSupportingDocument[]>([]);
   const [supportDocDescription, setSupportDocDescription] = useState('');
@@ -1310,6 +1317,72 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Add manual question to checklist
+  const addManualQuestion = async () => {
+    if (!selectedChecklist?.checklistId || !selectedVendorId || !manualQuestionText.trim()) {
+      setUploadError('Please provide question text and select a checklist');
+      return;
+    }
+
+    setIsAddingManualQuestion(true);
+    try {
+      console.log(`📝 MANUAL QUESTION: Adding to checklist ${selectedChecklist.checklistId}`);
+      
+      const newQuestion = await ChecklistService.addManualQuestion(
+        selectedChecklist.checklistId,
+        selectedVendorId,
+        manualQuestionText.trim(),
+        manualQuestionRequiresDoc,
+        manualQuestionDocDescription.trim() || undefined
+      );
+
+      console.log('📝 MANUAL QUESTION: Successfully added:', newQuestion);
+
+      // Convert to our local format
+      const localQuestion: ExtractedQuestion = {
+        id: newQuestion.id,
+        text: newQuestion.questionText,
+        status: 'pending',
+        answer: '',
+        confidence: 0,
+        requiresDoc: newQuestion.requiresDocument,
+        docDescription: newQuestion.documentDescription,
+        checklistId: newQuestion.checklistId,
+        checklistName: selectedChecklist.name,
+        isDone: false,
+        isEditing: false
+      };
+
+      // Update the selected checklist with the new question
+      const updatedChecklist = {
+        ...selectedChecklist,
+        questions: [...(selectedChecklist.questions || []), localQuestion]
+      };
+      
+      setSelectedChecklist(updatedChecklist);
+      
+      // Update checklists list
+      setChecklists(prev => prev.map(c => 
+        c.id === selectedChecklist.id ? updatedChecklist : c
+      ));
+
+      // Refresh the AI Questionnaire section with updated questions
+      await loadAllVendorQuestionsForAI(selectedVendorId);
+
+      // Reset form and close modal
+      setManualQuestionText('');
+      setManualQuestionRequiresDoc(false);
+      setManualQuestionDocDescription('');
+      setShowAddQuestionModal(false);
+      
+    } catch (error) {
+      console.error('❌ Error adding manual question:', error);
+      setUploadError('Failed to add manual question. Please try again.');
+    } finally {
+      setIsAddingManualQuestion(false);
+    }
+  };
+
   // Delete checklist
   const deleteChecklist = async (checklist: ChecklistFile) => {
     if (!checklist.checklistId || !selectedVendorId) return;
@@ -1488,8 +1561,23 @@ const QuestionnairesPage = () => {
                   <Upload className="h-16 w-16 text-blue-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
                   <p className="text-lg text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
-
-                              </div>
+                  
+                  {/* Add Manual Question Button */}
+                  {selectedChecklist && (
+                    <div className="mt-6">
+                      <button
+                        onClick={() => setShowAddQuestionModal(true)}
+                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Add Manual Question
+                      </button>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Add custom questions to the selected checklist: "{selectedChecklist.name}"
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Upload Area */}
                         <div 
@@ -2293,6 +2381,93 @@ const QuestionnairesPage = () => {
 
 
         </div>
+
+        {/* Add Manual Question Modal */}
+        {showAddQuestionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Add Manual Question</h3>
+                <button
+                  onClick={() => setShowAddQuestionModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Question Text *
+                  </label>
+                  <textarea
+                    value={manualQuestionText}
+                    onChange={(e) => setManualQuestionText(e.target.value)}
+                    placeholder="Enter your compliance question..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="requiresDoc"
+                    checked={manualQuestionRequiresDoc}
+                    onChange={(e) => setManualQuestionRequiresDoc(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="requiresDoc" className="text-sm text-gray-700">
+                    Requires supporting document
+                  </label>
+                </div>
+                
+                {manualQuestionRequiresDoc && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Document Description
+                    </label>
+                    <input
+                      type="text"
+                      value={manualQuestionDocDescription}
+                      onChange={(e) => setManualQuestionDocDescription(e.target.value)}
+                      placeholder="Describe what document is needed..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowAddQuestionModal(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isAddingManualQuestion}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addManualQuestion}
+                  disabled={!manualQuestionText.trim() || isAddingManualQuestion}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {isAddingManualQuestion ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Add Question
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Confirmation Dialog */}
         {confirmationDialog.show && (

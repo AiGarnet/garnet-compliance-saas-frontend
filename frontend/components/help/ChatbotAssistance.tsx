@@ -28,6 +28,16 @@ interface ChatMessage {
   followUpSuggestions?: string[];
 }
 
+interface ChatHistoryItem {
+  id?: string;
+  userQuestion: string;
+  aiResponse: string;
+  category: string;
+  createdAt: string;
+  sessionId?: string;
+  messages?: ChatMessage[];
+}
+
 interface ChatbotAssistanceProps {
   vendorId: string;
   onClose?: () => void;
@@ -39,8 +49,9 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +64,6 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
   }, [messages]);
 
   useEffect(() => {
-    // Load previous chat history and add welcome message
     loadChatHistory();
   }, [vendorId]);
 
@@ -63,43 +73,118 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
       const history = await apiCall(`/api/help/vendor/${vendorId}/history`);
       setChatHistory(history.history || []);
       
-      // Add welcome message
-      const welcomeMessage: ChatMessage = {
-        id: 'welcome',
-        type: 'bot',
-        content: 'Hello! I\'m your compliance assistant. I can help you with:\n\n• Data privacy and GDPR compliance\n• Cybersecurity frameworks and controls\n• Financial regulations and risk management\n• Vendor risk assessment processes\n• Supporting documentation requirements\n\nWhat compliance question can I help you with today?',
-        timestamp: new Date(),
-        category: 'Welcome',
-        confidence: 1,
-        isComplianceRelated: true,
-        followUpSuggestions: [
-          'What documents do I need for GDPR compliance?',
-          'How do I assess cybersecurity risks?',
-          'What are the key financial compliance requirements?'
-        ]
-      };
-      setMessages([welcomeMessage]);
+      // Add welcome message if no current session
+      if (!currentSessionId) {
+        const welcomeMessage: ChatMessage = {
+          id: 'welcome',
+          type: 'bot',
+          content: 'Hello! I\'m your compliance assistant. I can help you with:\n\n• Data privacy and GDPR compliance\n• Cybersecurity frameworks and controls\n• Financial regulations and risk management\n• Vendor risk assessment processes\n• Supporting documentation requirements\n\nWhat compliance question can I help you with today?',
+          timestamp: new Date(),
+          category: 'Welcome',
+          confidence: 1,
+          isComplianceRelated: true,
+          followUpSuggestions: [
+            'What documents do I need for GDPR compliance?',
+            'How do I assess cybersecurity risks?',
+            'What are the key financial compliance requirements?'
+          ]
+        };
+        setMessages([welcomeMessage]);
+      }
     } catch (error) {
       console.error('Error loading chat history:', error);
       // Still show welcome message even if history fails to load
-      const welcomeMessage: ChatMessage = {
-        id: 'welcome',
-        type: 'bot',
-        content: 'Hello! I\'m your compliance assistant. I can help you with:\n\n• Data privacy and GDPR compliance\n• Cybersecurity frameworks and controls\n• Financial regulations and risk management\n• Vendor risk assessment processes\n• Supporting documentation requirements\n\nWhat compliance question can I help you with today?',
-        timestamp: new Date(),
-        category: 'Welcome',
-        confidence: 1,
-        isComplianceRelated: true,
-        followUpSuggestions: [
-          'What documents do I need for GDPR compliance?',
-          'How do I assess cybersecurity risks?',
-          'What are the key financial compliance requirements?'
-        ]
-      };
-      setMessages([welcomeMessage]);
+      if (!currentSessionId) {
+        const welcomeMessage: ChatMessage = {
+          id: 'welcome',
+          type: 'bot',
+          content: 'Hello! I\'m your compliance assistant. I can help you with:\n\n• Data privacy and GDPR compliance\n• Cybersecurity frameworks and controls\n• Financial regulations and risk management\n• Vendor risk assessment processes\n• Supporting documentation requirements\n\nWhat compliance question can I help you with today?',
+          timestamp: new Date(),
+          category: 'Welcome',
+          confidence: 1,
+          isComplianceRelated: true,
+          followUpSuggestions: [
+            'What documents do I need for GDPR compliance?',
+            'How do I assess cybersecurity risks?',
+            'What are the key financial compliance requirements?'
+          ]
+        };
+        setMessages([welcomeMessage]);
+      }
     } finally {
       setIsLoadingHistory(false);
     }
+  };
+
+  // Load a previous conversation
+  const loadPreviousConversation = async (historyItem: ChatHistoryItem) => {
+    try {
+      setIsLoading(true);
+      
+      // If the history item has a sessionId, load the full conversation
+      if (historyItem.sessionId) {
+        const response = await apiCall(`/api/help/vendor/${vendorId}/session/${historyItem.sessionId}`);
+        if (response.messages && response.messages.length > 0) {
+          setMessages(response.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          })));
+          setCurrentSessionId(historyItem.sessionId);
+          setShowHistory(false);
+          return;
+        }
+      }
+      
+      // Fallback: create a basic conversation from the history item
+      const conversationMessages: ChatMessage[] = [
+        {
+          id: `user-${Date.now()}`,
+          type: 'user',
+          content: historyItem.userQuestion,
+          timestamp: new Date(historyItem.createdAt),
+          category: historyItem.category
+        },
+        {
+          id: `bot-${Date.now()}`,
+          type: 'bot',
+          content: historyItem.aiResponse,
+          timestamp: new Date(historyItem.createdAt),
+          category: historyItem.category,
+          confidence: 0.8,
+          isComplianceRelated: true
+        }
+      ];
+      
+      setMessages(conversationMessages);
+      setCurrentSessionId(historyItem.sessionId || `session-${Date.now()}`);
+      setShowHistory(false);
+      
+    } catch (error) {
+      console.error('Error loading previous conversation:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start a new conversation
+  const startNewConversation = () => {
+    setCurrentSessionId(null);
+    const welcomeMessage: ChatMessage = {
+      id: 'welcome',
+      type: 'bot',
+      content: 'Hello! I\'m your compliance assistant. I can help you with:\n\n• Data privacy and GDPR compliance\n• Cybersecurity frameworks and controls\n• Financial regulations and risk management\n• Vendor risk assessment processes\n• Supporting documentation requirements\n\nWhat compliance question can I help you with today?',
+      timestamp: new Date(),
+      category: 'Welcome',
+      confidence: 1,
+      isComplianceRelated: true,
+      followUpSuggestions: [
+        'What documents do I need for GDPR compliance?',
+        'How do I assess cybersecurity risks?',
+        'What are the key financial compliance requirements?'
+      ]
+    };
+    setMessages([welcomeMessage]);
+    setShowHistory(false);
   };
 
   const sendMessage = async () => {
@@ -257,37 +342,49 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
       <div className="flex-1 overflow-hidden">
         {showHistory ? (
           /* Chat History */
-          <div className="h-full overflow-y-auto p-4">
+          <div className="h-full overflow-y-auto p-4 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800">
             <div className="mb-4">
-              <h4 className="font-semibold text-gray-800 mb-2">Previous Conversations</h4>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-white text-lg">Previous Conversations</h4>
+                <button
+                  onClick={startNewConversation}
+                  className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm"
+                >
+                  + New Chat
+                </button>
+              </div>
               {isLoadingHistory ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                  <span className="ml-2 text-gray-600">Loading history...</span>
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  <span className="ml-2 text-white font-semibold">Loading history...</span>
                 </div>
               ) : chatHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No previous conversations found.</p>
-                  <p className="text-sm">Start a new conversation to see your chat history here.</p>
+                <div className="text-center py-8">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-2 text-white opacity-70" />
+                  <p className="text-white font-bold">No previous conversations found.</p>
+                  <p className="text-sm text-white opacity-90 font-medium">Start a new conversation to see your chat history here.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {chatHistory.map((item, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
-                      <div className="flex items-start space-x-2">
-                        <User className="h-5 w-5 mt-0.5 text-blue-600 flex-shrink-0" />
+                    <div 
+                      key={index} 
+                      className="bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg p-4 cursor-pointer transition-all duration-200 border border-white border-opacity-20 hover:border-opacity-40"
+                      onClick={() => loadPreviousConversation(item)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <User className="h-5 w-5 mt-0.5 text-white flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">{item.userQuestion}</p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Bot className="h-4 w-4 text-gray-500" />
-                            <p className="text-sm text-gray-600 line-clamp-2">{item.aiResponse}</p>
+                          <p className="text-sm font-bold text-white mb-2">{item.userQuestion}</p>
+                          <div className="flex items-start space-x-2 mb-3">
+                            <Bot className="h-4 w-4 text-white opacity-80 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-white opacity-90 font-medium line-clamp-2">{item.aiResponse}</p>
                           </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-500">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-white opacity-75 font-semibold">
                               {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString()}
                             </span>
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">{item.category}</span>
+                            <span className="text-xs bg-white bg-opacity-20 text-white font-bold px-2 py-1 rounded">{item.category}</span>
                           </div>
                         </div>
                       </div>
