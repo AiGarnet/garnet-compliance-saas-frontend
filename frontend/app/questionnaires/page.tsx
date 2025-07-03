@@ -36,6 +36,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { vendors as vendorAPI } from '@/lib/api';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
+import { AIService } from '@/lib/services/aiService';
 import ChatbotAssistance from '@/components/help/ChatbotAssistance';
 
 interface ExtractedQuestion {
@@ -149,6 +150,15 @@ const QuestionnairesPage = () => {
   // AI processing states
   const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentQuestion: '' });
+  
+  // Document generation states
+  const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
+  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+  const [generateDocTitle, setGenerateDocTitle] = useState('');
+  const [generateDocInstructions, setGenerateDocInstructions] = useState('');
+  const [generateDocCategory, setGenerateDocCategory] = useState('');
+  const [generateDocQuestionId, setGenerateDocQuestionId] = useState<string | null>(null);
+  const [documentGenerationError, setDocumentGenerationError] = useState<string | null>(null);
   
 
   
@@ -1243,6 +1253,78 @@ const QuestionnairesPage = () => {
     } catch (error) {
       console.error('❌ Error deleting supporting document:', error);
       setSupportDocUploadError('Failed to delete supporting document. Please try again.');
+    }
+  };
+
+  // Document generation functions
+  const openGenerateDocModal = (questionId?: string) => {
+    setGenerateDocQuestionId(questionId || null);
+    setShowGenerateDocModal(true);
+    setDocumentGenerationError(null);
+    setGenerateDocTitle('');
+    setGenerateDocInstructions('');
+    setGenerateDocCategory('');
+  };
+
+  const closeGenerateDocModal = () => {
+    setShowGenerateDocModal(false);
+    setGenerateDocQuestionId(null);
+    setDocumentGenerationError(null);
+    setGenerateDocTitle('');
+    setGenerateDocInstructions('');
+    setGenerateDocCategory('');
+  };
+
+  const generateAndSaveDocument = async () => {
+    if (!generateDocTitle.trim()) {
+      setDocumentGenerationError('Please enter a document title');
+      return;
+    }
+
+    if (!selectedVendorId) {
+      setDocumentGenerationError('Please select a vendor first');
+      return;
+    }
+
+    setIsGeneratingDocument(true);
+    setDocumentGenerationError(null);
+
+    try {
+      console.log('🤖 GENERATING: Starting document generation...');
+      
+      // Get vendor ID as number
+      const vendorIdNum = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdNum) {
+        throw new Error('Invalid vendor selected');
+      }
+
+      const result = await AIService.generateAndSaveDocument({
+        documentTitle: generateDocTitle,
+        instructions: generateDocInstructions || undefined,
+        category: generateDocCategory || undefined,
+        vendorId: vendorIdNum,
+        questionId: generateDocQuestionId || undefined,
+      });
+
+      if (result.success) {
+        console.log('✅ Document generated and saved successfully!');
+        
+        // Refresh the supporting documents list
+        await loadVendorSupportingDocuments(selectedVendorId);
+        
+        // Close modal
+        closeGenerateDocModal();
+        
+        // Show success message
+        alert('Document generated and saved successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to generate document');
+      }
+    } catch (error: any) {
+      console.error('❌ Error generating document:', error);
+      setDocumentGenerationError(error.message || 'Failed to generate document. Please try again.');
+    } finally {
+      setIsGeneratingDocument(false);
     }
   };
 
@@ -2531,6 +2613,22 @@ const QuestionnairesPage = () => {
                       )}
                     </label>
                     
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 mb-2">OR</div>
+                      <button
+                        onClick={() => openGenerateDocModal()}
+                        disabled={isUploadingSupportDoc || isGeneratingDocument}
+                        className={`inline-flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
+                          isUploadingSupportDoc || isGeneratingDocument
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : 'bg-purple-600 text-white hover:bg-purple-700 shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Generate with AI
+                      </button>
+                    </div>
+                    
                     <div className="text-sm text-gray-500">
                       Supports: PDF, Images, DOC, DOCX, TXT
                     </div>
@@ -2695,6 +2793,19 @@ const QuestionnairesPage = () => {
                                   </>
                                 )}
                               </label>
+                              
+                              <button
+                                onClick={() => openGenerateDocModal(question.id)}
+                                disabled={isUploadingSupportDoc || isGeneratingDocument}
+                                className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  isUploadingSupportDoc || isGeneratingDocument
+                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                                }`}
+                              >
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Generate with AI
+                              </button>
                               
                               {question.supportingDocs && question.supportingDocs.length > 0 && (
                                 <span className="text-sm text-green-600 font-medium">
@@ -2864,6 +2975,120 @@ const QuestionnairesPage = () => {
                     </div>
                   </div>
                 </div>
+        )}
+
+        {/* Generate Document Modal */}
+        {showGenerateDocModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                  Generate Supporting Document
+                </h3>
+                <button
+                  onClick={closeGenerateDocModal}
+                  className="text-gray-400 hover:text-gray-600"
+                  disabled={isGeneratingDocument}
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              {documentGenerationError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm">{documentGenerationError}</p>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={generateDocTitle}
+                    onChange={(e) => setGenerateDocTitle(e.target.value)}
+                    placeholder="e.g., Data Privacy Policy, Security Audit Report..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isGeneratingDocument}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category (Optional)
+                  </label>
+                  <select
+                    value={generateDocCategory}
+                    onChange={(e) => setGenerateDocCategory(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isGeneratingDocument}
+                  >
+                    <option value="">Select category</option>
+                    <option value="Security">Security</option>
+                    <option value="Data Privacy">Data Privacy</option>
+                    <option value="Compliance">Compliance</option>
+                    <option value="Policies">Policies</option>
+                    <option value="Procedures">Procedures</option>
+                    <option value="Audit">Audit</option>
+                    <option value="Risk Management">Risk Management</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Instructions (Optional)
+                  </label>
+                  <textarea
+                    value={generateDocInstructions}
+                    onChange={(e) => setGenerateDocInstructions(e.target.value)}
+                    placeholder="Provide specific requirements or context for the document..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    rows={3}
+                    disabled={isGeneratingDocument}
+                  />
+                </div>
+                
+                {generateDocQuestionId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-blue-800 text-sm">
+                      <strong>Note:</strong> This document will be linked to the specific question that requires it.
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={closeGenerateDocModal}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isGeneratingDocument}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={generateAndSaveDocument}
+                  disabled={!generateDocTitle.trim() || isGeneratingDocument}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {isGeneratingDocument ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Document
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
 
