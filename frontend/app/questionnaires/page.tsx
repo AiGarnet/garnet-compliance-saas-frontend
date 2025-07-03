@@ -2030,8 +2030,8 @@ const QuestionnairesPage = () => {
                 </option>
                 {!uploadError && !isLoadingVendors ? (
                   safeMap(vendors, (vendor: any) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name}
+                    <option key={vendor.uuid || vendor.id} value={vendor.uuid || vendor.id}>
+                      {vendor.name || vendor.companyName}
                     </option>
                   ))
                 ) : null}
