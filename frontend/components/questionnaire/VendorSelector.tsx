@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Building2, ChevronDown } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { safeMap } from '@/lib/utils/arrayUtils';
+import { vendors as vendorAPI } from '../../lib/api';
 
 interface Vendor {
   id: string;
@@ -38,17 +39,12 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
       setError(null);
       
       console.log('Fetching vendors from API...');
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
+      const response = await vendorAPI.getAll();
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch vendors`);
-      }
-      
-      const data = await response.json();
-      console.log('Vendors API response:', data);
+      console.log('Vendors API response:', response);
       
       // The API returns { success: true, data: [...] } structure
-      const vendorList = data.success && Array.isArray(data.data) ? data.data : [];
+      const vendorList = response && response.data && Array.isArray(response.data) ? response.data : [];
       console.log('Extracted vendor list:', vendorList);
       
       if (vendorList.length === 0) {
@@ -58,7 +54,7 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
       }
       
       const formattedVendors = safeMap(vendorList, (vendor: any) => ({
-        id: vendor.vendorId?.toString() || vendor.id?.toString(),
+        id: vendor.uuid || vendor.id?.toString() || vendor.vendorId?.toString(),
         name: vendor.companyName || vendor.name,
         companyName: vendor.companyName || vendor.name,
         status: vendor.status || 'QUESTIONNAIRE_PENDING',
