@@ -147,6 +147,14 @@ const QuestionnairesPage = () => {
   const [supportDocDescription, setSupportDocDescription] = useState('');
   const [supportDocCategory, setSupportDocCategory] = useState('');
   
+  // Evidence files state
+  const [evidenceFiles, setEvidenceFiles] = useState<any[]>([]);
+  const [isUploadingEvidence, setIsUploadingEvidence] = useState(false);
+  const [evidenceUploadError, setEvidenceUploadError] = useState<string | null>(null);
+  const [evidenceDescription, setEvidenceDescription] = useState('');
+  const [evidenceCategory, setEvidenceCategory] = useState('');
+  const evidenceFileRef = useRef<HTMLInputElement>(null);
+  
   // AI processing states
   const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentQuestion: '' });
@@ -282,6 +290,9 @@ const QuestionnairesPage = () => {
       
       // Load supporting documents
       await loadVendorSupportingDocuments(selectedVendorId);
+      
+      // Load evidence files
+      await loadVendorEvidenceFiles(selectedVendorId);
       
     } catch (error) {
       console.error('Error loading vendor data:', error);
@@ -1256,6 +1267,116 @@ const QuestionnairesPage = () => {
     }
   };
 
+  // Evidence file functions
+  const loadVendorEvidenceFiles = async (vendorId: string) => {
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/vendors/${vendorId}/evidence`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load evidence files');
+      }
+
+      const data = await response.json();
+      setEvidenceFiles(data.evidenceFiles || []);
+    } catch (error: any) {
+      console.error('Error loading evidence files:', error);
+      setEvidenceUploadError(error.message || 'Failed to load evidence files');
+    }
+  };
+
+  const handleEvidenceFileUpload = async (files: FileList) => {
+    if (!selectedVendorId) {
+      setEvidenceUploadError('Please select a vendor first');
+      return;
+    }
+
+    setIsUploadingEvidence(true);
+    setEvidenceUploadError(null);
+
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('vendorId', selectedVendorId);
+        if (evidenceDescription) {
+          formData.append('description', evidenceDescription);
+        }
+        if (evidenceCategory) {
+          formData.append('category', evidenceCategory);
+        }
+
+        const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload evidence file');
+        }
+
+        const result = await response.json();
+        console.log('Evidence file uploaded successfully:', result);
+      }
+
+      // Reload evidence files
+      await loadVendorEvidenceFiles(selectedVendorId);
+      
+      // Clear form
+      setEvidenceDescription('');
+      setEvidenceCategory('');
+      if (evidenceFileRef.current) {
+        evidenceFileRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error('Error uploading evidence file:', error);
+      setEvidenceUploadError(error.message || 'Failed to upload evidence file');
+    } finally {
+      setIsUploadingEvidence(false);
+    }
+  };
+
+  const deleteEvidenceFile = async (fileId: string) => {
+    if (!selectedVendorId) return;
+
+    const confirmDelete = window.confirm(
+      'Are you sure you want to delete this evidence file?\n\nThis action cannot be undone.'
+    );
+    
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete evidence file');
+      }
+
+      // Remove from state
+      setEvidenceFiles(prev => prev.filter(file => file.id !== fileId));
+      
+      console.log('Evidence file deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting evidence file:', error);
+      setEvidenceUploadError(error.message || 'Failed to delete evidence file');
+    }
+  };
+
   // Document generation functions
   const openGenerateDocModal = (questionId?: string) => {
     setGenerateDocQuestionId(questionId || null);
@@ -1867,7 +1988,7 @@ const QuestionnairesPage = () => {
                 }`}
               >
                 <Upload className="w-4 h-4 inline mr-2" />
-                Checklist Upload
+                Checklist & Evidence Files
                     </button>
                             <button 
                 onClick={() => setActiveSection('ai')}
@@ -2132,6 +2253,145 @@ const QuestionnairesPage = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Evidence Files Section */}
+                {selectedVendorId && (
+                  <div className="mt-12 border-t pt-8">
+                    <div className="text-center mb-8">
+                      <Files className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Evidence Files</h3>
+                      <p className="text-gray-600">Upload internal evidence files to enhance AI response generation</p>
+                      <p className="text-sm text-orange-600 mt-2">
+                        📝 Evidence files are internal only and will not be shown on the Trust Portal
+                      </p>
+                    </div>
+
+                    {/* Evidence File Upload Form */}
+                    <div className="bg-orange-50 rounded-lg p-6 mb-6">
+                      <h4 className="text-lg font-semibold text-orange-900 mb-4">Upload Evidence Files</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Description (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={evidenceDescription}
+                            onChange={(e) => setEvidenceDescription(e.target.value)}
+                            placeholder="Describe what this evidence file contains..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category (Optional)
+                          </label>
+                          <select
+                            value={evidenceCategory}
+                            onChange={(e) => setEvidenceCategory(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="">Select category...</option>
+                            <option value="Security">Security</option>
+                            <option value="Data Privacy">Data Privacy</option>
+                            <option value="Compliance">Compliance</option>
+                            <option value="Policies">Policies</option>
+                            <option value="Procedures">Procedures</option>
+                            <option value="Certifications">Certifications</option>
+                            <option value="Contracts">Contracts</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-4">
+                        <input
+                          ref={evidenceFileRef}
+                          type="file"
+                          className="hidden"
+                          multiple
+                          accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt,.csv,.xlsx"
+                          onChange={(e) => e.target.files && handleEvidenceFileUpload(e.target.files)}
+                        />
+                        <button
+                          onClick={() => evidenceFileRef.current?.click()}
+                          disabled={isUploadingEvidence || !selectedVendorId}
+                          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors flex items-center"
+                        >
+                          {isUploadingEvidence ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Choose Files
+                            </>
+                          )}
+                        </button>
+                        <span className="text-sm text-gray-500">
+                          PDF, images, documents supported
+                        </span>
+                      </div>
+
+                      {evidenceUploadError && (
+                        <div className="mt-4 text-red-600 bg-red-50 p-3 rounded-lg">
+                          {evidenceUploadError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Evidence Files List */}
+                    {evidenceFiles.length > 0 && (
+                      <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                          Uploaded Evidence Files ({evidenceFiles.length})
+                        </h4>
+                        <div className="space-y-3">
+                          {evidenceFiles.map((file: any) => (
+                            <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center">
+                                <FileText className="h-5 w-5 text-orange-600 mr-3" />
+                                <div>
+                                  <p className="font-medium text-gray-900">{file.originalFilename}</p>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span>{(file.fileSize / 1024).toFixed(1)} KB</span>
+                                    {file.category && (
+                                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                                        {file.category}
+                                      </span>
+                                    )}
+                                    <span>{new Date(file.uploadDate).toLocaleDateString()}</span>
+                                  </div>
+                                  {file.description && (
+                                    <p className="text-sm text-gray-600 mt-1">{file.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => deleteEvidenceFile(file.id)}
+                                className="text-red-600 hover:text-red-700 p-2"
+                                title="Delete evidence file"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {evidenceFiles.length === 0 && !isUploadingEvidence && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Files className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                        <p>No evidence files uploaded yet</p>
+                      </div>
+                    )}
                   </div>
                 )}
                       </div>
