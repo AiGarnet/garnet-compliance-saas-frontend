@@ -28,7 +28,8 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  Trash2
+  Trash2,
+  Info
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -3345,11 +3346,11 @@ const QuestionnairesPage = () => {
         {/* Generate Document Modal */}
         {showGenerateDocModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
-                  Generate Supporting Document
+                  Generate Compliance Evidence Document
                 </h3>
                 <button
                   onClick={closeGenerateDocModal}
@@ -3358,6 +3359,21 @@ const QuestionnairesPage = () => {
                 >
                   <X className="h-6 w-6" />
                 </button>
+              </div>
+
+              {/* Enhanced Context Info */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center">
+                  <Info className="h-4 w-4 mr-1" />
+                  Enhanced AI Document Generation
+                </h4>
+                <div className="text-sm text-purple-700 space-y-1">
+                  <p>✨ <strong>Company-specific:</strong> Uses your vendor's industry, region, and context</p>
+                  <p>📋 <strong>Questionnaire-aware:</strong> References your current questions and answers</p>
+                  <p>📁 <strong>Evidence-integrated:</strong> Considers existing evidence files to avoid duplication</p>
+                  <p>⚖️ <strong>Compliance-focused:</strong> Incorporates relevant regulatory frameworks (GDPR, SOC 2, etc.)</p>
+                  <p>📄 <strong>Audit-ready:</strong> Generates professional documents suitable for regulatory reviews</p>
+                </div>
               </div>
               
               {documentGenerationError && (
@@ -3375,15 +3391,16 @@ const QuestionnairesPage = () => {
                     type="text"
                     value={generateDocTitle}
                     onChange={(e) => setGenerateDocTitle(e.target.value)}
-                    placeholder="e.g., Data Privacy Policy, Security Audit Report..."
+                    placeholder="e.g., Data Privacy Policy, Security Incident Response Plan, Vendor Risk Assessment..."
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     disabled={isGeneratingDocument}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Be specific about the type of evidence document you need</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category (Optional)
+                    Document Category
                   </label>
                   <select
                     value={generateDocCategory}
@@ -3391,42 +3408,64 @@ const QuestionnairesPage = () => {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     disabled={isGeneratingDocument}
                   >
-                    <option value="">Select category</option>
-                    <option value="Security">Security</option>
-                    <option value="Data Privacy">Data Privacy</option>
-                    <option value="Compliance">Compliance</option>
-                    <option value="Policies">Policies</option>
-                    <option value="Procedures">Procedures</option>
-                    <option value="Audit">Audit</option>
-                    <option value="Risk Management">Risk Management</option>
-                    <option value="General">General</option>
+                    <option value="">Select category (helps tailor content)</option>
+                    <option value="Security">Security (ISO 27001, NIST, SOC 2)</option>
+                    <option value="Data Privacy">Data Privacy (GDPR, CCPA, PIPEDA)</option>
+                    <option value="Financial Compliance">Financial Compliance (AML, KYC, SOX)</option>
+                    <option value="Policies">Corporate Policies & Procedures</option>
+                    <option value="Audit">Audit Reports & Assessments</option>
+                    <option value="Risk Management">Risk Management & Controls</option>
+                    <option value="Vendor Management">Third-Party & Vendor Management</option>
+                    <option value="Business Continuity">Business Continuity & Disaster Recovery</option>
+                    <option value="Training">Training & Awareness Programs</option>
+                    <option value="General">General Compliance</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">Category determines which compliance frameworks and requirements to include</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Instructions (Optional)
+                    Specific Requirements & Context
                   </label>
                   <textarea
                     value={generateDocInstructions}
                     onChange={(e) => setGenerateDocInstructions(e.target.value)}
-                    placeholder="Provide specific requirements or context for the document..."
+                    placeholder="Examples:
+• Include specific technical controls for cloud infrastructure
+• Address multi-jurisdictional compliance requirements
+• Focus on financial services regulatory requirements
+• Include incident response procedures for data breaches
+• Address specific audit findings or gaps"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    rows={3}
+                    rows={5}
                     disabled={isGeneratingDocument}
                   />
+                  <p className="text-xs text-gray-500 mt-1">AI will combine this with your questionnaire answers and company context</p>
                 </div>
                 
                 {generateDocQuestionId && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-blue-800 text-sm">
-                      <strong>Note:</strong> This document will be linked to the specific question that requires it.
+                      <strong>📎 Question-Specific Document:</strong> This evidence will be directly linked to the question that requires supporting documentation.
                     </p>
+                  </div>
+                )}
+
+                {/* Context Preview */}
+                {selectedVendorId && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-gray-700 text-sm font-medium mb-1">Context that will be used:</p>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p>• Vendor company information and industry context</p>
+                      <p>• Current questionnaire questions and AI-generated answers</p>
+                      <p>• Existing evidence files (to avoid duplication)</p>
+                      <p>• Relevant compliance frameworks based on title and category</p>
+                    </div>
                   </div>
                 )}
               </div>
               
-              <div className="flex items-center justify-end space-x-3 mt-6">
+              <div className="flex items-center justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={closeGenerateDocModal}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -3442,12 +3481,12 @@ const QuestionnairesPage = () => {
                   {isGeneratingDocument ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
+                      Generating Evidence Document...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Document
+                      Generate Evidence Document
                     </>
                   )}
                 </button>
