@@ -28,8 +28,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  Trash2,
-  Info
+  Trash2
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -3361,20 +3360,7 @@ const QuestionnairesPage = () => {
                 </button>
               </div>
 
-              {/* Enhanced Context Info */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
-                <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center">
-                  <Info className="h-4 w-4 mr-1" />
-                  Enhanced AI Document Generation
-                </h4>
-                <div className="text-sm text-purple-700 space-y-1">
-                  <p>✨ <strong>Company-specific:</strong> Uses your vendor's industry, region, and context</p>
-                  <p>📋 <strong>Questionnaire-aware:</strong> References your current questions and answers</p>
-                  <p>📁 <strong>Evidence-integrated:</strong> Considers existing evidence files to avoid duplication</p>
-                  <p>⚖️ <strong>Compliance-focused:</strong> Incorporates relevant regulatory frameworks (GDPR, SOC 2, etc.)</p>
-                  <p>📄 <strong>Audit-ready:</strong> Generates professional documents suitable for regulatory reviews</p>
-                </div>
-              </div>
+
               
               {documentGenerationError && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
