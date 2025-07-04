@@ -41,7 +41,14 @@ export function getApiEndpoint(path: string): string {
 // Helper function to get auth token
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
+  
+  // Try to get token from localStorage
+  const token = localStorage.getItem('authToken');
+  
+  // Log token status for debugging
+  console.log(`🔑 Auth Token Status: ${token ? 'Found' : 'Not Found'}`);
+  
+  return token;
 }
 
 // Helper function to check if user is authenticated
@@ -53,6 +60,10 @@ function isAuthenticated(): boolean {
     // Basic JWT validation - check if token is expired
     const payload = JSON.parse(atob(token.split('.')[1]));
     const now = Date.now() / 1000;
+    
+    // Log token expiration for debugging
+    console.log(`🕒 Token expiration: ${new Date(payload.exp * 1000).toLocaleString()}, Now: ${new Date().toLocaleString()}, Valid: ${payload.exp > now}`);
+    
     return payload.exp > now;
   } catch (error) {
     console.error('Invalid JWT token:', error);
@@ -117,7 +128,14 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
         endpoint
       });
       
-      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      // Try to parse error response as JSON
+      let error;
+      try {
+        error = await response.json();
+      } catch {
+        error = { error: 'Network error', message: response.statusText };
+      }
+      
       console.error('❌ API Error Details:', error);
       
       // Handle specific authentication errors
@@ -150,7 +168,14 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
       throw new Error(error.message || error.error || `HTTP ${response.status}`);
     }
 
-    const responseData = await response.json();
+    // Try to parse response as JSON, fall back to text if not JSON
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch {
+      responseData = { text: await response.text() };
+    }
+    
     console.log('✅ API Success Response:', {
       endpoint,
       status: response.status,
@@ -192,25 +217,46 @@ export async function uploadFile(endpoint: string, file: File, additionalData: R
     localStorage_authToken: typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : 'N/A'
   });
   
+  // Always include token for uploads if available
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   } else {
     console.error('❌ NO AUTH TOKEN FOUND - User needs to log in');
+    throw new Error('Authentication required. Please log in to upload files.');
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: formData,
-    // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Upload failed' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    if (!response.ok) {
+      console.error('❌ File Upload Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        endpoint
+      });
+      
+      // Try to parse error response
+      let error;
+      try {
+        error = await response.json();
+      } catch {
+        error = { error: 'Upload failed', message: response.statusText };
+      }
+      
+      throw new Error(error.message || error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } catch (uploadError) {
+    console.error('❌ File Upload Exception:', uploadError);
+    throw uploadError;
   }
-
-  return response.json();
 }
 
 export const auth = {

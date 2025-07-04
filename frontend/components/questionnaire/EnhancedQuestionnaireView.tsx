@@ -242,59 +242,118 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     alert('Assistance request submitted. Our team will contact you within 24 hours.');
   };
 
-  // Submit to Trust Portal
-  const submitToTrustPortal = async (vendorId: string, questionnaireId: string, questions: QuestionnaireQuestion[]) => {
-    const completedQuestions = questions.filter(q => q.status !== 'empty');
-    const summary = {
-      title: `Compliance Questionnaire Submission`,
-      description: `Completed questionnaire with ${completedQuestions.length} answered questions`,
-      category: 'Compliance Documentation',
-      content: JSON.stringify({
-        questionnaireId,
-        totalQuestions: questions.length,
-        completedQuestions: completedQuestions.length,
-        aiAnsweredQuestions: questions.filter(q => q.status === 'ai-answered').length,
-        manuallyAnsweredQuestions: questions.filter(q => q.status === 'manually-answered').length,
-        assistanceRequestedQuestions: questions.filter(q => q.status === 'assistance-requested').length,
-        submissionDate: new Date().toISOString(),
-        status: 'In Review'
-      }),
-      vendorId: parseInt(vendorId),
-      isQuestionnaireAnswer: true,
-      questionnaireId
-    };
-
-    const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/trust-portal/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(summary),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Trust Portal API error: ${response.status}`);
-    }
-
-    return await response.json();
-  };
-
   // Submit questionnaire for review
   const handleSubmitForReview = async () => {
     setIsProcessing(true);
     
     try {
-      // Submit to backend using correct questionnaire endpoint
+      // Get auth token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // First, upload any supporting documents and evidence files
+      const uploadedDocuments = [];
+      
+      // Upload evidence files first
+      for (const evidenceFile of evidenceFiles) {
+        const formData = new FormData();
+        formData.append('file', evidenceFile);
+        formData.append('description', `Evidence file: ${evidenceFile.name}`);
+        formData.append('category', 'evidence');
+        
+        const uploadResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/vendors/${selectedVendor}/evidence`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        if (uploadResponse.ok) {
+          const result = await uploadResponse.json();
+          uploadedDocuments.push({
+            filename: evidenceFile.name,
+            fileUrl: result.evidenceFile?.spacesUrl,
+            fileType: evidenceFile.type,
+            fileSize: evidenceFile.size,
+            category: 'evidence',
+            id: result.evidenceFile?.id
+          });
+        }
+      }
+      
+      // Upload question-specific supporting documents
+      for (const question of questions) {
+        if (question.uploadedDocument) {
+          const formData = new FormData();
+          formData.append('file', question.uploadedDocument);
+          formData.append('description', `Supporting document for: ${question.question.substring(0, 50)}...`);
+          formData.append('category', 'supporting-document');
+          formData.append('questionId', question.id);
+          
+          const uploadResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/vendors/${selectedVendor}/evidence`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+          
+          if (uploadResponse.ok) {
+            const result = await uploadResponse.json();
+            uploadedDocuments.push({
+              filename: question.uploadedDocument.name,
+              fileUrl: result.evidenceFile?.spacesUrl,
+              fileType: question.uploadedDocument.type,
+              fileSize: question.uploadedDocument.size,
+              category: 'supporting-document',
+              questionId: question.id,
+              id: result.evidenceFile?.id
+            });
+          }
+        }
+      }
+      
+      // Submit questionnaire with links to uploaded documents
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           title: `Enterprise Questionnaire - ${new Date().toLocaleDateString()}`,
           vendorId: parseInt(selectedVendor),
-          questions: questions.map(q => ({
-            questionText: q.question,
-            answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
-            status: q.status === 'ai-answered' || q.status === 'manually-answered' ? 'Completed' : 'Not Started',
-            needsAssistance: q.status === 'assistance-requested',
-            assistanceRequest: q.assistanceRequest
+          questions: questions.map(q => {
+            // Find supporting documents for this question
+            const supportingDocs = uploadedDocuments.filter(doc => 
+              doc.questionId === q.id
+            );
+            
+            return {
+              questionText: q.question,
+              answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
+              status: q.status === 'ai-answered' || q.status === 'manually-answered' ? 'Completed' : 'Not Started',
+              needsAssistance: q.status === 'assistance-requested',
+              assistanceRequest: q.assistanceRequest,
+              supportingDocuments: supportingDocs.map(doc => ({
+                fileUrl: doc.fileUrl,
+                filename: doc.filename,
+                fileType: doc.fileType,
+                fileSize: doc.fileSize,
+                id: doc.id
+              }))
+            };
+          }),
+          evidenceFiles: uploadedDocuments.filter(doc => doc.category === 'evidence').map(doc => ({
+            fileUrl: doc.fileUrl,
+            filename: doc.filename,
+            fileType: doc.fileType,
+            fileSize: doc.fileSize,
+            id: doc.id
           })),
           generateAnswers: false
         })
@@ -307,7 +366,56 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
         // Submit to Trust Portal
         if (questionnaireId) {
           try {
-            await submitToTrustPortal(selectedVendor, questionnaireId, questions);
+            // Create trust portal entry with detailed content including supporting docs
+            const trustPortalResponse = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/trust-portal/items', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                title: `Compliance Questionnaire Submission`,
+                description: `Completed questionnaire with ${questions.filter(q => q.status !== 'empty').length} answered questions`,
+                category: 'Compliance Documentation',
+                content: JSON.stringify({
+                  questionnaireId,
+                  totalQuestions: questions.length,
+                  completedQuestions: questions.filter(q => q.status !== 'empty').length,
+                  aiAnsweredQuestions: questions.filter(q => q.status === 'ai-answered').length,
+                  manuallyAnsweredQuestions: questions.filter(q => q.status === 'manually-answered').length,
+                  assistanceRequestedQuestions: questions.filter(q => q.status === 'assistance-requested').length,
+                  submissionDate: new Date().toISOString(),
+                  status: 'In Review',
+                  questions: questions.map(q => ({
+                    id: q.id,
+                    question: q.question,
+                    answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
+                    status: q.status,
+                    supportingDocuments: uploadedDocuments.filter(doc => doc.questionId === q.id).map(doc => ({
+                      filename: doc.filename,
+                      fileUrl: doc.fileUrl,
+                      fileType: doc.fileType,
+                      fileSize: doc.fileSize,
+                      id: doc.id
+                    }))
+                  })),
+                  evidenceFiles: uploadedDocuments.filter(doc => doc.category === 'evidence').map(doc => ({
+                    filename: doc.filename,
+                    fileUrl: doc.fileUrl,
+                    fileType: doc.fileType,
+                    fileSize: doc.fileSize,
+                    id: doc.id
+                  }))
+                }),
+                vendorId: parseInt(selectedVendor),
+                isQuestionnaireAnswer: true,
+                questionnaireId
+              })
+            });
+            
+            if (!trustPortalResponse.ok) {
+              console.error('Trust portal submission error:', await trustPortalResponse.text());
+            }
           } catch (trustPortalError) {
             console.error('Trust Portal submission error:', trustPortalError);
           }
