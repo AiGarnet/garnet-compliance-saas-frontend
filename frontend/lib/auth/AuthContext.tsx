@@ -128,7 +128,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('✅ Login successful, processing response:', {
         hasAccessToken: !!data.access_token,
-        hasToken: !!data.token,
         hasUser: !!data.user,
         userEmail: data.user?.email,
         userRole: data.user?.role,
@@ -136,8 +135,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         organization: data.user?.organization
       });
 
-      // The backend returns 'access_token', not 'token'
-      const token = data.access_token || data.token; // Support both for compatibility
+      // The backend always returns 'access_token'
+      const token = data.access_token;
       
       if (!token) {
         throw new Error('No authentication token received from server');
