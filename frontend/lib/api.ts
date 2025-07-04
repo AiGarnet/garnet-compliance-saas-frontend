@@ -75,8 +75,10 @@ function isAuthenticated(): boolean {
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const url = getApiEndpoint(endpoint);
   
-  // Get auth token and add to headers if available
-  const token = getAuthToken();
+  // Get fresh auth token directly from localStorage on each call
+  // This ensures we always use the most current token
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -85,25 +87,42 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
   // Add Authorization header if token exists and this isn't a public auth endpoint
   if (token && !endpoint.includes('/api/auth/')) {
     // Validate token before using it
-    if (!isAuthenticated()) {
-      console.error('❌ EXPIRED OR INVALID TOKEN - Redirecting to login');
+    try {
+      // Basic JWT validation - check if token is expired
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const now = Date.now() / 1000;
+      
+      if (payload.exp <= now) {
+        console.error('❌ EXPIRED TOKEN DETECTED - Redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        
+        // Only redirect if we're in the browser
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login';
+        }
+        throw new Error('Authentication session expired. Please log in again.');
+      }
+      
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔐 API Call with Authentication:', {
+        endpoint,
+        url,
+        hasToken: true,
+        tokenPreview: `${token.substring(0, 20)}...`,
+        tokenExpires: new Date(payload.exp * 1000).toLocaleString(),
+        headers: { ...headers, Authorization: '[REDACTED]' }
+      });
+    } catch (tokenError) {
+      console.error('❌ Invalid JWT token:', tokenError);
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
-      // Only redirect if we're in the browser
+      
       if (typeof window !== 'undefined') {
         window.location.href = '/auth/login';
       }
-      throw new Error('Authentication session expired. Please log in again.');
+      throw new Error('Invalid authentication token. Please log in again.');
     }
-    
-    headers['Authorization'] = `Bearer ${token}`;
-    console.log('🔐 API Call with Authentication:', {
-      endpoint,
-      url,
-      hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
-      headers: { ...headers, Authorization: headers.Authorization ? '[REDACTED]' : undefined }
-    });
   } else {
     console.log('📤 API Call without Authentication:', {
       endpoint,

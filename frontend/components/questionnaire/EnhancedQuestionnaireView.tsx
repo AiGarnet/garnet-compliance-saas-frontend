@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/Alert';
 import VendorSelector from './VendorSelector';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface QuestionnaireQuestion {
   id: string;
@@ -45,6 +46,7 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   enterpriseId 
 }) => {
   const router = useRouter();
+  const { isAuthenticated, token, logout } = useAuth();
   
   // State management
   const [questions, setQuestions] = useState<QuestionnaireQuestion[]>([]);
@@ -55,10 +57,21 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'review' | 'submit'>('upload');
   const [trustPortalStatus, setTrustPortalStatus] = useState<'draft' | 'in-review' | 'approved'>('draft');
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Refs
   const checklistInputRef = useRef<HTMLInputElement>(null);
   const evidenceInputRef = useRef<HTMLInputElement>(null);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 3000);
+    }
+  }, [isAuthenticated, token, router]);
 
   // Initialize with the passed vendorId if provided
   useEffect(() => {
@@ -72,6 +85,15 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   const handleChecklistUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Check authentication before proceeding
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 2000);
+      return;
+    }
 
     setEnterpriseChecklist(file);
     setIsProcessing(true);
@@ -96,6 +118,16 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   // Handle evidence files upload
   const handleEvidenceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    
+    // Check authentication before proceeding
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 2000);
+      return;
+    }
+    
     setEvidenceFiles(prev => [...prev, ...files]);
     
     if (questions.length > 0) {
@@ -132,6 +164,15 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
   // Generate AI answers for all questions
   const generateAIAnswers = async (evidenceFiles: File[]) => {
+    // Check authentication before proceeding
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 2000);
+      return;
+    }
+    
     setIsProcessing(true);
     
     for (let i = 0; i < questions.length; i++) {
@@ -159,8 +200,19 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
               }
             : q
         ));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error generating AI answer:', error);
+        
+        // Handle authentication errors
+        if (error.name === 'AuthenticationError' || (error.message && error.message.includes('Authentication'))) {
+          setAuthError('Authentication failed. Please log in again.');
+          setTimeout(() => {
+            logout();
+            router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+          }, 2000);
+          return;
+        }
+        
         setQuestions(prev => prev.map(q => 
           q.id === question.id 
             ? { ...q, isAiAnswerLoading: false }
@@ -175,6 +227,11 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
   // Generate AI answer for a single question
   const generateAIAnswerForQuestion = async (question: string, evidenceFiles: File[]): Promise<string> => {
+    // Check authentication before proceeding
+    if (!isAuthenticated || !token) {
+      throw new Error("Authentication required. Please log in to continue.");
+    }
+    
     // Use the correct backend AI endpoint with proper format
     try {
       const context = evidenceFiles.length > 0 
@@ -189,11 +246,18 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
       console.log('Sending AI request:', requestBody);
 
+      // Get fresh token from localStorage
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        throw new Error('Authentication token missing. Please log in again.');
+      }
+
       const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(requestBody)
       });
@@ -202,12 +266,23 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
         const data = await response.json();
         return data.answer || data.response || 'Unable to generate AI answer at this time.';
       } else {
+        // Handle authentication errors
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const errorText = await response.text();
         console.error('AI API error:', response.status, response.statusText, errorText);
         return 'AI service temporarily unavailable. Please try manual answer or request assistance.';
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI answer generation failed:', error);
+      
+      // Re-throw authentication errors to be handled by the caller
+      if (error.message && error.message.includes('Authentication')) {
+        throw error;
+      }
+      
       return 'Network error occurred. Please check your connection and try again.';
     }
   };
@@ -255,7 +330,17 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       }
       
       // First, upload any supporting documents and evidence files
-      const uploadedDocuments = [];
+      interface UploadedDocument {
+        filename: string;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+        category: string;
+        questionId?: string;
+        id?: string;
+      }
+      
+      const uploadedDocuments: UploadedDocument[] = [];
       
       // Upload evidence files first
       for (const evidenceFile of evidenceFiles) {

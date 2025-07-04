@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Building2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { vendors as vendorAPI } from '../../lib/api';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface Vendor {
   id: string;
@@ -28,17 +30,38 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated, token, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    if (isAuthenticated && token) {
+      fetchVendors();
+    } else {
+      setError("Authentication required. Please log in to continue.");
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, token]);
 
   const fetchVendors = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Fetching vendors from API...');
+      console.log('Fetching vendors from API with authentication...');
+      console.log('Auth status:', { isAuthenticated, hasToken: !!token });
+      
+      // Ensure token is available in localStorage before making the request
+      const storedToken = localStorage.getItem('authToken');
+      if (!storedToken) {
+        console.error('No auth token found in localStorage');
+        setError('Authentication token missing. Please log in again.');
+        setTimeout(() => {
+          logout();
+          router.push('/auth/login');
+        }, 2000);
+        return;
+      }
+      
       const response = await vendorAPI.getAll();
       
       console.log('Vendors API response:', response);
@@ -70,8 +93,19 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
         console.log('Auto-selecting first vendor:', formattedVendors[0].id);
         onVendorSelect(formattedVendors[0].id);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching vendors:', err);
+      
+      // Handle authentication errors specifically
+      if (err.name === 'AuthenticationError' || (err.message && err.message.includes('Authentication'))) {
+        setError('Authentication failed. Please log in again.');
+        setTimeout(() => {
+          logout();
+          router.push('/auth/login');
+        }, 2000);
+        return;
+      }
+      
       setError(`Failed to load vendors: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
@@ -83,6 +117,14 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
   const handleVendorSelect = (vendorId: string) => {
     onVendorSelect(vendorId);
     setIsOpen(false);
+  };
+
+  const handleRetry = () => {
+    if (!isAuthenticated) {
+      router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+    } else {
+      fetchVendors();
+    }
   };
 
   if (isLoading) {
@@ -109,20 +151,24 @@ const VendorSelector: React.FC<VendorSelectorProps> = ({
       <Card className="border-red-200 shadow-sm">
         <CardHeader className="bg-red-50 rounded-t-lg">
           <CardTitle className="flex items-center space-x-3">
-            <Building2 className="w-5 h-5 text-red-600" />
-            <span className="text-gray-900 font-semibold">Select Your Company</span>
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="text-gray-900 font-semibold">Authentication Error</span>
           </CardTitle>
-          <p className="text-sm text-gray-600 mt-1">Choose the vendor account for this questionnaire submission</p>
+          <p className="text-sm text-gray-600 mt-1">There was a problem loading your vendor data</p>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="text-red-600 text-sm">
-            {error}
-            <button 
-              onClick={fetchVendors}
-              className="ml-2 text-blue-600 hover:text-blue-800 underline font-medium"
-            >
-              Retry
-            </button>
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-700 font-medium">{error}</p>
+              <button 
+                onClick={handleRetry}
+                className="mt-3 flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>{!isAuthenticated ? 'Log In' : 'Retry'}</span>
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
