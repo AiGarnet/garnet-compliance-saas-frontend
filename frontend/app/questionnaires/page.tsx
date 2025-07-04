@@ -2130,79 +2130,160 @@ const QuestionnairesPage = () => {
         {/* Section Content */}
         <div className="min-h-[600px]">
           
-          {/* Section 1: Checklist Upload */}
+          {/* Section 1: Checklist Upload & Evidence Files */}
           {activeSection === 'upload' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <div className="max-w-4xl mx-auto">
-                <div className="text-center mb-8">
-                  <Upload className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
-                  <p className="text-lg text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
-                  
-                  {/* Add Manual Question Button */}
-                  {selectedChecklist && (
-                    <div className="mt-6">
-                      <button
-                        onClick={() => setShowAddQuestionModal(true)}
-                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Add Manual Question
-                      </button>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Add custom questions to the selected checklist: "{selectedChecklist.name}"
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div className="max-w-6xl mx-auto">
+                {/* Upload Error Display */}
+                {uploadError && (
+                  <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700">{uploadError}</p>
+                  </div>
+                )}
 
-                {/* Upload Area */}
-                        <div 
-                          ref={dropZoneRef}
-                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer mb-8 ${
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Checklist Upload */}
+                  <div>
+                    <div className="text-center mb-6">
+                      <Upload className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Checklist</h2>
+                      <p className="text-sm text-gray-600">Upload your compliance checklist and we'll extract the questions</p>
+                    </div>
+
+                    {/* Upload Area */}
+                    <div 
+                      ref={dropZoneRef}
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer mb-6 ${
                         dragActive 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-300 hover:border-gray-400'
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
                       }`}
                       onDragEnter={handleDrag}
                       onDragOver={handleDrag}
                       onDragLeave={handleDrag}
                       onDrop={handleDrop}
-                  onClick={() => checklistFileRef.current?.click()}
-                >
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-xl text-gray-600 mb-2">
-                    {dragActive ? 'Drop file here' : 'Upload compliance checklist'}
-                  </p>
-                  <p className="text-gray-500 mb-4">
-                    PDF, TXT, DOC, DOCX supported
-                  </p>
-                  <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                    Choose File
-                  </button>
-                        <input
-                    ref={checklistFileRef}
-                          type="file"
-                          className="hidden"
-                    accept=".pdf,.txt,.doc,.docx"
-                    onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                  />
+                      onClick={() => checklistFileRef.current?.click()}
+                    >
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                      <p className="text-lg text-gray-600 mb-2">
+                        {dragActive ? 'Drop file here' : 'Upload compliance checklist'}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-3">
+                        PDF, TXT, DOC, DOCX supported
+                      </p>
+                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                        Choose File
+                      </button>
+                      <input
+                        ref={checklistFileRef}
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.txt,.doc,.docx"
+                        onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                      />
                     </div>
-                    
-                    {isUploading && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-3" />
-                    <span className="text-lg text-gray-600">Processing file...</span>
+
+                    {/* Add Manual Question Button */}
+                    {selectedChecklist && (
+                      <div className="text-center">
+                        <button
+                          onClick={() => setShowAddQuestionModal(true)}
+                          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Add Manual Question
+                        </button>
                       </div>
                     )}
-                    
-                    {uploadError && (
-                  <div className="text-red-600 bg-red-50 p-4 rounded-lg mb-6">
-                        {uploadError}
-                      </div>
-                )}
+                  </div>
 
-                                {/* Loading Checklists */}
+                  {/* Right Column: Evidence Files */}
+                  <div>
+                    <div className="text-center mb-6">
+                      <Files className="h-12 w-12 text-orange-600 mx-auto mb-3" />
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Evidence Files</h2>
+                      <p className="text-sm text-gray-600">Upload internal evidence files to enhance AI responses</p>
+                    </div>
+
+                    {/* Evidence File Upload Form */}
+                    <div className="mb-6">
+                      <div className="grid grid-cols-1 gap-3 mb-4">
+                        <div>
+                          <input
+                            type="text"
+                            value={evidenceDescription}
+                            onChange={(e) => setEvidenceDescription(e.target.value)}
+                            placeholder="Description (optional)..."
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        
+                        <div>
+                          <select
+                            value={evidenceCategory}
+                            onChange={(e) => setEvidenceCategory(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="">Category (optional)...</option>
+                            <option value="Security">Security</option>
+                            <option value="Data Privacy">Data Privacy</option>
+                            <option value="Compliance">Compliance</option>
+                            <option value="Policies">Policies</option>
+                            <option value="Procedures">Procedures</option>
+                            <option value="Certifications">Certifications</option>
+                            <option value="Contracts">Contracts</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div 
+                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors cursor-pointer"
+                        onClick={() => evidenceFileRef.current?.click()}
+                      >
+                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm text-gray-600 mb-2">Click to upload evidence files</p>
+                        <input
+                          ref={evidenceFileRef}
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => e.target.files && handleEvidenceFileUpload(e.target.files)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Evidence Files List */}
+                    {evidenceFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {evidenceFiles.map((file: any) => (
+                          <div key={file.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center space-x-3 overflow-hidden">
+                              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <span className="text-sm text-gray-900 truncate">{file.originalName || file.filename}</span>
+                            </div>
+                            <button
+                              onClick={() => deleteEvidenceFile(file.id)}
+                              className="text-red-600 hover:text-red-700 p-1 flex-shrink-0"
+                              title="Delete evidence file"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {evidenceFiles.length === 0 && !isUploadingEvidence && (
+                      <div className="text-center py-4 text-gray-500">
+                        <Files className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm">No evidence files uploaded yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Loading Checklists */}
                 {isLoadingChecklists && checklists.length === 0 && (
                   <div className="mt-8 flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-3" />
@@ -3273,15 +3354,6 @@ const QuestionnairesPage = () => {
 
                 {/* General Document Upload Section */}
                 <div className="border-t border-gray-200 pt-6">
-                  <div className="prose prose-sm max-w-none">
-                    <p>Upload supporting documents and evidence files to strengthen your compliance submission.</p>
-                    <ul className="mt-2">
-                      <li>Accepted formats: PDF, Images, DOC, DOCX, TXT</li>
-                      <li>Documents will be stored securely in the supporting-docs/ folder</li>
-                      <li>Files can be linked to specific questions or kept as general evidence</li>
-                    </ul>
-                  </div>
-
                   <div className="mt-6">
                     <div className="flex items-center gap-4">
                       <input
@@ -3304,19 +3376,15 @@ const QuestionnairesPage = () => {
                         {isUploadingSupportDoc ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Uploading to supporting-docs/...
+                            Uploading...
                           </>
                         ) : (
                           <>
                             <Upload className="h-5 w-5 mr-2" />
-                            Choose & Upload File
+                            Upload Document
                           </>
                         )}
                       </label>
-                      
-                      <div className="text-sm text-gray-500">
-                        Supports: PDF, Images, DOC, DOCX, TXT
-                      </div>
                     </div>
                   </div>
                 </div>
