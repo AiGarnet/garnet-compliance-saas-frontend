@@ -28,7 +28,8 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  Trash2
+  Trash2,
+  Share
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -1215,15 +1216,37 @@ const QuestionnairesPage = () => {
     });
   };
 
+  // Add function to determine if a question requires supporting documentation using AI-like logic
+  const determineIfDocumentRequired = (question: string): boolean => {
+    // AI-like heuristic to determine if a question requires supporting documentation
+    const documentKeywords = [
+      'policy', 'procedure', 'document', 'certificate', 'license', 'contract',
+      'agreement', 'compliance', 'audit', 'report', 'evidence', 'proof',
+      'certification', 'accreditation', 'standard', 'framework', 'plan',
+      'training', 'awareness', 'incident', 'response', 'backup', 'recovery',
+      'disaster', 'business continuity', 'risk assessment', 'vulnerability',
+      'penetration test', 'security assessment', 'data protection', 'privacy'
+    ];
+    
+    const lowerQuestion = question.toLowerCase();
+    return documentKeywords.some(keyword => lowerQuestion.includes(keyword));
+  };
+
+  // Update the parseQuestionsFromText function to use proper logic
   const parseQuestionsFromText = (text: string): ExtractedQuestion[] => {
     const lines = text.split('\n').filter(line => line.trim().length > 0);
-    return lines.map((line, index) => ({
-      id: `q-${Date.now()}-${index}`,
-      text: line.trim(),
-      status: 'pending',
-      requiresDoc: Math.random() > 0.7,
-      docDescription: Math.random() > 0.7 ? getRandomDocRequirement() : undefined
-    }));
+    return lines.map((line, index) => {
+      const questionText = line.trim();
+      const requiresDoc = determineIfDocumentRequired(questionText);
+      
+      return {
+        id: `q-${Date.now()}-${index}`,
+        text: questionText,
+        status: 'pending',
+        requiresDoc: requiresDoc,
+        docDescription: requiresDoc ? getRandomDocRequirement() : undefined
+      };
+    });
   };
 
   const getRandomDocRequirement = (): string => {
@@ -2832,14 +2855,14 @@ const QuestionnairesPage = () => {
             </div>
           )}
 
-          {/* Section 3: Supporting Documents - INDEPENDENT UPLOAD SYSTEM */}
+          {/* Section 3: Supporting Documents - CONDITIONAL UPLOAD SYSTEM */}
           {activeSection === 'docs' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-6">
                   <FolderOpen className="h-12 w-12 text-gray-600 mx-auto mb-3" />
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">Supporting Documents</h2>
-                  <p className="text-sm text-gray-600">Upload supporting documents for specific questions</p>
+                  <p className="text-sm text-gray-600">Upload supporting documents for questions that require them</p>
                 </div>
 
                 {/* Supporting Document Upload Error */}
@@ -2849,58 +2872,66 @@ const QuestionnairesPage = () => {
                   </div>
                 )}
 
-                {/* Question-Specific Document Requirements */}
-                {extractedQuestions.length > 0 && (
-                  <div className="space-y-6">
-                    {extractedQuestions.map((question) => (
+                {/* Question-Specific Document Requirements - Only for questions that require docs */}
+                {extractedQuestions.filter(q => q.requiresDoc).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Question-Specific Documents</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Upload supporting documents for questions that require them.
+                    </p>
+                    
+                    <div className="space-y-6">
+                      {extractedQuestions
+                        .filter(question => question.requiresDoc)
+                        .map((question) => (
                           <div 
                             key={question.id}
-                        className={`bg-white border rounded-lg p-6 transition-all ${
-                          question.supportingDocs?.length ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                        }`}
+                            className={`bg-white border rounded-lg p-6 transition-all ${
+                              question.supportingDocs?.length ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                            }`}
                           >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-grow">
-                            <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
-                            
-                            {question.docDescription && (
-                              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
-                                <p className="text-yellow-800 text-sm">
-                                  <strong>Required:</strong> {question.docDescription}
-                                </p>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-grow">
+                                <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
+                                
+                                {question.docDescription && (
+                                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
+                                    <p className="text-yellow-800 text-sm">
+                                      <strong>Required:</strong> {question.docDescription}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="file"
-                                className="hidden"
-                                id={`support-doc-${question.id}`}
-                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                                onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
-                                disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
-                              />
-                              <label
-                                htmlFor={`support-doc-${question.id}`}
-                              className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
-                                  isUploadingSupportDoc && uploadingQuestionId === question.id
-                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                  : question.supportingDocs?.length 
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                              >
-                                {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
+                                
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  id={`support-doc-${question.id}`}
+                                  accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                                  onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                                  disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
+                                />
+                                <label
+                                  htmlFor={`support-doc-${question.id}`}
+                                  className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                    isUploadingSupportDoc && uploadingQuestionId === question.id
+                                      ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                    : question.supportingDocs?.length 
+                                      ? 'bg-green-600 text-white hover:bg-green-700'
+                                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                                  }`}
+                                >
+                                  {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Uploading...
+                                    </>
+                                ) : question.supportingDocs?.length ? (
                                   <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Uploading...
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Submitted
                                   </>
-                              ) : question.supportingDocs?.length ? (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Submitted
-                                </>
                                 ) : (
                                   <>
                                     <Upload className="h-4 w-4 mr-2" />
@@ -2908,33 +2939,177 @@ const QuestionnairesPage = () => {
                                   </>
                                 )}
                               </label>
-                          </div>
-                        </div>
+                            </div>
 
-                        {/* Uploaded Documents List */}
-                        {question.supportingDocs && question.supportingDocs.length > 0 && (
-                          <div className="mt-4 space-y-2">
-                            {question.supportingDocs.map((doc: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
-                                <div className="flex items-center space-x-3 overflow-hidden">
-                                  <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
-                                  <span className="text-gray-700 truncate">{doc.originalName || doc.filename}</span>
-                                </div>
-                              <button
-                                  onClick={() => deleteStandaloneSupportDoc(doc.id)}
-                                  className="text-red-500 hover:text-red-700 transition-colors"
-                                  title="Delete document"
-                              >
-                                  <Trash2 className="h-5 w-5" />
-                              </button>
+                            {/* Uploaded Documents List */}
+                            {question.supportingDocs && question.supportingDocs.length > 0 && (
+                              <div className="mt-4 space-y-2">
+                                {question.supportingDocs.map((doc: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                                    <div className="flex items-center space-x-3 overflow-hidden">
+                                      <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                      <span className="text-gray-700 truncate">{doc.originalName || doc.filename}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                                      className="text-red-500 hover:text-red-700 transition-colors"
+                                      title="Delete document"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
-                      </div>
-                        )}
                     </div>
-                    ))}
                   </div>
                 )}
+
+                {/* General Supporting Documents Section */}
+                <div className="border-t pt-8">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Supporting Documents</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload any additional supporting documents that provide evidence for your questionnaire responses.
+                  </p>
+                  
+                  {/* General Supporting Documents List */}
+                  {uploadedSupportingDocs.length > 0 && (
+                    <div className="mb-6 space-y-3">
+                      {uploadedSupportingDocs.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-5 w-5 text-gray-600" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{doc.originalName}</p>
+                              <p className="text-xs text-gray-500">
+                                {(doc.fileSize / 1024 / 1024).toFixed(2)} MB • {doc.category || 'General'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => sendSupportingDocumentToTrustPortal(doc)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Send to Trust Portal"
+                            >
+                              <Share className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Delete document"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* General Document Upload */}
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="file"
+                      ref={standaloneSupportDocRef}
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                      onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
+                      disabled={isUploadingSupportDoc}
+                    />
+                    <button
+                      onClick={() => standaloneSupportDocRef.current?.click()}
+                      disabled={isUploadingSupportDoc}
+                      className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
+                        isUploadingSupportDoc
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {isUploadingSupportDoc ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Additional Documents
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Evidence Files Section */}
+                <div className="border-t pt-8 mt-8">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Evidence Files</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload evidence files that will be used to generate AI answers for your questions.
+                  </p>
+                  
+                  {/* Evidence Files List */}
+                  {evidenceFiles.length > 0 && (
+                    <div className="mb-6 space-y-3">
+                      {evidenceFiles.map((file: any) => (
+                        <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-5 w-5 text-gray-600" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{file.originalFilename || file.filename}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.fileSize / 1024 / 1024).toFixed(2)} MB • {file.category || 'Evidence'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => deleteEvidenceFile(file.id)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Delete file"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Evidence File Upload */}
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="file"
+                      ref={evidenceFileRef}
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                      onChange={(e) => e.target.files && handleEvidenceFileUpload(e.target.files)}
+                      disabled={isUploadingEvidence}
+                      multiple
+                    />
+                    <button
+                      onClick={() => evidenceFileRef.current?.click()}
+                      disabled={isUploadingEvidence}
+                      className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
+                        isUploadingEvidence
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
+                    >
+                      {isUploadingEvidence ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Evidence Files
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
