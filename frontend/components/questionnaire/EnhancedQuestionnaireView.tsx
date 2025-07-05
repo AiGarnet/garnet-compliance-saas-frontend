@@ -25,16 +25,25 @@ import { Alert } from '@/components/ui/Alert';
 import VendorSelector from './VendorSelector';
 import { useAuth } from '@/lib/auth/AuthContext';
 
+// Define the UploadedDocument interface at the top level
+interface UploadedDocument {
+  filename: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  category: string;
+  questionId?: string;
+  id?: string;
+}
+
 interface QuestionnaireQuestion {
   id: string;
   question: string;
   aiAnswer?: string;
   isAiAnswerLoading?: boolean;
-  uploadedDocument?: File;
   needsAssistance?: boolean;
   assistanceRequest?: string;
   status: 'empty' | 'ai-answered' | 'manually-answered' | 'assistance-requested' | 'completed';
-  requiresSupportingDocuments: boolean;
 }
 
 interface EnhancedQuestionnaireViewProps {
@@ -45,7 +54,7 @@ interface EnhancedQuestionnaireViewProps {
 const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({ 
   vendorId, 
   enterpriseId 
-}) => {
+}): JSX.Element => {
   const router = useRouter();
   const { isAuthenticated, token, logout } = useAuth();
   
@@ -105,8 +114,7 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       setQuestions(questionsFromFile.map(q => ({
         id: generateQuestionId(),
         question: q,
-        status: 'empty' as const,
-        requiresSupportingDocuments: false
+        status: 'empty' as const
       })));
       setCurrentStep('processing');
     } catch (error) {
@@ -289,19 +297,6 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     }
   };
 
-  // Handle manual document upload for specific question
-  const handleManualDocumentUpload = (questionId: string, file: File) => {
-    setQuestions(prev => prev.map(q => 
-      q.id === questionId 
-        ? { 
-            ...q, 
-            uploadedDocument: file,
-            status: 'manually-answered'
-          }
-        : q
-    ));
-  };
-
   // Handle assistance request
   const handleAssistanceRequest = (questionId: string, request: string) => {
     setQuestions(prev => prev.map(q => 
@@ -321,204 +316,73 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
   // Submit questionnaire for review
   const handleSubmitForReview = async () => {
+    if (!selectedVendor) {
+      alert('Please select a vendor first');
+      return;
+    }
+
     setIsProcessing(true);
-    
+
     try {
-      // Get auth token from localStorage
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      
-      if (!token) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // First, upload any supporting documents and evidence files
-      interface UploadedDocument {
-        filename: string;
-        fileUrl: string;
-        fileType: string;
-        fileSize: number;
-        category: string;
-        questionId?: string;
-        id?: string;
-      }
-      
+      // Upload evidence files first
       const uploadedDocuments: UploadedDocument[] = [];
       
-      // Upload evidence files first
-      for (const evidenceFile of evidenceFiles) {
+      for (const file of evidenceFiles) {
         const formData = new FormData();
-        formData.append('file', evidenceFile);
-        formData.append('description', `Evidence file: ${evidenceFile.name}`);
+        formData.append('file', file);
+        formData.append('vendorId', selectedVendor);
         formData.append('category', 'evidence');
         
-        const uploadResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/vendors/${selectedVendor}/evidence`, {
+        const response = await fetch('/api/upload', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
+          body: formData,
         });
         
-        if (uploadResponse.ok) {
-          const result = await uploadResponse.json();
-          uploadedDocuments.push({
-            filename: evidenceFile.name,
-            fileUrl: result.evidenceFile?.spacesUrl,
-            fileType: evidenceFile.type,
-            fileSize: evidenceFile.size,
-            category: 'evidence',
-            id: result.evidenceFile?.id
-          });
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
         }
+        
+        const { fileUrl, id } = await response.json();
+        
+        uploadedDocuments.push({
+          filename: file.name,
+          fileUrl,
+          fileType: file.type,
+          fileSize: file.size,
+          category: 'evidence',
+          id
+        });
       }
-      
-      // Upload question-specific supporting documents
-      for (const question of questions) {
-        if (question.uploadedDocument && question.requiresSupportingDocuments) {
-          const formData = new FormData();
-          formData.append('file', question.uploadedDocument);
-          formData.append('vendorId', vendorId);
-          formData.append('questionId', question.id);
-          formData.append('description', `Supporting document for: ${question.question.substring(0, 50)}...`);
-          formData.append('category', 'supporting-document');
-          
-          const uploadResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/vendors/${selectedVendor}/evidence`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData
-          });
-          
-          if (uploadResponse.ok) {
-            const result = await uploadResponse.json();
-            uploadedDocuments.push({
-              filename: question.uploadedDocument.name,
-              fileUrl: result.evidenceFile?.spacesUrl,
-              fileType: question.uploadedDocument.type,
-              fileSize: question.uploadedDocument.size,
-              category: 'supporting-document',
-              questionId: question.id,
-              id: result.evidenceFile?.id
-            });
-          }
-        }
-      }
-      
-      // Submit questionnaire with links to uploaded documents
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/questionnaires', {
+
+      // Submit questionnaire data
+      const questionnaireData = {
+        vendorId: selectedVendor,
+        questions: questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          aiAnswer: q.aiAnswer,
+          status: q.status,
+          assistanceRequest: q.assistanceRequest
+        })),
+        documents: uploadedDocuments
+      };
+
+      const response = await fetch('/api/questionnaires', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title: `Enterprise Questionnaire - ${new Date().toLocaleDateString()}`,
-          vendorId: parseInt(selectedVendor),
-          questions: questions.map(q => {
-            // Find supporting documents for this question
-            const supportingDocs = uploadedDocuments.filter(doc => 
-              doc.questionId === q.id
-            );
-            
-            return {
-              questionText: q.question,
-              answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
-              status: q.status === 'ai-answered' || q.status === 'manually-answered' ? 'Completed' : 'Not Started',
-              needsAssistance: q.status === 'assistance-requested',
-              assistanceRequest: q.assistanceRequest,
-              supportingDocuments: supportingDocs.map(doc => ({
-                fileUrl: doc.fileUrl,
-                filename: doc.filename,
-                fileType: doc.fileType,
-                fileSize: doc.fileSize,
-                id: doc.id
-              }))
-            };
-          }),
-          evidenceFiles: uploadedDocuments.filter(doc => doc.category === 'evidence').map(doc => ({
-            fileUrl: doc.fileUrl,
-            filename: doc.filename,
-            fileType: doc.fileType,
-            fileSize: doc.fileSize,
-            id: doc.id
-          })),
-          generateAnswers: false
-        })
+        body: JSON.stringify(questionnaireData),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        const questionnaireId = result.questionnaire?.id;
-        
-        // Submit to Trust Portal
-        if (questionnaireId) {
-          try {
-            // Create trust portal entry with detailed content including supporting docs
-            const trustPortalResponse = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/trust-portal/items', {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                title: `Compliance Questionnaire Submission`,
-                description: `Completed questionnaire with ${questions.filter(q => q.status !== 'empty').length} answered questions`,
-                category: 'Compliance Documentation',
-                content: JSON.stringify({
-                  questionnaireId,
-                  totalQuestions: questions.length,
-                  completedQuestions: questions.filter(q => q.status !== 'empty').length,
-                  aiAnsweredQuestions: questions.filter(q => q.status === 'ai-answered').length,
-                  manuallyAnsweredQuestions: questions.filter(q => q.status === 'manually-answered').length,
-                  assistanceRequestedQuestions: questions.filter(q => q.status === 'assistance-requested').length,
-                  submissionDate: new Date().toISOString(),
-                  status: 'In Review',
-                  questions: questions.map(q => ({
-                    id: q.id,
-                    question: q.question,
-                    answer: q.aiAnswer || (q.uploadedDocument ? `Document uploaded: ${q.uploadedDocument.name}` : ''),
-                    status: q.status,
-                    supportingDocuments: uploadedDocuments.filter(doc => doc.questionId === q.id).map(doc => ({
-                      filename: doc.filename,
-                      fileUrl: doc.fileUrl,
-                      fileType: doc.fileType,
-                      fileSize: doc.fileSize,
-                      id: doc.id
-                    }))
-                  })),
-                  evidenceFiles: uploadedDocuments.filter(doc => doc.category === 'evidence').map(doc => ({
-                    filename: doc.filename,
-                    fileUrl: doc.fileUrl,
-                    fileType: doc.fileType,
-                    fileSize: doc.fileSize,
-                    id: doc.id
-                  }))
-                }),
-                vendorId: parseInt(selectedVendor),
-                isQuestionnaireAnswer: true,
-                questionnaireId
-              })
-            });
-            
-            if (!trustPortalResponse.ok) {
-              console.error('Trust portal submission error:', await trustPortalResponse.text());
-            }
-          } catch (trustPortalError) {
-            console.error('Trust Portal submission error:', trustPortalError);
-          }
-        }
-        
-        setTrustPortalStatus('in-review');
-        setCurrentStep('submit');
-        
-        // Redirect to trust portal
-        router.push(`/trust-portal/vendor/${selectedVendor}`);
-      } else {
-        throw new Error('Submission failed');
+      if (!response.ok) {
+        throw new Error('Failed to submit questionnaire');
       }
+
+      setTrustPortalStatus('in-review');
+      router.push(`/trust-portal/vendor/${selectedVendor}`);
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('Error submitting questionnaire:', error);
       alert('Failed to submit questionnaire. Please try again.');
     } finally {
       setIsProcessing(false);
@@ -536,20 +400,20 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   // Render question status icon
   const renderStatusIcon = (question: QuestionnaireQuestion) => {
     if (question.isAiAnswerLoading) {
-      return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
+      return <Loader2 className="w-4 h-4 animate-spin text-blue-600" />;
     }
-    
+
     switch (question.status) {
       case 'ai-answered':
-        return <Bot className="w-4 h-4 text-green-500" />;
+        return <Bot className="w-4 h-4 text-blue-600" />;
       case 'manually-answered':
-        return <FileText className="w-4 h-4 text-blue-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'assistance-requested':
-        return <HelpCircle className="w-4 h-4 text-orange-500" />;
+        return <HelpCircle className="w-4 h-4 text-orange-600" />;
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
       default:
-        return <AlertCircle className="w-4 h-4 text-gray-400" />;
+        return null;
     }
   };
 
@@ -826,9 +690,6 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
                         AI-Generated Answers
                       </th>
                       <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
-                        Upload Supporting Doc
-                      </th>
-                      <th className="text-left p-4 w-1/4 font-bold text-gray-800 text-sm">
                         Request Assistance
                       </th>
                     </tr>
@@ -839,7 +700,6 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
                         key={question.id}
                         question={question}
                         index={index}
-                        onManualUpload={(file) => handleManualDocumentUpload(question.id, file)}
                         onAssistanceRequest={(request) => handleAssistanceRequest(question.id, request)}
                         renderStatusIcon={renderStatusIcon}
                       />
@@ -905,6 +765,14 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
             </Button>
           </div>
         )}
+
+        {/* Supporting Documents Section */}
+        <SupportingDocumentsSection
+          evidenceFiles={evidenceFiles}
+          setEvidenceFiles={setEvidenceFiles}
+          evidenceInputRef={evidenceInputRef}
+          handleEvidenceUpload={handleEvidenceUpload}
+        />
       </div>
     </div>
   );
@@ -914,7 +782,6 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 interface QuestionRowProps {
   question: QuestionnaireQuestion;
   index: number;
-  onManualUpload: (file: File) => void;
   onAssistanceRequest: (request: string) => void;
   renderStatusIcon: (question: QuestionnaireQuestion) => React.ReactNode;
 }
@@ -922,20 +789,11 @@ interface QuestionRowProps {
 const QuestionRow: React.FC<QuestionRowProps> = ({
   question,
   index,
-  onManualUpload,
   onAssistanceRequest,
   renderStatusIcon
 }) => {
-  const [assistanceText, setAssistanceText] = useState('');
   const [showAssistanceInput, setShowAssistanceInput] = useState(false);
-  const manualUploadRef = useRef<HTMLInputElement>(null);
-
-  const handleManualFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onManualUpload(file);
-    }
-  };
+  const [assistanceText, setAssistanceText] = useState('');
 
   const handleAssistanceSubmit = () => {
     if (assistanceText.trim()) {
@@ -946,137 +804,142 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
   };
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-      {/* Column 1: Checklist Questions */}
-      <td className="p-4 align-top">
-        <div className="flex items-start space-x-3">
-          {renderStatusIcon(question)}
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 mb-1">
-              <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Q{index + 1}</span>
-            </div>
-            <p className="text-sm text-gray-900 leading-relaxed">{question.question}</p>
+    <div className="mb-6 p-4 bg-white rounded-lg shadow">
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-semibold text-gray-700">Q{index + 1}.</span>
+            <p className="text-gray-800">{question.question}</p>
+            {renderStatusIcon(question)}
           </div>
-        </div>
-      </td>
+          
+          {question.aiAnswer && (
+            <div className="mt-2 p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-600">{question.aiAnswer}</p>
+            </div>
+          )}
 
-      {/* Column 2: AI-Generated Answers */}
-      <td className="p-4 align-top">
-        {question.isAiAnswerLoading ? (
-          <div className="flex items-center space-x-2 text-blue-600 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">Generating answer...</span>
-          </div>
-        ) : question.aiAnswer ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center space-x-2 mb-2">
-              <Bot className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-semibold text-blue-700">AI Generated</span>
+          {question.needsAssistance && !showAssistanceInput && (
+            <div className="mt-2">
+              <p className="text-sm text-yellow-600">
+                <AlertCircle className="inline-block w-4 h-4 mr-1" />
+                Assistance requested: {question.assistanceRequest}
+              </p>
             </div>
-            <p className="text-sm text-gray-700 leading-relaxed">{question.aiAnswer}</p>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-400 italic p-3 bg-gray-50 rounded-lg border border-gray-200">
-            No AI answer generated yet
-          </div>
-        )}
-      </td>
+          )}
 
-      {/* Column 3: Upload Supporting Doc */}
-      <td className="p-4 align-top">
-        <div className="space-y-2">
-          {question.uploadedDocument ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 mb-1">
-                <FileText className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-700">Document Uploaded</span>
-              </div>
-              <p className="text-sm text-gray-700 font-medium">{question.uploadedDocument.name}</p>
-            </div>
-          ) : (
-            <div>
-              <input
-                ref={manualUploadRef}
-                type="file"
-                accept=".pdf,.docx,.txt,.xlsx"
-                onChange={handleManualFileUpload}
-                className="hidden"
+          {showAssistanceInput && (
+            <div className="mt-2">
+              <textarea
+                value={assistanceText}
+                onChange={(e) => setAssistanceText(e.target.value)}
+                className="w-full p-2 border rounded"
+                placeholder="Describe what help you need..."
               />
+              <div className="mt-2 flex gap-2">
+                <Button onClick={handleAssistanceSubmit}>
+                  Submit Request
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowAssistanceInput(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          {!showAssistanceInput && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAssistanceInput(true)}
+            >
+              <HelpCircle className="w-4 h-4 mr-1" />
+              Need Help
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Update the SupportingDocumentsSection component to be properly typed
+interface SupportingDocumentsSectionProps {
+  evidenceFiles: File[];
+  setEvidenceFiles: React.Dispatch<React.SetStateAction<File[]>>;
+  evidenceInputRef: React.RefObject<HTMLInputElement>;
+  handleEvidenceUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const SupportingDocumentsSection: React.FC<SupportingDocumentsSectionProps> = ({
+  evidenceFiles,
+  setEvidenceFiles,
+  evidenceInputRef,
+  handleEvidenceUpload
+}) => {
+  return (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Supporting Documents
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload any supporting documents that provide evidence for your questionnaire responses. These documents will be available to the enterprise for review.
+            </p>
+            
+            <div className="flex flex-col gap-4">
+              {evidenceFiles.map((file: File, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm">{file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEvidenceFiles(files => files.filter((_, i) => i !== index));
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
               <Button
-                size="sm"
                 variant="outline"
-                onClick={() => manualUploadRef.current?.click()}
-                className="w-full border-gray-300 hover:border-green-500 hover:text-green-600 transition-colors"
+                onClick={() => evidenceInputRef.current?.click()}
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Upload Document
               </Button>
+              <input
+                type="file"
+                ref={evidenceInputRef}
+                className="hidden"
+                onChange={handleEvidenceUpload}
+                multiple
+              />
             </div>
-          )}
+          </div>
         </div>
-      </td>
-
-      {/* Column 4: Request Assistance */}
-      <td className="p-4 align-top">
-        <div className="space-y-2">
-          {question.needsAssistance ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 mb-2">
-                <HelpCircle className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-semibold text-orange-700">Assistance Requested</span>
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">{question.assistanceRequest}</p>
-            </div>
-          ) : (
-            <div>
-              {showAssistanceInput ? (
-                <div className="space-y-3">
-                  <textarea
-                    value={assistanceText}
-                    onChange={(e) => setAssistanceText(e.target.value)}
-                    placeholder="Describe what help you need with this question..."
-                    className="w-full text-sm border border-gray-300 rounded-lg p-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                  />
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={handleAssistanceSubmit}
-                      disabled={!assistanceText.trim()}
-                      className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
-                    >
-                      <Send className="w-4 h-4 mr-1" />
-                      Submit Request
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setShowAssistanceInput(false);
-                        setAssistanceText('');
-                      }}
-                      className="border-gray-300"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAssistanceInput(true)}
-                  className="w-full border-gray-300 hover:border-orange-500 hover:text-orange-600 transition-colors"
-                >
-                  <HelpCircle className="w-4 h-4 mr-2" />
-                  Need Help
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </td>
-    </tr>
+      </CardContent>
+    </Card>
   );
 };
 

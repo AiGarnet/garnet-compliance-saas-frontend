@@ -56,57 +56,25 @@ function transformBackendActivity(backendActivity: BackendActivity): Activity {
           color: { bg: 'bg-red-100', text: 'text-red-600' }
         };
       case 'questionnaire_submitted':
-      case 'questionnaire_updated':
-      case 'questionnaire_created':
         return {
           icon: { name: 'FileText', type: 'lucide' as const },
           color: { bg: 'bg-purple-100', text: 'text-purple-600' }
         };
       case 'checklist_uploaded':
       case 'evidence_uploaded':
-      case 'document_uploaded':
         return {
           icon: { name: 'Upload', type: 'lucide' as const },
           color: { bg: 'bg-orange-100', text: 'text-orange-600' }
         };
       case 'user_login':
-      case 'login':
         return {
           icon: { name: 'LogIn', type: 'lucide' as const },
           color: { bg: 'bg-green-100', text: 'text-green-600' }
         };
       case 'user_logout':
-      case 'logout':
         return {
           icon: { name: 'LogOut', type: 'lucide' as const },
           color: { bg: 'bg-gray-100', text: 'text-gray-600' }
-        };
-      case 'status_changed':
-      case 'vendor_status_changed':
-      case 'client_status_changed':
-        return {
-          icon: { name: 'RefreshCw', type: 'lucide' as const },
-          color: { bg: 'bg-yellow-100', text: 'text-yellow-600' }
-        };
-      case 'feedback_created':
-      case 'feedback_updated':
-      case 'feedback_resolved':
-        return {
-          icon: { name: 'MessageSquare', type: 'lucide' as const },
-          color: { bg: 'bg-indigo-100', text: 'text-indigo-600' }
-        };
-      case 'trust_portal_updated':
-      case 'trust_portal_item_added':
-      case 'trust_portal_item_removed':
-        return {
-          icon: { name: 'Shield', type: 'lucide' as const },
-          color: { bg: 'bg-teal-100', text: 'text-teal-600' }
-        };
-      case 'error':
-      case 'warning':
-        return {
-          icon: { name: 'AlertTriangle', type: 'lucide' as const },
-          color: { bg: 'bg-red-100', text: 'text-red-600' }
         };
       default:
         return {
@@ -118,50 +86,16 @@ function transformBackendActivity(backendActivity: BackendActivity): Activity {
 
   const iconAndColor = getIconAndColor(backendActivity.type);
 
-  // Format description based on activity type and metadata
-  let description = backendActivity.description;
-  if (!description && backendActivity.metadata) {
-    const meta = backendActivity.metadata;
-    switch (backendActivity.type) {
-      case 'client_created':
-      case 'vendor_created':
-        description = `Created new ${meta.entityType || 'vendor'}: ${meta.entityName}`;
-        break;
-      case 'client_updated':
-      case 'vendor_updated':
-        description = `Updated ${meta.entityType || 'vendor'}: ${meta.entityName}`;
-        break;
-      case 'status_changed':
-      case 'vendor_status_changed':
-      case 'client_status_changed':
-        description = `${meta.entityName} status changed from ${meta.oldStatus} to ${meta.newStatus}`;
-        break;
-      case 'questionnaire_submitted':
-        description = `Submitted questionnaire for ${meta.entityName}`;
-        break;
-      case 'evidence_uploaded':
-      case 'document_uploaded':
-        description = `Uploaded document: ${meta.fileName}`;
-        break;
-      case 'trust_portal_item_added':
-        description = `Added item to trust portal: ${meta.itemTitle}`;
-        break;
-      default:
-        description = description || `${backendActivity.type.replace(/_/g, ' ')}`;
-    }
-  }
-
   return {
     id: backendActivity.id,
     type: activityType,
     userId: backendActivity.userId || '',
     userName: backendActivity.userName || backendActivity.userEmail || 'Unknown User',
-    description: description,
+    description: backendActivity.description,
     metadata: backendActivity.metadata,
     timestamp: new Date(backendActivity.createdAt),
     icon: iconAndColor.icon,
-    color: iconAndColor.color,
-    status: backendActivity.status
+    color: iconAndColor.color
   };
 }
 

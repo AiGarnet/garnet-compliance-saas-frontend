@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Building2, Shield, FileText, Search, Users, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, Eye, Star, Globe } from 'lucide-react';
-import { TrustPortalService } from '@/lib/services/trustPortalService';
+import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Header from '@/components/Header';
 import { MobileNavigation } from '@/components/MobileNavigation';
@@ -23,14 +23,38 @@ export default function TrustPortalPage() {
       setError('');
       
       console.log('Fetching all vendors for trust portal...');
-      const response = await TrustPortalService.getVendorsWithItems();
+      const response = await vendorAPI.trustPortal.getVendorsWithItems();
       
       console.log('Trust portal API response:', response);
       
-      if (response.success && response.data) {
-        setVendors(response.data);
-        console.log('Loaded all vendors for trust portal:', response.data);
+      // Handle the API response structure properly (same as vendors page)
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const transformedVendors = response.data.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Questionnaire Pending',
+          industry: vendor.industry,
+          region: vendor.region,
+          description: vendor.description,
+          website: vendor.website
+        }));
+        setVendors(transformedVendors);
+        console.log('Loaded all vendors for trust portal:', transformedVendors);
+      } else if (response.vendors && Array.isArray(response.vendors)) {
+        // Handle legacy format if still returned
+        const transformedVendors = response.vendors.map((vendor: any) => ({
+          id: vendor.uuid || vendor.id || vendor.vendorId?.toString(),
+          name: vendor.companyName || vendor.name || 'Unknown Vendor',
+          status: vendor.status || 'Questionnaire Pending',
+          industry: vendor.industry,
+          region: vendor.region,
+          description: vendor.description,
+          website: vendor.website
+        }));
+        setVendors(transformedVendors);
+        console.log('Loaded all vendors for trust portal (legacy format):', transformedVendors);
       } else {
+        // No vendors found or error
         console.log('No vendors found or API error:', response);
         setVendors([]);
         if (!response.success) {
