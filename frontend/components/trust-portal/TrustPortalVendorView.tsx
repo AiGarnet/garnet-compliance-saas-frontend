@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Building2, Shield, FileText, Share2, Copy, ExternalLink } from 'lucide-react';
-import { vendors } from '@/lib/api';
+import { TrustPortalService } from '@/lib/services/trustPortalService';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { safeMap } from '@/lib/utils/arrayUtils';
 
@@ -37,7 +37,7 @@ export const TrustPortalVendorView: React.FC = () => {
         console.log('Fetching trust portal data for user:', user.id);
         
         // Get trust portal data for the authenticated vendor
-        const response = await vendors.trustPortal.getData(user.id);
+        const response = await TrustPortalService.getVendorItems(user.id);
         console.log('Trust portal data response:', response);
         setData(response);
       } catch (err: any) {
@@ -60,7 +60,7 @@ export const TrustPortalVendorView: React.FC = () => {
     try {
       setIsGeneratingLink(true);
       console.log('Generating invite link for user:', user.id);
-      const response = await vendors.trustPortal.generateInviteLink(user.id);
+      const response = await TrustPortalService.generateInviteLink(user.id);
       console.log('Generated invite link response:', response);
       setInviteLink(response.inviteLink);
     } catch (err: any) {

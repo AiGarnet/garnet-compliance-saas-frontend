@@ -8,6 +8,7 @@ export interface Activity {
   timestamp: Date;
   icon?: ActivityIcon;
   color?: ActivityColor;
+  status?: 'success' | 'pending' | 'failed' | 'in_progress';
 }
 
 export enum ActivityType {

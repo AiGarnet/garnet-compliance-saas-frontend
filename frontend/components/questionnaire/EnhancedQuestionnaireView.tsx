@@ -34,6 +34,7 @@ interface QuestionnaireQuestion {
   needsAssistance?: boolean;
   assistanceRequest?: string;
   status: 'empty' | 'ai-answered' | 'manually-answered' | 'assistance-requested' | 'completed';
+  requiresSupportingDocuments: boolean;
 }
 
 interface EnhancedQuestionnaireViewProps {
@@ -104,7 +105,8 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       setQuestions(questionsFromFile.map(q => ({
         id: generateQuestionId(),
         question: q,
-        status: 'empty' as const
+        status: 'empty' as const,
+        requiresSupportingDocuments: false
       })));
       setCurrentStep('processing');
     } catch (error) {
@@ -372,12 +374,13 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       
       // Upload question-specific supporting documents
       for (const question of questions) {
-        if (question.uploadedDocument) {
+        if (question.uploadedDocument && question.requiresSupportingDocuments) {
           const formData = new FormData();
           formData.append('file', question.uploadedDocument);
+          formData.append('vendorId', vendorId);
+          formData.append('questionId', question.id);
           formData.append('description', `Supporting document for: ${question.question.substring(0, 50)}...`);
           formData.append('category', 'supporting-document');
-          formData.append('questionId', question.id);
           
           const uploadResponse = await fetch(`https://garnet-compliance-saas-production.up.railway.app/api/vendors/${selectedVendor}/evidence`, {
             method: 'POST',

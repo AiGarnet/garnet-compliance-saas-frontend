@@ -1238,14 +1238,13 @@ const QuestionnairesPage = () => {
   };
 
   // STANDALONE Supporting Document Upload (Independent of questions)
-  const handleStandaloneSupportDocUpload = async (files: FileList) => {
-    if (!files || files.length === 0) return;
+  const handleStandaloneSupportDocUpload = async (file: File) => {
+    if (!file) return;
     if (!selectedVendorId) {
       setSupportDocUploadError('Please select a vendor first');
       return;
     }
 
-    const file = files[0];
     const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt'];
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
@@ -2152,20 +2151,20 @@ const QuestionnairesPage = () => {
                     <p className="text-gray-600 mb-4">Upload your compliance checklist or add questions manually</p>
 
                     <div className="space-y-4">
-                      {/* Upload Area */}
-                      <div 
-                        ref={dropZoneRef}
+                {/* Upload Area */}
+                        <div 
+                          ref={dropZoneRef}
                         className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
-                          dragActive 
-                            ? 'border-blue-500 bg-blue-50' 
+                        dragActive 
+                      ? 'border-blue-500 bg-blue-50' 
                             : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                        }`}
-                        onDragEnter={handleDrag}
-                        onDragOver={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDrop={handleDrop}
-                        onClick={() => checklistFileRef.current?.click()}
-                      >
+                      }`}
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                  onClick={() => checklistFileRef.current?.click()}
+                >
                         <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                         <p className="text-gray-600">
                           {isUploading ? (
@@ -2178,14 +2177,14 @@ const QuestionnairesPage = () => {
                           )}
                         </p>
                         <input
-                          ref={checklistFileRef}
+                    ref={checklistFileRef}
                           type="file"
                           className="hidden"
-                          accept=".pdf,.txt,.doc,.docx"
-                          onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                        />
-                      </div>
-                      
+                    accept=".pdf,.txt,.doc,.docx"
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                  />
+                    </div>
+                    
                       {/* Manual Question Button - Always Visible */}
                       <div className="bg-blue-50 rounded-lg p-4">
                         <button
@@ -2281,7 +2280,7 @@ const QuestionnairesPage = () => {
                           </div>
                         ))}
                       </div>
-                    )}
+                )}
 
                     {evidenceFiles.length === 0 && !isUploadingEvidence && (
                       <div className="text-center mt-4 text-gray-500">
@@ -2833,111 +2832,64 @@ const QuestionnairesPage = () => {
           )}
 
           {/* Section 3: Supporting Documents - INDEPENDENT UPLOAD SYSTEM */}
-          {activeSection === 'docs' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-6">
-                  <FolderOpen className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Supporting Documents</h2>
-                  <p className="text-sm text-gray-600">Upload supporting documents for specific questions</p>
-                </div>
-
-                {/* Supporting Document Upload Error */}
-                {supportDocUploadError && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700">{supportDocUploadError}</p>
-                  </div>
-                )}
-
-                {/* Question-Specific Document Requirements */}
-                {extractedQuestions.length > 0 && (
-                  <div className="space-y-6">
-                    {extractedQuestions.map((question) => (
-                      <div 
-                        key={question.id}
-                        className={`bg-white border rounded-lg p-6 transition-all ${
-                          question.supportingDocs?.length ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-grow">
-                            <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
-                            
-                            {question.docDescription && (
-                              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
-                                <p className="text-yellow-800 text-sm">
-                                  <strong>Required:</strong> {question.docDescription}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="file"
-                              className="hidden"
-                              id={`support-doc-${question.id}`}
-                              accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                              onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
-                              disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
-                            />
-                            <label
-                              htmlFor={`support-doc-${question.id}`}
-                              className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
-                                isUploadingSupportDoc && uploadingQuestionId === question.id
-                                  ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                  : question.supportingDocs?.length 
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                              }`}
-                            >
-                              {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Uploading...
-                                </>
-                              ) : question.supportingDocs?.length ? (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Submitted
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload Document
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Uploaded Documents List */}
-                        {question.supportingDocs && question.supportingDocs.length > 0 && (
-                          <div className="mt-4 space-y-2">
-                            {question.supportingDocs.map((doc: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
-                                <div className="flex items-center space-x-3 overflow-hidden">
-                                  <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
-                                  <span className="text-gray-700 truncate">{doc.originalName || doc.filename}</span>
-                                </div>
-                                <button
-                                  onClick={() => deleteStandaloneSupportDoc(doc.id)}
-                                  className="text-red-500 hover:text-red-700 transition-colors"
-                                  title="Delete document"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-2">Additional Supporting Documents</h2>
+                <p className="text-sm text-gray-600">Upload any additional supporting documents that may be relevant for enterprise review</p>
               </div>
             </div>
-          )}
+
+            {/* Supporting Document Upload Error */}
+            {supportDocUploadError && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                <p className="text-sm text-red-600">{supportDocUploadError}</p>
+              </div>
+            )}
+
+            {/* Upload Form */}
+            <div className="mb-6">
+              <input
+                type="file"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    handleStandaloneSupportDocUpload(files[0]);
+                  }
+                }}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100
+                  cursor-pointer"
+              />
+            </div>
+
+            {/* Uploaded Documents List */}
+            <div className="space-y-4">
+              {uploadedSupportingDocs.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{doc.originalName}</p>
+                      <p className="text-xs text-gray-500">{new Date(doc.uploadDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                      className="text-sm text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Section 4: Request Assistance */}
           {activeSection === 'support' && (

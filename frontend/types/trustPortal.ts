@@ -1,17 +1,17 @@
 export interface TrustPortalItem {
-  id: number;
-  vendorId: number;
+  id: string;
+  vendorId: string;
   title: string;
   description?: string;
-  category: TrustPortalCategory;
+  category: string;
   fileUrl?: string;
   fileType?: string;
-  fileSize?: string;
+  fileSize?: number;
   content?: string;
   isQuestionnaireAnswer: boolean;
   questionnaireId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type TrustPortalCategory = 
@@ -33,103 +33,43 @@ export interface TrustPortalVendor {
 
 // Feedback System Types
 export interface TrustPortalFeedback {
-  id: number;
-  vendorId: number;
-  enterpriseContactName?: string;
-  enterpriseContactEmail: string;
-  enterpriseCompanyName?: string;
-  feedbackType: FeedbackType;
-  subject: string;
-  message: string;
-  status: FeedbackStatus;
-  priority: FeedbackPriority;
-  inviteToken?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  responses?: TrustPortalFeedbackResponse[];
-}
-
-export enum FeedbackType {
-  GENERAL = 'general',
-  DOCUMENT_REQUEST = 'document_request',
-  CLARIFICATION = 'clarification',
-  COMPLIANCE_ISSUE = 'compliance_issue',
-  FOLLOW_UP = 'follow_up'
-}
-
-export enum FeedbackStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed'
-}
-
-export enum FeedbackPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  URGENT = 'urgent'
+  id: string;
+  vendorId: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in-progress' | 'resolved';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TrustPortalFeedbackResponse {
-  id: number;
-  feedbackId: number;
-  responderType: ResponderType;
-  responderName?: string;
-  responderEmail?: string;
-  message: string;
-  attachments?: string[];
-  isInternalNote: boolean;
-  createdAt: Date;
-}
-
-export enum ResponderType {
-  VENDOR = 'vendor',
-  ENTERPRISE = 'enterprise',
-  ADMIN = 'admin'
+  id: string;
+  feedbackId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Shared Documents Types
 export interface TrustPortalSharedDocument {
-  id: number;
-  vendorId: number;
-  documentTitle: string;
-  documentDescription?: string;
-  documentCategory: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileType?: string;
-  fileSize?: number;
-  isEvidenceFile: boolean;
-  isQuestionnaireAnswer: boolean;
-  questionnaireId?: string;
-  workId?: string;
-  shareToTrustPortal: boolean;
-  isActive: boolean;
-  displayOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string;
+  vendorId: string;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Complete Trust Portal Data
-export interface VendorTrustPortalData {
-  vendor: {
-    vendorId: number;
-    companyName: string;
-    region?: string;
-    industry?: string;
-    description?: string;
-    website?: string;
-    contactEmail?: string;
-    contactName?: string;
-    status?: string;
-  };
-  sharedDocuments: TrustPortalSharedDocument[];
-  vendorWorks: VendorWork[];
-  questionnaireAnswers: QuestionnaireAnswer[];
-  evidenceFiles: EvidenceFile[];
-  feedback: TrustPortalFeedback[];
-  inviteToken?: string;
+export interface TrustPortalData {
+  vendor: TrustPortalVendor;
+  items: TrustPortalItem[];
+  feedback?: TrustPortalFeedback[];
+  sharedDocuments?: TrustPortalSharedDocument[];
 }
 
 export interface VendorWork {

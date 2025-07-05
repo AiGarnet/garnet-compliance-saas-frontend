@@ -324,32 +324,68 @@ class ActivityApiService {
    * Get recent activities
    */
   async getRecentActivities(limit?: number, userId?: string): Promise<ApiResponse<BackendActivity[]>> {
-    const params = new URLSearchParams();
-    if (limit) params.append('limit', limit.toString());
-    if (userId) params.append('userId', userId);
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.append('limit', limit.toString());
+    if (userId) queryParams.append('userId', userId);
 
-    return this.request<BackendActivity[]>(`/api/activities/recent?${params.toString()}`);
+    const endpoint = `/api/activities/recent?${queryParams.toString()}`;
+    console.log('Fetching recent activities:', endpoint);
+    
+    try {
+      const response = await this.request<BackendActivity[]>(endpoint);
+      console.log('Recent activities response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      return {
+        success: false,
+        error: {
+          code: 'FETCH_ACTIVITIES_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to fetch recent activities'
+        }
+      };
+    }
   }
 
   /**
    * Get activities with filters
    */
   async getActivities(filters: ActivityFilters = {}): Promise<ApiResponse<BackendActivity[]>> {
-    const params = new URLSearchParams();
+    const queryParams = new URLSearchParams();
     
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          params.append(key, value.join(','));
-        } else if (value instanceof Date) {
-          params.append(key, value.toISOString());
-        } else {
-          params.append(key, value.toString());
-        }
+    if (filters.userId) queryParams.append('userId', filters.userId);
+    if (filters.type) {
+      if (Array.isArray(filters.type)) {
+        filters.type.forEach(t => queryParams.append('type', t));
+      } else {
+        queryParams.append('type', filters.type);
       }
-    });
+    }
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.entityType) queryParams.append('entityType', filters.entityType);
+    if (filters.entityId) queryParams.append('entityId', filters.entityId);
+    if (filters.startDate) queryParams.append('startDate', filters.startDate.toISOString());
+    if (filters.endDate) queryParams.append('endDate', filters.endDate.toISOString());
+    if (filters.limit) queryParams.append('limit', filters.limit.toString());
+    if (filters.offset) queryParams.append('offset', filters.offset.toString());
 
-    return this.request<BackendActivity[]>(`/api/activities?${params.toString()}`);
+    const endpoint = `/api/activities?${queryParams.toString()}`;
+    console.log('Fetching activities with filters:', endpoint);
+    
+    try {
+      const response = await this.request<BackendActivity[]>(endpoint);
+      console.log('Activities response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      return {
+        success: false,
+        error: {
+          code: 'FETCH_ACTIVITIES_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to fetch activities'
+        }
+      };
+    }
   }
 
   /**
@@ -457,43 +493,159 @@ class ActivityApiService {
    * Start polling for real-time activity updates
    */
   startActivityPolling(intervalMs: number = 30000, userId?: string) {
-    return setInterval(async () => {
-      try {
-        const response = await this.getRecentActivities(5, userId);
-        
-        // Check for new activities that might have toast configs
+    console.log('Starting activity polling with interval:', intervalMs, 'userId:', userId);
+    
+    // Initial fetch
+    this.getRecentActivities(10, userId)
+      .then(response => {
         if (response.success && response.data) {
-          response.data.forEach(activity => {
-            if (activity.toastConfig && activity.status === 'success') {
-              // Only show toasts for recent activities (within last 2 minutes)
-              const activityTime = new Date(activity.createdAt).getTime();
-              const now = new Date().getTime();
-              const twoMinutes = 2 * 60 * 1000;
-              
-              if (now - activityTime < twoMinutes) {
-                this.triggerToast({
-                  ...activity.toastConfig,
-                  activityId: activity.id,
-                  metadata: {
-                    activityData: activity,
-                    isPolled: true
-                  }
-                });
-              }
+          console.log('Initial activities fetch successful:', response.data.length, 'activities');
+          this.handleNewActivities(response.data);
+        } else {
+          console.warn('Initial activities fetch failed:', response.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error in initial activities fetch:', error);
+      });
+
+    // Setup polling interval
+    const intervalId = setInterval(async () => {
+      try {
+        console.log('Polling for new activities...');
+        const response = await this.getRecentActivities(10, userId);
+        
+        if (response.success && response.data) {
+          console.log('Polled activities:', response.data.length, 'activities');
+          this.handleNewActivities(response.data);
+        } else {
+          console.warn('Activity polling failed:', response.error);
+        }
+      } catch (error) {
+        console.error('Error in activity polling:', error);
+      }
+    }, intervalMs);
+
+    return intervalId;
+  }
+
+  /**
+   * Handle new activities from polling
+   */
+  private handleNewActivities(activities: BackendActivity[]) {
+    activities.forEach(activity => {
+      // Only show toasts for recent activities (within last 2 minutes)
+      const activityTime = new Date(activity.createdAt).getTime();
+      const now = new Date().getTime();
+      const twoMinutes = 2 * 60 * 1000;
+      
+      if (now - activityTime < twoMinutes) {
+        // Check if activity has toast config
+        if (activity.toastConfig) {
+          this.triggerToast({
+            title: activity.toastConfig.title,
+            message: activity.toastConfig.message,
+            type: activity.toastConfig.type,
+            duration: activity.toastConfig.duration,
+            showProgress: activity.toastConfig.showProgress,
+            actions: activity.toastConfig.actions,
+            metadata: {
+              activityId: activity.id,
+              timestamp: activity.createdAt,
+              isPolled: true
             }
           });
         }
-      } catch (error) {
-        console.error('Activity polling error:', error);
+        
+        // Generate default toast for important activities without toast config
+        else if (activity.status === 'success' && this.isImportantActivity(activity.type)) {
+          const toast = this.generateDefaultToast(activity);
+          if (toast) {
+            this.triggerToast(toast);
+          }
+        }
       }
-    }, intervalMs);
+    });
+  }
+
+  /**
+   * Check if activity type is important enough for default toast
+   */
+  private isImportantActivity(type: string): boolean {
+    const importantTypes = [
+      'client_created',
+      'client_updated',
+      'client_deleted',
+      'client_status_changed',
+      'questionnaire_submitted',
+      'evidence_uploaded',
+      'trust_portal_updated'
+    ];
+    return importantTypes.includes(type);
+  }
+
+  /**
+   * Generate default toast for activity without toast config
+   */
+  private generateDefaultToast(activity: BackendActivity): Omit<Toast, 'id' | 'timestamp'> | null {
+    const entityName = activity.entityName || activity.metadata?.entityName || 'Item';
+    
+    switch (activity.type) {
+      case 'client_created':
+        return {
+          title: 'New Client Created',
+          message: `${entityName} has been created successfully`,
+          type: 'success'
+        };
+      case 'client_updated':
+        return {
+          title: 'Client Updated',
+          message: `${entityName} has been updated successfully`,
+          type: 'info'
+        };
+      case 'client_deleted':
+        return {
+          title: 'Client Deleted',
+          message: `${entityName} has been deleted`,
+          type: 'warning'
+        };
+      case 'client_status_changed':
+        return {
+          title: 'Status Changed',
+          message: `${entityName} status has been updated`,
+          type: 'info'
+        };
+      case 'questionnaire_submitted':
+        return {
+          title: 'Questionnaire Submitted',
+          message: `Questionnaire for ${entityName} has been submitted`,
+          type: 'success'
+        };
+      case 'evidence_uploaded':
+        return {
+          title: 'Evidence Uploaded',
+          message: `New evidence has been uploaded for ${entityName}`,
+          type: 'info'
+        };
+      case 'trust_portal_updated':
+        return {
+          title: 'Trust Portal Updated',
+          message: 'Trust portal content has been updated',
+          type: 'info'
+        };
+      default:
+        return null;
+    }
   }
 
   /**
    * Stop activity polling
    */
   stopActivityPolling(intervalId: NodeJS.Timeout) {
-    clearInterval(intervalId);
+    if (intervalId) {
+      console.log('Stopping activity polling');
+      clearInterval(intervalId);
+    }
   }
 }
 
