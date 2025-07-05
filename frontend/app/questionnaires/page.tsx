@@ -2138,8 +2138,8 @@ const QuestionnairesPage = () => {
                 {uploadError && (
                   <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-red-700">{uploadError}</p>
-                  </div>
-                )}
+                    </div>
+                  )}
 
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -2148,55 +2148,55 @@ const QuestionnairesPage = () => {
                     <div className="flex items-center space-x-3 mb-4">
                       <ClipboardList className="h-6 w-6 text-blue-600" />
                       <h2 className="text-xl font-semibold text-gray-800">Upload Checklist</h2>
-                    </div>
-                    <p className="text-gray-600 mb-4">Upload your compliance checklist and we'll extract the questions</p>
+                </div>
+                    <p className="text-gray-600 mb-4">Upload your compliance checklist or add questions manually</p>
 
-                    {/* Upload Area */}
-                    <div 
-                      ref={dropZoneRef}
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
-                        dragActive 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                      }`}
-                      onDragEnter={handleDrag}
-                      onDragOver={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={() => checklistFileRef.current?.click()}
-                    >
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">
-                        {isUploading ? (
-                          <span className="flex items-center justify-center">
-                            <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                            Uploading...
-                          </span>
-                        ) : (
-                          <span>Drop your checklist here or click to browse</span>
-                        )}
-                      </p>
-                      <input
-                        ref={checklistFileRef}
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,.txt,.doc,.docx"
-                        onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                      />
-                    </div>
-                    
-                    {/* Add Manual Question Button */}
-                    {selectedChecklist && (
-                      <div className="text-center mt-4">
+                    <div className="space-y-4">
+                      {/* Upload Area */}
+                      <div 
+                        ref={dropZoneRef}
+                        className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
+                          dragActive 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                        }`}
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                        onClick={() => checklistFileRef.current?.click()}
+                      >
+                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600">
+                          {isUploading ? (
+                            <span className="flex items-center justify-center">
+                              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                              Uploading...
+                            </span>
+                          ) : (
+                            <span>Drop your checklist here or click to browse</span>
+                          )}
+                        </p>
+                        <input
+                          ref={checklistFileRef}
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.txt,.doc,.docx"
+                          onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                        />
+                      </div>
+                      
+                      {/* Manual Question Button - Always Visible */}
+                      <div className="bg-blue-50 rounded-lg p-4">
                         <button
                           onClick={() => setShowAddQuestionModal(true)}
-                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          className="w-full flex items-center justify-center px-4 py-3 text-blue-700 hover:text-blue-800 font-medium rounded-lg hover:bg-blue-100 transition-colors"
                         >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Add Manual Question
+                          <MessageCircle className="h-5 w-5 mr-2" />
+                          Add Questions Manually
                         </button>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   {/* Right Column: Evidence Files */}
@@ -2204,7 +2204,7 @@ const QuestionnairesPage = () => {
                     <div className="flex items-center space-x-3 mb-4">
                       <FileText className="h-6 w-6 text-green-600" />
                       <h2 className="text-xl font-semibold text-gray-800">Evidence Files</h2>
-                    </div>
+                      </div>
                     <p className="text-gray-600 mb-4">Upload supporting documentation and evidence</p>
 
                     {/* Evidence File Upload Form */}
@@ -2292,7 +2292,7 @@ const QuestionnairesPage = () => {
                   </div>
                 </div>
 
-                {/* Loading Checklists */}
+                                {/* Loading Checklists */}
                 {isLoadingChecklists && checklists.length === 0 && (
                   <div className="mt-8 flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-3" />
@@ -2447,9 +2447,9 @@ const QuestionnairesPage = () => {
                 )}
 
                 {/* End of main content */}
-              </div>
-            </div>
-          )}
+                      </div>
+                          </div>
+                  )}
 
           {/* Section 2: AI Questionnaire */}
           {activeSection === 'ai' && (
@@ -2836,83 +2836,10 @@ const QuestionnairesPage = () => {
           {activeSection === 'docs' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
               <div className="max-w-6xl mx-auto">
-                {/* Question-Specific Document Requirements */}
-                {extractedQuestions.length > 0 && extractedQuestions.some(q => q.requiresDoc || q.docDescription) && (
-                  <div className="mb-8">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <ClipboardList className="h-5 w-5 mr-2 text-blue-600" />
-                        Question-Specific Document Requirements
-                      </h3>
-                      <p className="text-sm text-blue-700 mb-4">
-                        Some questions from your uploaded checklist require specific supporting documents:
-                      </p>
-                      
-                      <div className="space-y-4">
-                        {extractedQuestions
-                          .filter(q => q.requiresDoc || q.docDescription)
-                          .map((question) => (
-                          <div 
-                            key={question.id}
-                            className="bg-white border border-blue-200 rounded-lg p-4"
-                          >
-                            <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
-                            
-                            {question.docDescription && (
-                              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
-                                <p className="text-yellow-800 text-sm">
-                                  <strong>Required:</strong> {question.docDescription}
-                                </p>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="file"
-                                className="hidden"
-                                id={`support-doc-${question.id}`}
-                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                                onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
-                                disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
-                              />
-                              <label
-                                htmlFor={`support-doc-${question.id}`}
-                                className={`inline-flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
-                                  isUploadingSupportDoc && uploadingQuestionId === question.id
-                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                              >
-                                {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload for This Question
-                                  </>
-                                )}
-                              </label>
-                              
-                              {question.supportingDocs && question.supportingDocs.length > 0 && (
-                                <div className="ml-3 text-sm text-gray-600">
-                                  {question.supportingDocs.length} document(s) uploaded
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div className="text-center mb-6">
                   <FolderOpen className="h-12 w-12 text-gray-600 mx-auto mb-3" />
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">Supporting Documents</h2>
-                  <p className="text-sm text-gray-600">Upload and manage supporting documents independently</p>
+                  <p className="text-sm text-gray-600">Upload supporting documents for specific questions</p>
                 </div>
 
                 {/* Supporting Document Upload Error */}
@@ -2922,222 +2849,92 @@ const QuestionnairesPage = () => {
                   </div>
                 )}
 
-                {/* Standalone Upload Form */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-8 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <Upload className="h-6 w-6 mr-3 text-green-600" />
-                    Upload Supporting Documents
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Description (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        placeholder="e.g., Security policy document, Compliance certificate..."
-                        value={supportDocDescription}
-                        onChange={(e) => setSupportDocDescription(e.target.value)}
-                        disabled={isUploadingSupportDoc}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category (Optional)
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        value={supportDocCategory}
-                        onChange={(e) => setSupportDocCategory(e.target.value)}
-                        disabled={isUploadingSupportDoc}
+                {/* Question-Specific Document Requirements */}
+                {extractedQuestions.length > 0 && (
+                  <div className="space-y-6">
+                    {extractedQuestions.map((question) => (
+                      <div 
+                        key={question.id}
+                        className={`bg-white border rounded-lg p-6 transition-all ${
+                          question.supportingDocs?.length ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                        }`}
                       >
-                        <option value="">Select category</option>
-                        <option value="Security">Security</option>
-                        <option value="Compliance">Compliance</option>
-                        <option value="Privacy">Privacy</option>
-                        <option value="Policies">Policies</option>
-                        <option value="Certificates">Certificates</option>
-                        <option value="Evidence">Evidence</option>
-                        <option value="General">General</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <input
-                      ref={standaloneSupportDocRef}
-                      type="file"
-                      className="hidden"
-                      id="standalone-support-doc"
-                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                      onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
-                      disabled={isUploadingSupportDoc}
-                    />
-                    <label
-                      htmlFor="standalone-support-doc"
-                      className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium ${
-                        isUploadingSupportDoc
-                          ? 'bg-gray-400 text-white cursor-not-allowed' 
-                          : 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
-                      }`}
-                    >
-                      {isUploadingSupportDoc ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-5 w-5 mr-2" />
-                          Upload Document
-                        </>
-                      )}
-                    </label>
-                    
-                    <div className="text-sm text-gray-500">
-                      Supports: PDF, Images, DOC, DOCX, TXT
-                    </div>
-                  </div>
-                </div>
-
-                {/* Uploaded Documents List */}
-                <div className="bg-white border border-gray-200 rounded-xl">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <Files className="h-5 w-5 mr-2 text-gray-600" />
-                      Uploaded Supporting Documents
-                      <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {uploadedSupportingDocs.length}
-                      </span>
-                    </h3>
-                  </div>
-
-                  {uploadedSupportingDocs.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FolderOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-gray-600 mb-2">No Documents Uploaded Yet</h4>
-                      <p className="text-gray-500">Start by uploading your first supporting document above</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200">
-                      {uploadedSupportingDocs.map((doc) => (
-                        <div key={doc.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                              <div className="flex-shrink-0 mt-1">
-                                <FileText className="h-5 w-5 text-green-600" />
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-grow">
+                            <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
+                            
+                            {question.docDescription && (
+                              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
+                                <p className="text-yellow-800 text-sm">
+                                  <strong>Required:</strong> {question.docDescription}
+                                </p>
                               </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium text-gray-900 truncate">
-                                  {doc.originalName}
-                                </h4>
-                                
-                                {doc.description && (
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {doc.description}
-                                  </p>
-                                )}
-                                
-                                <div className="flex items-center space-x-4 mt-2">
-                                  {doc.category && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      {doc.category}
-                                    </span>
-                                  )}
-                                  
-                                  <span className="text-xs text-gray-500">
-                                    {(doc.fileSize / 1024).toFixed(1)} KB
-                                  </span>
-                                  
-                                  <span className="text-xs text-gray-500">
-                                    {doc.uploadDate.toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                            )}
+                          </div>
 
-                            <div className="flex items-center space-x-2 ml-4">
-                              <a
-                                href={`/api/checklists/documents/${doc.id}/download`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-green-600 hover:text-green-700 text-sm font-medium"
-                              >
-                                View
-                              </a>
-                              
-                              <button
-                                onClick={() => sendSupportingDocumentToTrustPortal(doc)}
-                                disabled={sendingDocumentId === doc.id || sendingToTrustPortal}
-                                className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center"
-                              >
-                                {sendingDocumentId === doc.id ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Sending...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-3 w-3 mr-1" />
-                                    Send to Trust Portal
-                                  </>
-                                )}
-                              </button>
-                              
-                              <button
-                                onClick={() => deleteStandaloneSupportDoc(doc.id)}
-                                className="text-red-600 hover:text-red-700 text-sm font-medium"
-                              >
-                                Delete
-                              </button>
-                            </div>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="file"
+                              className="hidden"
+                              id={`support-doc-${question.id}`}
+                              accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                              onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                              disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
+                            />
+                            <label
+                              htmlFor={`support-doc-${question.id}`}
+                              className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                isUploadingSupportDoc && uploadingQuestionId === question.id
+                                  ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                  : question.supportingDocs?.length 
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                            >
+                              {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : question.supportingDocs?.length ? (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Submitted
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload Document
+                                </>
+                              )}
+                            </label>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
-                {/* General Document Upload Section */}
-                <div className="border-t border-gray-200 pt-6">
-                  <div className="mt-6">
-                    <div className="flex items-center gap-4">
-                              <input
-                        ref={standaloneSupportDocRef}
-                                type="file"
-                                className="hidden"
-                        id="standalone-support-doc"
-                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                        onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
-                        disabled={isUploadingSupportDoc}
-                              />
-                              <label
-                        htmlFor="standalone-support-doc"
-                        className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium ${
-                          isUploadingSupportDoc
-                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                            : 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
-                                }`}
-                              >
-                        {isUploadingSupportDoc ? (
-                                  <>
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                    Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                            <Upload className="h-5 w-5 mr-2" />
-                            Upload Document
-                                  </>
-                                )}
-                              </label>
-                            </div>
+                        {/* Uploaded Documents List */}
+                        {question.supportingDocs && question.supportingDocs.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {question.supportingDocs.map((doc: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                                <div className="flex items-center space-x-3 overflow-hidden">
+                                  <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                  <span className="text-gray-700 truncate">{doc.originalName || doc.filename}</span>
+                                </div>
+                                <button
+                                  onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                                  className="text-red-500 hover:text-red-700 transition-colors"
+                                  title="Delete document"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
+                        )}
                       </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
