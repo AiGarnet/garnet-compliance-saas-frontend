@@ -2132,7 +2132,7 @@ const QuestionnairesPage = () => {
           
           {/* Section 1: Checklist Upload & Evidence Files */}
           {activeSection === 'upload' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
               <div className="max-w-6xl mx-auto">
                 {/* Upload Error Display */}
                 {uploadError && (
@@ -2144,20 +2144,20 @@ const QuestionnairesPage = () => {
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Left Column: Checklist Upload */}
-                  <div>
-                    <div className="text-center mb-6">
-                      <Upload className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Checklist</h2>
-                      <p className="text-sm text-gray-600">Upload your compliance checklist and we'll extract the questions</p>
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <ClipboardList className="h-6 w-6 text-blue-600" />
+                      <h2 className="text-xl font-semibold text-gray-800">Upload Checklist</h2>
                     </div>
+                    <p className="text-gray-600 mb-4">Upload your compliance checklist and we'll extract the questions</p>
 
                     {/* Upload Area */}
                     <div 
                       ref={dropZoneRef}
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer mb-6 ${
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
                         dragActive 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-300 hover:border-gray-400'
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                       }`}
                       onDragEnter={handleDrag}
                       onDragOver={handleDrag}
@@ -2165,16 +2165,17 @@ const QuestionnairesPage = () => {
                       onDrop={handleDrop}
                       onClick={() => checklistFileRef.current?.click()}
                     >
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                      <p className="text-lg text-gray-600 mb-2">
-                        {dragActive ? 'Drop file here' : 'Upload compliance checklist'}
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">
+                        {isUploading ? (
+                          <span className="flex items-center justify-center">
+                            <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                            Uploading...
+                          </span>
+                        ) : (
+                          <span>Drop your checklist here or click to browse</span>
+                        )}
                       </p>
-                      <p className="text-sm text-gray-500 mb-3">
-                        PDF, TXT, DOC, DOCX supported
-                      </p>
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                        Choose File
-                      </button>
                       <input
                         ref={checklistFileRef}
                         type="file"
@@ -2183,13 +2184,13 @@ const QuestionnairesPage = () => {
                         onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
                       />
                     </div>
-
+                    
                     {/* Add Manual Question Button */}
                     {selectedChecklist && (
-                      <div className="text-center">
+                      <div className="text-center mt-4">
                         <button
                           onClick={() => setShowAddQuestionModal(true)}
-                          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Add Manual Question
@@ -2199,75 +2200,83 @@ const QuestionnairesPage = () => {
                   </div>
 
                   {/* Right Column: Evidence Files */}
-                  <div>
-                    <div className="text-center mb-6">
-                      <Files className="h-12 w-12 text-orange-600 mx-auto mb-3" />
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Evidence Files</h2>
-                      <p className="text-sm text-gray-600">Upload internal evidence files to enhance AI responses</p>
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <FileText className="h-6 w-6 text-green-600" />
+                      <h2 className="text-xl font-semibold text-gray-800">Evidence Files</h2>
                     </div>
+                    <p className="text-gray-600 mb-4">Upload supporting documentation and evidence</p>
 
                     {/* Evidence File Upload Form */}
-                    <div className="mb-6">
-                      <div className="grid grid-cols-1 gap-3 mb-4">
-                        <div>
-                          <input
-                            type="text"
-                            value={evidenceDescription}
-                            onChange={(e) => setEvidenceDescription(e.target.value)}
-                            placeholder="Description (optional)..."
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-3">
+                        <input
+                          type="text"
+                          value={evidenceDescription}
+                          onChange={(e) => setEvidenceDescription(e.target.value)}
+                          placeholder="Description (optional)..."
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                        />
                         
-                        <div>
-                          <select
-                            value={evidenceCategory}
-                            onChange={(e) => setEvidenceCategory(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="">Category (optional)...</option>
-                            <option value="Security">Security</option>
-                            <option value="Data Privacy">Data Privacy</option>
-                            <option value="Compliance">Compliance</option>
-                            <option value="Policies">Policies</option>
-                            <option value="Procedures">Procedures</option>
-                            <option value="Certifications">Certifications</option>
-                            <option value="Contracts">Contracts</option>
-                          </select>
-                        </div>
+                        <select
+                          value={evidenceCategory}
+                          onChange={(e) => setEvidenceCategory(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                        >
+                          <option value="">Category (optional)...</option>
+                          <option value="Security">Security</option>
+                          <option value="Data Privacy">Data Privacy</option>
+                          <option value="Compliance">Compliance</option>
+                          <option value="Policies">Policies</option>
+                          <option value="Procedures">Procedures</option>
+                          <option value="Certifications">Certifications</option>
+                          <option value="Contracts">Contracts</option>
+                        </select>
                       </div>
 
                       <div 
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors cursor-pointer"
+                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200 ${
+                          isUploadingEvidence ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+                        }`}
                         onClick={() => evidenceFileRef.current?.click()}
                       >
-                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-600 mb-2">Click to upload evidence files</p>
+                        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                        <p className="text-gray-600">
+                          {isUploadingEvidence ? (
+                            <span className="flex items-center justify-center">
+                              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                              Uploading...
+                            </span>
+                          ) : (
+                            <span>Drop evidence files here or click to browse</span>
+                          )}
+                        </p>
                         <input
                           ref={evidenceFileRef}
                           type="file"
                           multiple
                           className="hidden"
                           onChange={(e) => e.target.files && handleEvidenceFileUpload(e.target.files)}
+                          accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                         />
                       </div>
                     </div>
 
                     {/* Evidence Files List */}
                     {evidenceFiles.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="mt-4 space-y-2">
                         {evidenceFiles.map((file: any) => (
-                          <div key={file.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+                          <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center space-x-3 overflow-hidden">
-                              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                              <span className="text-sm text-gray-900 truncate">{file.originalName || file.filename}</span>
+                              <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{file.originalName || file.filename}</span>
                             </div>
                             <button
                               onClick={() => deleteEvidenceFile(file.id)}
-                              className="text-red-600 hover:text-red-700 p-1 flex-shrink-0"
+                              className="text-red-500 hover:text-red-700 transition-colors"
                               title="Delete evidence file"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </div>
                         ))}
@@ -2275,7 +2284,7 @@ const QuestionnairesPage = () => {
                     )}
 
                     {evidenceFiles.length === 0 && !isUploadingEvidence && (
-                      <div className="text-center py-4 text-gray-500">
+                      <div className="text-center mt-4 text-gray-500">
                         <Files className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                         <p className="text-sm">No evidence files uploaded yet</p>
                       </div>
@@ -2294,7 +2303,7 @@ const QuestionnairesPage = () => {
                 {/* Uploaded Checklists */}
                 {checklists.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
                       Uploaded Checklists
                       {isLoadingChecklists && (
                         <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2 inline" />
@@ -2437,266 +2446,10 @@ const QuestionnairesPage = () => {
                   </div>
                 )}
 
-                {/* Checklist & Evidence Files - Side by Side Layout */}
-                {selectedVendorId && (
-                  <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
-                    {/* Left Column: Evidence Files */}
-                    <div className="bg-orange-50 rounded-lg p-6">
-                      <div className="text-center mb-6">
-                        <Files className="h-10 w-10 text-orange-600 mx-auto mb-3" />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Evidence Files</h3>
-                        <p className="text-sm text-gray-600">Upload internal evidence files to enhance AI responses</p>
-                        <p className="text-xs text-orange-600 mt-1">
-                          📝 Internal only - not shown on Trust Portal
-                        </p>
-                      </div>
-
-                      {/* Evidence File Upload Form */}
-                      <div className="mb-6">
-                        <div className="grid grid-cols-1 gap-3 mb-4">
-                          <div>
-                            <input
-                              type="text"
-                              value={evidenceDescription}
-                              onChange={(e) => setEvidenceDescription(e.target.value)}
-                              placeholder="Description (optional)..."
-                              className="w-full px-3 py-2 text-sm border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <select
-                              value={evidenceCategory}
-                              onChange={(e) => setEvidenceCategory(e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            >
-                              <option value="">Category (optional)...</option>
-                              <option value="Security">Security</option>
-                              <option value="Data Privacy">Data Privacy</option>
-                              <option value="Compliance">Compliance</option>
-                              <option value="Policies">Policies</option>
-                              <option value="Procedures">Procedures</option>
-                              <option value="Certifications">Certifications</option>
-                              <option value="Contracts">Contracts</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col space-y-3">
-                          <input
-                            ref={evidenceFileRef}
-                            type="file"
-                            className="hidden"
-                            multiple
-                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt,.csv,.xlsx"
-                            onChange={(e) => e.target.files && handleEvidenceFileUpload(e.target.files)}
-                          />
-                          <button
-                            onClick={() => evidenceFileRef.current?.click()}
-                            disabled={isUploadingEvidence || !selectedVendorId}
-                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors flex items-center justify-center text-sm"
-                          >
-                            {isUploadingEvidence ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                Uploading...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="h-4 w-4 mr-2" />
-                                Choose Files
-                              </>
-                            )}
-                          </button>
-                          
-                          {/* Generate Evidence Document Button */}
-                          <button
-                            onClick={() => openGenerateDocModal()}
-                            disabled={!selectedVendorId}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center text-sm"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Generate Evidence Document
-                          </button>
-                          
-                          <span className="text-xs text-gray-500 text-center">
-                            PDF, images, documents supported
-                          </span>
-                        </div>
-
-                        {evidenceUploadError && (
-                          <div className="mt-4 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
-                            {evidenceUploadError}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Evidence Files List */}
-                      {evidenceFiles.length > 0 && (
-                        <div className="bg-white rounded-lg border border-orange-200 p-4">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                            Evidence Files ({evidenceFiles.length})
-                          </h4>
-                          <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {evidenceFiles.map((file: any) => (
-                              <div key={file.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
-                                <div className="flex items-center min-w-0 flex-1">
-                                  <FileText className="h-4 w-4 text-orange-600 mr-2 flex-shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-gray-900 text-xs truncate">{file.originalFilename}</p>
-                                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                      <span>{(file.fileSize / 1024).toFixed(1)} KB</span>
-                                      {file.category && (
-                                        <span className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs">
-                                          {file.category}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => deleteEvidenceFile(file.id)}
-                                  className="text-red-600 hover:text-red-700 p-1 flex-shrink-0"
-                                  title="Delete evidence file"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {evidenceFiles.length === 0 && !isUploadingEvidence && (
-                        <div className="text-center py-6 text-gray-500">
-                          <Files className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm">No evidence files uploaded yet</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Column: Checklist Questions */}
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <div className="text-center mb-6">
-                        <ClipboardList className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Checklist Questions</h3>
-                        <p className="text-sm text-gray-600">View and manage extracted questions from uploaded checklists</p>
-                      </div>
-
-                      {/* Progress Summary */}
-                      {extractedQuestions.length > 0 && (
-                        <div className="bg-white rounded-lg border border-blue-200 p-4 mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-900">Progress Overview</span>
-                            <span className="text-xs text-gray-600">
-                              {extractedQuestions.filter(q => q.status === 'completed').length} / {extractedQuestions.length} completed
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ 
-                                width: `${(extractedQuestions.filter(q => q.status === 'completed').length / extractedQuestions.length) * 100}%` 
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Quick Actions */}
-                      {extractedQuestions.length > 0 && (
-                        <div className="space-y-2 mb-4">
-                          <button
-                            onClick={() => generateAllPendingAnswers()}
-                            disabled={isGeneratingAnswers || extractedQuestions.filter(q => q.status === 'pending').length === 0}
-                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center text-sm"
-                          >
-                            {isGeneratingAnswers ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                Generating Answers...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Generate All Pending ({extractedQuestions.filter(q => q.status === 'pending').length})
-                              </>
-                            )}
-                          </button>
-                          
-                          {extractedQuestions.filter(q => q.status === 'completed' && q.answer).length > 0 && (
-                            <button
-                              onClick={() => createQuestionnaireFromAI()}
-                              disabled={!selectedVendorId || sendingToAI}
-                              className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center text-sm"
-                            >
-                              {sendingToAI ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                  Creating...
-                                </>
-                              ) : (
-                                <>
-                                  <MessageCircle className="h-4 w-4 mr-2" />
-                                  Create Questionnaire ({extractedQuestions.filter(q => q.status === 'completed' && q.answer).length})
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Questions List */}
-                      {extractedQuestions.length > 0 ? (
-                        <div className="bg-white rounded-lg border border-blue-200 p-4 max-h-96 overflow-y-auto">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-3">Questions Summary</h4>
-                          <div className="space-y-2">
-                            {extractedQuestions.slice(0, 10).map((question: ExtractedQuestion) => (
-                              <div key={question.id} className="p-2 bg-blue-50 rounded-lg">
-                                <div className="flex items-start justify-between">
-                                  <p className="text-xs text-gray-800 flex-1 pr-2 leading-relaxed">
-                                    {question.text.length > 80 ? `${question.text.slice(0, 80)}...` : question.text}
-                                  </p>
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                                    question.status === 'completed' 
-                                      ? 'bg-green-100 text-green-800'
-                                      : question.status === 'pending'
-                                      ? 'bg-gray-100 text-gray-800'
-                                      : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {question.status === 'completed' ? 'Done' : 
-                                     question.status === 'pending' ? 'Pending' : 'Processing'}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                            {extractedQuestions.length > 10 && (
-                              <div className="text-center pt-2">
-                                <button
-                                  onClick={() => setActiveSection('ai')}
-                                  className="text-blue-600 hover:text-blue-700 text-xs underline"
-                                >
-                                  View all {extractedQuestions.length} questions →
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-6 text-gray-500">
-                          <ClipboardList className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm">No questions available</p>
-                          <p className="text-xs text-gray-400 mt-1">Upload a checklist to see questions here</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                      </div>
-                    </div>
-                  )}
+                {/* End of main content */}
+              </div>
+            </div>
+          )}
 
           {/* Section 2: AI Questionnaire */}
           {activeSection === 'ai' && (
@@ -2983,7 +2736,6 @@ const QuestionnairesPage = () => {
                             </div>
                           )}
                           
-                          {/* Show a preview hint when answer exists but is collapsed */}
                           {question.answer && !expandedQuestions.has(question.id) && (
                             <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg mb-4">
                               <p className="text-sm text-gray-600 italic">
@@ -3235,17 +2987,15 @@ const QuestionnairesPage = () => {
                       {isUploadingSupportDoc ? (
                         <>
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Uploading to supporting-docs/...
+                          Uploading...
                         </>
                       ) : (
                         <>
                           <Upload className="h-5 w-5 mr-2" />
-                          Choose & Upload File
+                          Upload Document
                         </>
                       )}
                     </label>
-                    
-
                     
                     <div className="text-sm text-gray-500">
                       Supports: PDF, Images, DOC, DOCX, TXT
@@ -3356,38 +3106,38 @@ const QuestionnairesPage = () => {
                 <div className="border-t border-gray-200 pt-6">
                   <div className="mt-6">
                     <div className="flex items-center gap-4">
-                      <input
+                              <input
                         ref={standaloneSupportDocRef}
-                        type="file"
-                        className="hidden"
+                                type="file"
+                                className="hidden"
                         id="standalone-support-doc"
-                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
                         onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
                         disabled={isUploadingSupportDoc}
-                      />
-                      <label
+                              />
+                              <label
                         htmlFor="standalone-support-doc"
                         className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium ${
                           isUploadingSupportDoc
-                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
                             : 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
-                        }`}
-                      >
+                                }`}
+                              >
                         {isUploadingSupportDoc ? (
-                          <>
+                                  <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
                             <Upload className="h-5 w-5 mr-2" />
                             Upload Document
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                                  </>
+                                )}
+                              </label>
+                            </div>
+                          </div>
+                      </div>
               </div>
             </div>
           )}
