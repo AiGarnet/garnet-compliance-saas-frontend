@@ -17,7 +17,8 @@ import {
   Trash2,
   Eye,
   Share,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,8 @@ interface QuestionnaireQuestion {
   isAiAnswerLoading?: boolean;
   needsAssistance?: boolean;
   assistanceRequest?: string;
+  supporting_doc_required: boolean;
+  uploadedDocument?: File;
   status: 'empty' | 'ai-answered' | 'manually-answered' | 'assistance-requested' | 'completed';
 }
 
@@ -63,15 +66,19 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
   const [selectedVendor, setSelectedVendor] = useState<string>(vendorId);
   const [enterpriseChecklist, setEnterpriseChecklist] = useState<File | null>(null);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [generalSupportingDocs, setGeneralSupportingDocs] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'review' | 'submit'>('upload');
   const [trustPortalStatus, setTrustPortalStatus] = useState<'draft' | 'in-review' | 'approved'>('draft');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<{[key: string]: 'idle' | 'uploading' | 'success' | 'error'}>({});
   
   // Refs
   const checklistInputRef = useRef<HTMLInputElement>(null);
   const evidenceInputRef = useRef<HTMLInputElement>(null);
+  const generalDocsInputRef = useRef<HTMLInputElement>(null);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -114,6 +121,7 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       setQuestions(questionsFromFile.map(q => ({
         id: generateQuestionId(),
         question: q,
+        supporting_doc_required: determineIfDocumentRequired(q),
         status: 'empty' as const
       })));
       setCurrentStep('processing');
@@ -123,6 +131,19 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Determine if a question requires supporting documentation using AI
+  const determineIfDocumentRequired = (question: string): boolean => {
+    // Simple heuristic - in production, this would use AI to analyze the question
+    const documentKeywords = [
+      'policy', 'procedure', 'document', 'certificate', 'license', 'contract',
+      'agreement', 'compliance', 'audit', 'report', 'evidence', 'proof',
+      'certification', 'accreditation', 'standard', 'framework'
+    ];
+    
+    const lowerQuestion = question.toLowerCase();
+    return documentKeywords.some(keyword => lowerQuestion.includes(keyword));
   };
 
   // Handle evidence files upload
@@ -143,6 +164,124 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     if (questions.length > 0) {
       await generateAIAnswers(files);
     }
+  };
+
+  // Handle general supporting documents upload
+  const handleGeneralDocsUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 2000);
+      return;
+    }
+    
+    setGeneralSupportingDocs(prev => [...prev, ...files]);
+  };
+
+  // Handle question-specific document upload
+  const handleQuestionDocumentUpload = async (questionId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!isAuthenticated || !token) {
+      setAuthError("Authentication required. Please log in to continue.");
+      setTimeout(() => {
+        router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
+      }, 2000);
+      return;
+    }
+
+    // Update the question with the uploaded file
+    setQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { ...q, uploadedDocument: file, status: 'manually-answered' }
+        : q
+    ));
+  };
+
+  // Upload file to DigitalOcean Spaces
+  const uploadFileToSpaces = async (file: File, questionId?: string): Promise<UploadedDocument> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('vendorId', selectedVendor);
+    formData.append('category', questionId ? 'supporting-document' : 'evidence');
+    if (questionId) {
+      formData.append('questionId', questionId);
+    }
+
+    const response = await fetch(`/api/vendors/${selectedVendor}/evidence`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to upload ${file.name}`);
+    }
+
+    const result = await response.json();
+    
+    return {
+      filename: file.name,
+      fileUrl: result.evidenceFile.spacesUrl,
+      fileType: file.type,
+      fileSize: file.size,
+      category: questionId ? 'supporting-document' : 'evidence',
+      questionId,
+      id: result.evidenceFile.id
+    };
+  };
+
+  // Upload all documents with progress tracking
+  const uploadAllDocuments = async (): Promise<UploadedDocument[]> => {
+    const allDocuments: UploadedDocument[] = [];
+    const totalFiles = questions.filter(q => q.uploadedDocument).length + generalSupportingDocs.length;
+    let uploadedCount = 0;
+
+    // Upload question-specific documents
+    for (const question of questions) {
+      if (question.uploadedDocument) {
+        setUploadStatus(prev => ({ ...prev, [`question_${question.id}`]: 'uploading' }));
+        
+        try {
+          const uploadedDoc = await uploadFileToSpaces(question.uploadedDocument, question.id);
+          allDocuments.push(uploadedDoc);
+          setUploadStatus(prev => ({ ...prev, [`question_${question.id}`]: 'success' }));
+        } catch (error) {
+          console.error(`Failed to upload document for question ${question.id}:`, error);
+          setUploadStatus(prev => ({ ...prev, [`question_${question.id}`]: 'error' }));
+          throw error;
+        }
+        
+        uploadedCount++;
+        setUploadProgress((uploadedCount / totalFiles) * 100);
+      }
+    }
+
+    // Upload general supporting documents
+    for (const file of generalSupportingDocs) {
+      setUploadStatus(prev => ({ ...prev, [`general_${file.name}`]: 'uploading' }));
+      
+      try {
+        const uploadedDoc = await uploadFileToSpaces(file);
+        allDocuments.push(uploadedDoc);
+        setUploadStatus(prev => ({ ...prev, [`general_${file.name}`]: 'success' }));
+      } catch (error) {
+        console.error(`Failed to upload general document ${file.name}:`, error);
+        setUploadStatus(prev => ({ ...prev, [`general_${file.name}`]: 'error' }));
+        throw error;
+      }
+      
+      uploadedCount++;
+      setUploadProgress((uploadedCount / totalFiles) * 100);
+    }
+
+    return allDocuments;
   };
 
   // Extract questions from uploaded file
@@ -210,19 +349,8 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
               }
             : q
         ));
-      } catch (error: any) {
-        console.error('Error generating AI answer:', error);
-        
-        // Handle authentication errors
-        if (error.name === 'AuthenticationError' || (error.message && error.message.includes('Authentication'))) {
-          setAuthError('Authentication failed. Please log in again.');
-          setTimeout(() => {
-            logout();
-            router.push('/auth/login?redirect=' + encodeURIComponent(window.location.pathname));
-          }, 2000);
-          return;
-        }
-        
+      } catch (error) {
+        console.error(`Error generating AI answer for question ${i + 1}:`, error);
         setQuestions(prev => prev.map(q => 
           q.id === question.id 
             ? { ...q, isAiAnswerLoading: false }
@@ -232,68 +360,41 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     }
     
     setIsProcessing(false);
-    setCurrentStep('review');
   };
 
-  // Generate AI answer for a single question
+  // Generate AI answer for a specific question
   const generateAIAnswerForQuestion = async (question: string, evidenceFiles: File[]): Promise<string> => {
-    // Check authentication before proceeding
-    if (!isAuthenticated || !token) {
-      throw new Error("Authentication required. Please log in to continue.");
-    }
-    
-    // Use the correct backend AI endpoint with proper format
     try {
-      const context = evidenceFiles.length > 0 
-        ? `This question is part of an enterprise compliance questionnaire. Evidence files available: ${evidenceFiles.map(f => f.name).join(', ')}` 
-        : 'This question is part of an enterprise compliance questionnaire.';
+      // Prepare evidence content
+      const evidenceContent = await Promise.all(
+        evidenceFiles.map(async (file) => {
+          const text = await readFileAsText(file);
+          return `File: ${file.name}\nContent: ${text}\n`;
+        })
+      );
 
-      const requestBody = {
-        question: question,
-        context: context,
-        vendorId: selectedVendor ? parseInt(selectedVendor) : undefined
-      };
-
-      console.log('Sending AI request:', requestBody);
-
-      // Get fresh token from localStorage
-      const authToken = localStorage.getItem('authToken');
-      if (!authToken) {
-        throw new Error('Authentication token missing. Please log in again.');
-      }
-
-      const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/ask', {
+      const response = await fetch('/api/ai/questionnaire', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          question,
+          evidence: evidenceContent.join('\n'),
+          vendorId: selectedVendor
+        })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        return data.answer || data.response || 'Unable to generate AI answer at this time.';
-      } else {
-        // Handle authentication errors
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        
-        const errorText = await response.text();
-        console.error('AI API error:', response.status, response.statusText, errorText);
-        return 'AI service temporarily unavailable. Please try manual answer or request assistance.';
+      if (!response.ok) {
+        throw new Error('Failed to generate AI answer');
       }
-    } catch (error: any) {
-      console.error('AI answer generation failed:', error);
-      
-      // Re-throw authentication errors to be handled by the caller
-      if (error.message && error.message.includes('Authentication')) {
-        throw error;
-      }
-      
-      return 'Network error occurred. Please check your connection and try again.';
+
+      const result = await response.json();
+      return result.answer || 'Unable to generate answer at this time.';
+    } catch (error) {
+      console.error('Error generating AI answer:', error);
+      return 'Unable to generate answer at this time.';
     }
   };
 
@@ -309,9 +410,6 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
           }
         : q
     ));
-    
-    // In real implementation, this would create a support ticket
-    alert('Assistance request submitted. Our team will contact you within 24 hours.');
   };
 
   // Submit questionnaire for review
@@ -322,37 +420,12 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
     }
 
     setIsProcessing(true);
+    setUploadProgress(0);
 
     try {
-      // Upload evidence files first
-      const uploadedDocuments: UploadedDocument[] = [];
-      
-      for (const file of evidenceFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('vendorId', selectedVendor);
-        formData.append('category', 'evidence');
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
-        }
-        
-        const { fileUrl, id } = await response.json();
-        
-        uploadedDocuments.push({
-          filename: file.name,
-          fileUrl,
-          fileType: file.type,
-          fileSize: file.size,
-          category: 'evidence',
-          id
-        });
-      }
+      // Upload all documents first
+      const uploadedDocs = await uploadAllDocuments();
+      setUploadedDocuments(uploadedDocs);
 
       // Submit questionnaire data
       const questionnaireData = {
@@ -362,15 +435,22 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
           question: q.question,
           aiAnswer: q.aiAnswer,
           status: q.status,
-          assistanceRequest: q.assistanceRequest
+          assistanceRequest: q.assistanceRequest,
+          supporting_doc_required: q.supporting_doc_required,
+          uploadedDocument: q.uploadedDocument ? {
+            filename: q.uploadedDocument.name,
+            fileType: q.uploadedDocument.type,
+            fileSize: q.uploadedDocument.size
+          } : null
         })),
-        documents: uploadedDocuments
+        documents: uploadedDocs
       };
 
       const response = await fetch('/api/questionnaires', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(questionnaireData),
       });
@@ -386,18 +466,12 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       alert('Failed to submit questionnaire. Please try again.');
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
     }
   };
 
-  // Generate unique question ID
   const generateQuestionId = () => `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Check if all questions are addressed
-  const allQuestionsAddressed = questions.every(q => 
-    q.status !== 'empty' && !q.isAiAnswerLoading
-  );
-
-  // Render question status icon
   const renderStatusIcon = (question: QuestionnaireQuestion) => {
     if (question.isAiAnswerLoading) {
       return <Loader2 className="w-4 h-4 animate-spin text-blue-600" />;
@@ -415,6 +489,15 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
       default:
         return null;
     }
+  };
+
+  // Add handler for removing question documents
+  const handleRemoveQuestionDocument = (questionId: string) => {
+    setQuestions(prev => prev.map(q => 
+      q.id === questionId 
+        ? { ...q, uploadedDocument: undefined, status: 'empty' }
+        : q
+    ));
   };
 
   return (
@@ -718,7 +801,7 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Submit for Enterprise Review</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {allQuestionsAddressed 
+                  {questions.every(q => q.status !== 'empty' && !q.isAiAnswerLoading) 
                     ? "All questions have been addressed. Ready to submit to Trust Portal."
                     : "Some questions still need attention before submission."
                   }
@@ -726,9 +809,9 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
               </div>
               <Button
                 onClick={handleSubmitForReview}
-                disabled={!allQuestionsAddressed || isProcessing}
+                disabled={!questions.every(q => q.status !== 'empty' && !q.isAiAnswerLoading) || isProcessing}
                 className={`font-semibold px-8 py-3 ${
-                  allQuestionsAddressed 
+                  questions.every(q => q.status !== 'empty' && !q.isAiAnswerLoading) 
                     ? 'bg-green-600 hover:bg-green-700 text-white' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -768,10 +851,19 @@ const EnhancedQuestionnaireView: React.FC<EnhancedQuestionnaireViewProps> = ({
 
         {/* Supporting Documents Section */}
         <SupportingDocumentsSection
+          questions={questions}
           evidenceFiles={evidenceFiles}
+          generalSupportingDocs={generalSupportingDocs}
           setEvidenceFiles={setEvidenceFiles}
+          setGeneralSupportingDocs={setGeneralSupportingDocs}
           evidenceInputRef={evidenceInputRef}
+          generalDocsInputRef={generalDocsInputRef}
           handleEvidenceUpload={handleEvidenceUpload}
+          handleGeneralDocsUpload={handleGeneralDocsUpload}
+          handleQuestionDocumentUpload={handleQuestionDocumentUpload}
+          handleRemoveQuestionDocument={handleRemoveQuestionDocument}
+          uploadStatus={uploadStatus}
+          uploadProgress={uploadProgress}
         />
       </div>
     </div>
@@ -868,19 +960,37 @@ const QuestionRow: React.FC<QuestionRowProps> = ({
   );
 };
 
-// Update the SupportingDocumentsSection component to be properly typed
+// Update the SupportingDocumentsSection component to handle conditional uploads
 interface SupportingDocumentsSectionProps {
+  questions: QuestionnaireQuestion[];
   evidenceFiles: File[];
+  generalSupportingDocs: File[];
   setEvidenceFiles: React.Dispatch<React.SetStateAction<File[]>>;
+  setGeneralSupportingDocs: React.Dispatch<React.SetStateAction<File[]>>;
   evidenceInputRef: React.RefObject<HTMLInputElement>;
+  generalDocsInputRef: React.RefObject<HTMLInputElement>;
   handleEvidenceUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleGeneralDocsUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleQuestionDocumentUpload: (questionId: string, event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveQuestionDocument: (questionId: string) => void;
+  uploadStatus: {[key: string]: 'idle' | 'uploading' | 'success' | 'error'};
+  uploadProgress: number;
 }
 
 const SupportingDocumentsSection: React.FC<SupportingDocumentsSectionProps> = ({
+  questions,
   evidenceFiles,
+  generalSupportingDocs,
   setEvidenceFiles,
+  setGeneralSupportingDocs,
   evidenceInputRef,
-  handleEvidenceUpload
+  generalDocsInputRef,
+  handleEvidenceUpload,
+  handleGeneralDocsUpload,
+  handleQuestionDocumentUpload,
+  handleRemoveQuestionDocument,
+  uploadStatus,
+  uploadProgress
 }) => {
   return (
     <Card className="mt-8">
@@ -891,14 +1001,155 @@ const SupportingDocumentsSection: React.FC<SupportingDocumentsSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Question-Specific Documents */}
+          {questions.filter(q => q.supporting_doc_required).length > 0 && (
+            <div>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Question-Specific Documents</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload supporting documents for questions that require them.
+              </p>
+              
+              <div className="space-y-4">
+                {questions
+                  .filter(q => q.supporting_doc_required)
+                  .map((question, index) => (
+                    <div key={question.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 mb-1">
+                            Q{questions.indexOf(question) + 1}: {question.question.substring(0, 100)}...
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Supporting document required
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {question.uploadedDocument ? (
+                        <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">
+                              {question.uploadedDocument.name}
+                            </span>
+                            <span className="text-xs text-green-600">
+                              ({(question.uploadedDocument.size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {uploadStatus[`question_${question.id}`] === 'uploading' && (
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                            )}
+                            {uploadStatus[`question_${question.id}`] === 'success' && (
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            )}
+                            {uploadStatus[`question_${question.id}`] === 'error' && (
+                              <AlertCircle className="w-4 h-4 text-red-600" />
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveQuestionDocument(question.id)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="file"
+                            id={`question-doc-${question.id}`}
+                            className="hidden"
+                            onChange={(e) => handleQuestionDocumentUpload(question.id, e)}
+                            accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.png,.jpg,.jpeg"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById(`question-doc-${question.id}`)?.click()}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Document
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* General Supporting Documents */}
           <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Additional Supporting Documents</h4>
             <p className="text-sm text-gray-600 mb-4">
-              Upload any supporting documents that provide evidence for your questionnaire responses. These documents will be available to the enterprise for review.
+              Upload any additional supporting documents that provide evidence for your questionnaire responses.
             </p>
             
             <div className="flex flex-col gap-4">
-              {evidenceFiles.map((file: File, index: number) => (
+              {generalSupportingDocs.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm">{file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {uploadStatus[`general_${file.name}`] === 'uploading' && (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    )}
+                    {uploadStatus[`general_${file.name}`] === 'success' && (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    )}
+                    {uploadStatus[`general_${file.name}`] === 'error' && (
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setGeneralSupportingDocs(files => files.filter((_, i) => i !== index));
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <input
+                type="file"
+                ref={generalDocsInputRef}
+                className="hidden"
+                onChange={handleGeneralDocsUpload}
+                multiple
+                accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.png,.jpg,.jpeg"
+              />
+              <Button
+                variant="outline"
+                onClick={() => generalDocsInputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Additional Documents
+              </Button>
+            </div>
+          </div>
+
+          {/* Evidence Files (existing functionality) */}
+          <div>
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Evidence Files</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload evidence files that will be used to generate AI answers for your questions.
+            </p>
+            
+            <div className="flex flex-col gap-4">
+              {evidenceFiles.map((file, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-gray-600" />
@@ -921,22 +1172,39 @@ const SupportingDocumentsSection: React.FC<SupportingDocumentsSectionProps> = ({
             </div>
 
             <div className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => evidenceInputRef.current?.click()}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Document
-              </Button>
               <input
                 type="file"
                 ref={evidenceInputRef}
                 className="hidden"
                 onChange={handleEvidenceUpload}
                 multiple
+                accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.png,.jpg,.jpeg"
               />
+              <Button
+                variant="outline"
+                onClick={() => evidenceInputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Evidence Files
+              </Button>
             </div>
           </div>
+
+          {/* Upload Progress */}
+          {uploadProgress > 0 && uploadProgress < 100 && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Uploading documents...</span>
+                <span className="text-sm text-gray-500">{Math.round(uploadProgress)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
