@@ -2003,26 +2003,21 @@ const QuestionnairesPage = () => {
         
       <main id="main-content" className="container mx-auto py-8 px-4">
         {/* Page Header */}
-        <div className="flex flex-col gap-6 mb-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center">
-              <ClipboardList className="mr-3 h-8 w-8 text-blue-600" />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-800 flex items-center">
+              <ClipboardList className="mr-3 h-7 w-7 text-primary" />
               Questionnaire Workspace
             </h1>
-            <p className="text-lg text-gray-600 mt-2">Complete your compliance questionnaire through our 4-step process</p>
+            <p className="text-gray-600 mt-1">Complete your compliance questionnaire through our 4-step process</p>
           </div>
 
-          {/* Prominent Vendor Selection */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6">
-            <div className="text-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Your Vendor</h2>
-              <p className="text-gray-600">Choose which vendor you want to work on</p>
-            </div>
-            <div className="flex justify-center">
-              <div className="flex items-center gap-3 bg-white rounded-lg p-2 shadow-md border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg p-3 shadow-md">
+              <div className="flex items-center gap-3">
                 <Building2 className="h-6 w-6 text-blue-600" />
                 <select
-                  className="px-4 py-3 border-0 rounded-md text-lg bg-transparent focus:outline-none focus:ring-0 min-w-[300px] font-medium text-gray-900"
+                  className="px-4 py-3 border border-blue-300 rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[250px] font-medium text-gray-900"
                   value={selectedVendorId}
                   onChange={(e) => setSelectedVendorId(e.target.value)}
                 >
@@ -2043,16 +2038,16 @@ const QuestionnairesPage = () => {
                   ) : null}
                 </select>
               </div>
-            </div>
-            
-            {selectedVendorId && (
-              <div className="mt-4 text-center">
-                <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Vendor Selected - Ready to proceed!
+              
+              {selectedVendorId && (
+                <div className="mt-2 text-center">
+                  <div className="inline-flex items-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Vendor Selected!
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -2901,204 +2896,16 @@ const QuestionnairesPage = () => {
                 </div>
 
                 {/* Supporting Document Upload Error */}
-                {supportDocUploadError && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700">{supportDocUploadError}</p>
-                  </div>
-                )}
-
-                {/* Standalone Upload Form */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-8 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <Upload className="h-6 w-6 mr-3 text-green-600" />
-                    Upload Supporting Documents
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Description (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        placeholder="e.g., Security policy document, Compliance certificate..."
-                        value={supportDocDescription}
-                        onChange={(e) => setSupportDocDescription(e.target.value)}
-                        disabled={isUploadingSupportDoc}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category (Optional)
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        value={supportDocCategory}
-                        onChange={(e) => setSupportDocCategory(e.target.value)}
-                        disabled={isUploadingSupportDoc}
-                      >
-                        <option value="">Select category</option>
-                        <option value="Security">Security</option>
-                        <option value="Compliance">Compliance</option>
-                        <option value="Privacy">Privacy</option>
-                        <option value="Policies">Policies</option>
-                        <option value="Certificates">Certificates</option>
-                        <option value="Evidence">Evidence</option>
-                        <option value="General">General</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <input
-                      ref={standaloneSupportDocRef}
-                      type="file"
-                      className="hidden"
-                      id="standalone-support-doc"
-                      accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                      onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
-                      disabled={isUploadingSupportDoc}
-                    />
-                    <label
-                      htmlFor="standalone-support-doc"
-                      className={`inline-flex items-center px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium ${
-                        isUploadingSupportDoc
-                          ? 'bg-gray-400 text-white cursor-not-allowed' 
-                          : 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
-                      }`}
-                    >
-                      {isUploadingSupportDoc ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Uploading to supporting-docs/...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-5 w-5 mr-2" />
-                          Choose & Upload File
-                        </>
-                      )}
-                    </label>
-                    
-
-                    
-                    <div className="text-sm text-gray-500">
-                      Supports: PDF, Images, DOC, DOCX, TXT
-                    </div>
-                  </div>
-                </div>
-
-                {/* Uploaded Documents List */}
-                <div className="bg-white border border-gray-200 rounded-xl">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <Files className="h-5 w-5 mr-2 text-gray-600" />
-                      Uploaded Supporting Documents
-                      <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {uploadedSupportingDocs.length}
-                      </span>
-                    </h3>
-                  </div>
-
-                  {uploadedSupportingDocs.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FolderOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-gray-600 mb-2">No Documents Uploaded Yet</h4>
-                      <p className="text-gray-500">Start by uploading your first supporting document above</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200">
-                      {uploadedSupportingDocs.map((doc) => (
-                        <div key={doc.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                              <div className="flex-shrink-0 mt-1">
-                                <FileText className="h-5 w-5 text-green-600" />
-                              </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium text-gray-900 truncate">
-                                  {doc.originalName}
-                                </h4>
-                                
-                                {doc.description && (
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {doc.description}
-                                  </p>
-                                )}
-                                
-                                <div className="flex items-center space-x-4 mt-2">
-                                  {doc.category && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      {doc.category}
-                                    </span>
-                                  )}
-                                  
-                                  <span className="text-xs text-gray-500">
-                                    {(doc.fileSize / 1024).toFixed(1)} KB
-                                  </span>
-                                  
-                                  <span className="text-xs text-gray-500">
-                                    {doc.uploadDate.toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2 ml-4">
-                              <a
-                                href={`/api/checklists/documents/${doc.id}/download`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-green-600 hover:text-green-700 text-sm font-medium"
-                              >
-                                View
-                              </a>
-                              
-                              <button
-                                onClick={() => sendSupportingDocumentToTrustPortal(doc)}
-                                disabled={sendingDocumentId === doc.id || sendingToTrustPortal}
-                                className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center"
-                              >
-                                {sendingDocumentId === doc.id ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Sending...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-3 w-3 mr-1" />
-                                    Send to Trust Portal
-                                  </>
-                                )}
-                              </button>
-                              
-                              <button
-                                onClick={() => deleteStandaloneSupportDoc(doc.id)}
-                                className="text-red-600 hover:text-red-700 text-sm font-medium"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Question-Based Documents (if any exist) */}
+                {/* Question-Based Documents (if any exist) - MOVED TO TOP */}
                 {extractedQuestions.length > 0 && extractedQuestions.some(q => q.requiresDoc || q.docDescription) && (
-                  <div className="mt-8">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <ClipboardList className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="mb-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                        <ClipboardList className="h-6 w-6 mr-3 text-blue-600" />
                         Question-Specific Document Requirements
                       </h3>
                       <p className="text-sm text-blue-700 mb-4">
-                        Some questions from your uploaded checklist require specific supporting documents:
+                        Upload supporting documents for relevant questions from your checklist:
                       </p>
                       
                       <div className="space-y-4">
@@ -3174,6 +2981,138 @@ const QuestionnairesPage = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Individual/General Supporting Documents - Reduced Prominence */}
+                <div className="mt-6">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                      General Supporting Documents (Optional)
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Upload additional documents not specific to any question
+                    </p>
+
+                    {supportDocUploadError && (
+                      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-xs">
+                        <p className="text-red-700">{supportDocUploadError}</p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Description (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          placeholder="e.g., Security policy document..."
+                          value={supportDocDescription}
+                          onChange={(e) => setSupportDocDescription(e.target.value)}
+                          disabled={isUploadingSupportDoc}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Category (Optional)
+                        </label>
+                        <select
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          value={supportDocCategory}
+                          onChange={(e) => setSupportDocCategory(e.target.value)}
+                          disabled={isUploadingSupportDoc}
+                        >
+                          <option value="">Select category</option>
+                          <option value="Security">Security</option>
+                          <option value="Compliance">Compliance</option>
+                          <option value="Privacy">Privacy</option>
+                          <option value="Policies">Policies</option>
+                          <option value="Certificates">Certificates</option>
+                          <option value="Evidence">Evidence</option>
+                          <option value="General">General</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={standaloneSupportDocRef}
+                        type="file"
+                        className="hidden"
+                        id="standalone-support-doc"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                        onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
+                        disabled={isUploadingSupportDoc}
+                      />
+                      <label
+                        htmlFor="standalone-support-doc"
+                        className={`inline-flex items-center px-3 py-2 text-sm rounded cursor-pointer transition-colors ${
+                          isUploadingSupportDoc
+                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {isUploadingSupportDoc ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-3 w-3 mr-1" />
+                            Upload File
+                          </>
+                        )}
+                      </label>
+                      
+                      <div className="text-xs text-gray-500">
+                        PDF, Images, DOC, DOCX, TXT
+                      </div>
+                    </div>
+
+                    {/* Simple Uploaded Documents List */}
+                    {uploadedSupportingDocs.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-gray-200">
+                        <h5 className="text-xs font-medium text-gray-600 mb-2">
+                          Uploaded ({uploadedSupportingDocs.length})
+                        </h5>
+                        <div className="space-y-2">
+                          {uploadedSupportingDocs.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded text-xs">
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <FileText className="h-3 w-3 text-green-600 flex-shrink-0" />
+                                <span className="truncate font-medium">{doc.originalName}</span>
+                                {doc.category && (
+                                  <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                                    {doc.category}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2 ml-2">
+                                <a
+                                  href={`/api/checklists/documents/${doc.id}/download`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  View
+                                </a>
+                                <button
+                                  onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
