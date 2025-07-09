@@ -612,7 +612,7 @@ export function VendorDashboard({ vendor, onUpdateVendor }: VendorDashboardProps
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <AnimatePresence mode="wait">
+        <div>
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 20 }}
@@ -625,7 +625,7 @@ export function VendorDashboard({ vendor, onUpdateVendor }: VendorDashboardProps
             {activeTab === 'progress' && renderProgressTab()}
             {activeTab === 'documents' && renderDocumentsTab()}
           </motion.div>
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   );

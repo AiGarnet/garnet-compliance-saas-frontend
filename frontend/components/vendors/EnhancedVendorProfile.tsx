@@ -291,7 +291,7 @@ export function EnhancedVendorProfile({ vendor, onEdit, onMessage, onScheduleCal
             </div>
           </div>
           <div className="flex items-center">
-            <User className="h-5 w-5 text-gray-400 mr-3" />
+            <Building2 className="h-5 w-5 text-gray-400 mr-3" />
             <div>
               <div className="text-sm text-gray-500">Contact Person</div>
               <div className="font-medium">{vendor?.contactName || 'John Doe'}</div>
