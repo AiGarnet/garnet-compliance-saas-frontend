@@ -552,13 +552,43 @@ const QuestionnairesPage = () => {
       const authToken = localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
       
-      console.log('🔐 AUTH CHECK (Optional):', {
+      console.log('🔐 AUTH CHECK (Required for vendors):', {
         hasToken: !!authToken,
         hasUserData: !!userData,
         tokenPreview: authToken ? `${authToken.substring(0, 20)}...` : 'NO TOKEN',
         isAuthenticated: !!authToken && !!userData,
-        note: 'Authentication is optional for questionnaire features'
+        note: 'Authentication required for vendor access but services remain public'
       });
+
+      // If no authentication, show a helpful error for vendor access
+      if (!authToken) {
+        console.error('❌ VENDORS: No authentication token found');
+        setUploadError('Authentication required to access vendors. Please log in to select a vendor and use questionnaire features.');
+        
+        // Don't redirect, just show the error - services can still work without vendor selection
+        setVendors([]);
+        return;
+      }
+
+      // Validate token format
+      try {
+        const payload = JSON.parse(atob(authToken.split('.')[1]));
+        const now = Date.now() / 1000;
+        
+        if (payload.exp <= now) {
+          console.error('❌ VENDORS: Authentication token is expired');
+          setUploadError('Your session has expired. Please log in again to access vendors.');
+          setVendors([]);
+          return;
+        }
+        
+        console.log('✅ VENDORS: Token is valid, expires at:', new Date(payload.exp * 1000));
+      } catch (tokenError) {
+        console.error('❌ VENDORS: Invalid token format:', tokenError);
+        setUploadError('Invalid authentication token. Please log in again to access vendors.');
+        setVendors([]);
+        return;
+      }
 
       console.log('🔍 VENDORS: Making API call to load vendors...');
       const response = await vendorAPI.getAll();
@@ -1971,9 +2001,11 @@ const QuestionnairesPage = () => {
                   onChange={(e) => setSelectedVendorId(e.target.value)}
                 >
                   <option value="">
-                    {isLoadingVendors 
-                      ? 'Loading vendors...'
-                      : '🔽 Select Vendor to Get Started'
+                    {uploadError && uploadError.includes('Authentication') 
+                      ? 'Please Login to Access Vendors'
+                      : isLoadingVendors 
+                        ? 'Loading vendors...'
+                        : '🔽 Select Vendor to Get Started'
                     }
                   </option>
                   {!uploadError && !isLoadingVendors ? (
@@ -2052,6 +2084,28 @@ const QuestionnairesPage = () => {
                           </div>
                         </div>
                         
+        {/* Authentication Notice for Services */}
+        {uploadError && uploadError.includes('Authentication') && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-800 mb-2 flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              Vendor Selection Requires Authentication
+            </h3>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p><strong>Vendor Selection:</strong> Requires login to maintain organization security</p>
+              <p><strong>Services Available:</strong> AI responses, document generation, and assistance features work without vendor selection</p>
+            </div>
+            <div className="mt-3">
+              <button 
+                onClick={() => window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)}
+                className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              >
+                Login to Access Vendors
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Section Content */}
         <div className="min-h-[600px]">
           
@@ -3047,11 +3101,27 @@ const QuestionnairesPage = () => {
                   <div className="text-center py-12 border border-gray-200 rounded-lg">
                     <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Select a Vendor First
+                      {uploadError && uploadError.includes('Authentication') 
+                        ? 'Login Required for Vendor Access'
+                        : 'Select a Vendor First'
+                      }
                     </h3>
                     <p className="text-gray-500">
-                      Please select a vendor from the dropdown above to request assistance.
+                      {uploadError && uploadError.includes('Authentication') 
+                        ? 'Please log in to access vendors and use vendor-specific features like assistance.'
+                        : 'Please select a vendor from the dropdown above to request assistance.'
+                      }
                     </p>
+                    {uploadError && uploadError.includes('Authentication') && (
+                      <div className="mt-4">
+                        <button 
+                          onClick={() => window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                          Login to Access Vendors
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
