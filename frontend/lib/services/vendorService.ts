@@ -8,27 +8,45 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export const VendorService = {
   /**
-   * Get all vendors
+   * Get all vendors (organization-filtered)
    */
   async getAllVendors(): Promise<Vendor[]> {
     try {
-      const response = await apiClient.get<{ vendors: Vendor[] }>('/api/vendors');
-      return response.vendors;
+      const response = await apiClient.get<{ success: boolean; data: Vendor[] }>('/api/vendors');
+      if (response.success) {
+        return response.data || [];
+      } else {
+        console.error('API error getting vendors:', response);
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching vendors:', error);
+      // If authentication error, user needs to log in
+      if (error.name === 'AuthenticationError') {
+        throw error;
+      }
       return [];
     }
   },
   
   /**
-   * Get a vendor by ID
+   * Get a vendor by ID (organization-filtered)
    */
   async getVendorById(id: string): Promise<Vendor | null> {
     try {
-      const response = await apiClient.get<{ vendor: Vendor }>(`/api/vendors/${id}`);
-      return response.vendor;
+      const response = await apiClient.get<{ success: boolean; data: Vendor }>(`/api/vendors/${id}`);
+      if (response.success) {
+        return response.data || null;
+      } else {
+        console.error('API error getting vendor:', response);
+        return null;
+      }
     } catch (error) {
       console.error(`Error fetching vendor ${id}:`, error);
+      // If authentication error, user needs to log in
+      if (error.name === 'AuthenticationError') {
+        throw error;
+      }
       return null;
     }
   },

@@ -4,7 +4,12 @@ import { VendorDetailView } from '@/components/vendors/VendorDetailView';
 export async function generateStaticParams() {
   try {
     // Try to fetch real vendor IDs from the API for static generation
-    const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors');
+    const response = await fetch('https://garnet-compliance-saas-production.up.railway.app/api/vendors', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`
+      }
+    });
     const data = await response.json();
     
     if (data.vendors && data.vendors.length > 0) {
