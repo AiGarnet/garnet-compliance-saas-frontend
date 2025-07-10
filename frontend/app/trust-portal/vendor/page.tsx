@@ -287,18 +287,56 @@ function VendorTrustPortalContent() {
   };
 
   // Download supporting document
-  const downloadSupportingDocument = async (document: SupportingDocument) => {
+  const downloadSupportingDocument = async (doc: SupportingDocument) => {
     try {
-      const response = await fetch(`/api/checklists/documents/${document.id}/download`);
-      if (response.ok) {
-        window.open(response.url, '_blank');
-      } else {
-        throw new Error('Failed to download document');
-      }
+      // Create a temporary link to trigger download
+      const link = document.createElement('a');
+      link.href = `/api/checklists/documents/${doc.id}/download`;
+      link.download = doc.filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Error downloading document:', error);
       alert('Failed to download document. Please try again.');
     }
+  };
+
+  // View supporting document in new tab
+  const viewSupportingDocument = async (doc: SupportingDocument) => {
+    try {
+      // Open the document in a new tab for viewing
+      window.open(`/api/checklists/documents/${doc.id}/download`, '_blank');
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      alert('Failed to view document. Please try again.');
+    }
+  };
+
+  // Format answer text to make specific phrases bold
+  const formatAnswerText = (text: string) => {
+    if (!text) return text;
+    
+    // List of phrases to make bold
+    const boldPhrases = [
+      'Defined Incident Response Times',
+      'Response Time',
+      'SLA',
+      'Service Level Agreement',
+      'Critical',
+      'High Priority',
+      'Emergency Response'
+    ];
+    
+    let formattedText = text;
+    
+    boldPhrases.forEach(phrase => {
+      const regex = new RegExp(`(${phrase})`, 'gi');
+      formattedText = formattedText.replace(regex, '<strong>$1</strong>');
+    });
+    
+    return formattedText;
   };
 
   // Handle feedback form submission
@@ -614,7 +652,7 @@ function VendorTrustPortalContent() {
                                             </div>
                                             {question.aiAnswer && (
                                               <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                                                <p className="text-sm text-gray-700">{question.aiAnswer}</p>
+                                                <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: formatAnswerText(question.aiAnswer) }}></p>
                                                 {question.confidenceScore && (
                                                   <div className="mt-2 flex items-center text-xs text-gray-500">
                                                     <span>Confidence: {Math.round(question.confidenceScore * 100)}%</span>
@@ -655,13 +693,22 @@ function VendorTrustPortalContent() {
                                                   </p>
                                                 </div>
                                               </div>
-                                              <button
-                                                onClick={() => downloadSupportingDocument(doc)}
-                                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                              >
-                                                <Download className="h-4 w-4 mr-1" />
-                                                Download
-                                              </button>
+                                              <div className="flex items-center space-x-2">
+                                                <button
+                                                  onClick={() => viewSupportingDocument(doc)}
+                                                  className="flex items-center text-primary hover:text-primary/80 text-sm font-medium"
+                                                >
+                                                  <Eye className="h-4 w-4 mr-1" />
+                                                  View
+                                                </button>
+                                                <button
+                                                  onClick={() => downloadSupportingDocument(doc)}
+                                                  className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                >
+                                                  <Download className="h-4 w-4 mr-1" />
+                                                  Download
+                                                </button>
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
@@ -717,13 +764,22 @@ function VendorTrustPortalContent() {
                                 </p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => downloadSupportingDocument(doc)}
-                              className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium ml-4"
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </button>
+                            <div className="flex items-center space-x-2 ml-4">
+                              <button
+                                onClick={() => viewSupportingDocument(doc)}
+                                className="flex items-center text-primary hover:text-primary/80 text-sm font-medium"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </button>
+                              <button
+                                onClick={() => downloadSupportingDocument(doc)}
+                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
