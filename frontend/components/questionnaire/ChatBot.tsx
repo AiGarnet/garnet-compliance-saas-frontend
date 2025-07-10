@@ -538,23 +538,28 @@ ${initialContext ? `ADDITIONAL CONTEXT: ${initialContext}` : ''}
                     )}
                   </div>
                   <div className={`flex-1 ${message.role === 'user' ? 'order-1' : 'order-2'}`}>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {message.content}
+                    <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                      {message.content.split('\n').map((line, index) => (
+                        <p key={index} className="mb-2 last:mb-0">
+                          {line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
+                            part.startsWith('**') && part.endsWith('**') ? (
+                              <strong key={partIndex} className="font-semibold">
+                                {part.slice(2, -2)}
+                              </strong>
+                            ) : (
+                              part
+                            )
+                          )}
+                        </p>
+                      ))}
                     </div>
                     
                     {/* Message metadata */}
-                    {message.metadata && (
+                    {message.metadata && message.metadata.category && (
                       <div className="mt-2 text-xs text-gray-500">
-                        {message.metadata.category && (
-                          <span className="inline-block bg-gray-100 px-2 py-1 rounded mr-2">
-                            {message.metadata.category}
-                          </span>
-                        )}
-                        {message.metadata.confidence && (
-                          <span className="inline-block">
-                            Confidence: {Math.round(message.metadata.confidence * 100)}%
-                          </span>
-                        )}
+                        <span className="inline-block bg-gray-100 px-2 py-1 rounded">
+                          {message.metadata.category}
+                        </span>
                       </div>
                     )}
                   </div>

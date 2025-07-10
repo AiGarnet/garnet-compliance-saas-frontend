@@ -418,21 +418,28 @@ const ChatbotAssistance: React.FC<ChatbotAssistanceProps> = ({ vendorId, onClose
                         <User className="h-5 w-5 mt-0.5 text-white" />
                       )}
                       <div className="flex-1">
-                        <div className="whitespace-pre-wrap">{message.content}</div>
+                        <div className="prose prose-sm max-w-none">
+                          {message.content.split('\n').map((line, index) => (
+                            <p key={index} className="mb-2 last:mb-0">
+                              {line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
+                                part.startsWith('**') && part.endsWith('**') ? (
+                                  <strong key={partIndex} className="font-semibold">
+                                    {part.slice(2, -2)}
+                                  </strong>
+                                ) : (
+                                  part
+                                )
+                              )}
+                            </p>
+                          ))}
+                        </div>
                         
                         {/* Bot message metadata */}
-                        {message.type === 'bot' && message.confidence !== undefined && (
+                        {message.type === 'bot' && (
                           <div className="mt-2 flex items-center space-x-2 text-sm">
-                            <div className="flex items-center space-x-1">
-                              {React.createElement(getConfidenceIcon(message.confidence), {
-                                className: `h-4 w-4 ${getConfidenceColor(message.confidence)}`
-                              })}
-                              <span className={getConfidenceColor(message.confidence)}>
-                                {(message.confidence * 100).toFixed(0)}% confidence
-                              </span>
-                            </div>
-                            <span className="text-gray-500">•</span>
-                            <span className="text-gray-600">{message.category}</span>
+                            {message.category && (
+                              <span className="text-gray-600">{message.category}</span>
+                            )}
                             <button
                               onClick={() => regenerateResponse(index)}
                               className="ml-2 text-gray-500 hover:text-gray-700"

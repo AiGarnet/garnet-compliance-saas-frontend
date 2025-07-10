@@ -2693,17 +2693,10 @@ const QuestionnairesPage = () => {
                                 </span>
                               )}
                               {question.status === 'completed' && (
-                                <>
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Completed
-                                  </span>
-                                  {question.confidence && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                      {Math.round(question.confidence * 100)}% confidence
-                                    </span>
-                                  )}
-                                </>
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Completed
+                                </span>
                               )}
                               {question.status === 'needs-support' && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
@@ -2743,7 +2736,21 @@ const QuestionnairesPage = () => {
                                 </div>
                               ) : (
                                 <div>
-                                  <p className="text-purple-800 whitespace-pre-wrap">{question.answer}</p>
+                                  <div className="text-purple-800 prose prose-purple max-w-none">
+                                    {question.answer.split('\n').map((line, index) => (
+                                      <p key={index} className="mb-2 last:mb-0">
+                                        {line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
+                                          part.startsWith('**') && part.endsWith('**') ? (
+                                            <strong key={partIndex} className="font-semibold">
+                                              {part.slice(2, -2)}
+                                            </strong>
+                                          ) : (
+                                            part
+                                          )
+                                        )}
+                                      </p>
+                                    ))}
+                                  </div>
                                   {question.isDone && (
                                     <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
                                       <CheckCircle className="h-3 w-3 mr-1" />

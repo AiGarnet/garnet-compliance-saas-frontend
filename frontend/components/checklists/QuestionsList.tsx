@@ -158,13 +158,25 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h5 className="text-sm font-medium text-blue-900">Compliance Response</h5>
-                        {question.confidenceScore && (
-                          <span className="text-sm font-medium text-blue-600">
-                            {Math.round(question.confidenceScore * 100)}% confidence
-                          </span>
-                        )}
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          AI Generated
+                        </span>
                       </div>
-                      <p className="text-sm text-blue-800 whitespace-pre-wrap">{question.aiAnswer}</p>
+                      <div className="text-sm text-blue-800 prose prose-blue prose-sm max-w-none">
+                        {question.aiAnswer.split('\n').map((line, index) => (
+                          <p key={index} className="mb-2 last:mb-0">
+                            {line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
+                              part.startsWith('**') && part.endsWith('**') ? (
+                                <strong key={partIndex} className="font-semibold">
+                                  {part.slice(2, -2)}
+                                </strong>
+                              ) : (
+                                part
+                              )
+                            )}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -909,8 +909,16 @@ export function ChatClient({ params }: { params: { id: string } }) {
                               {message.content.split('\n').map((line, index) => (
                                 <p key={index} className={`mb-2 last:mb-0 ${
                                   message.type === 'user' ? 'text-white' : 'text-gray-800'
-                                } ${line.startsWith('**') && line.endsWith('**') ? 'font-semibold' : ''}`}>
-                                  {line.replace(/\*\*(.*?)\*\*/g, '$1')}
+                                }`}>
+                                  {line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
+                                    part.startsWith('**') && part.endsWith('**') ? (
+                                      <strong key={partIndex} className="font-semibold">
+                                        {part.slice(2, -2)}
+                                      </strong>
+                                    ) : (
+                                      part
+                                    )
+                                  )}
                                 </p>
                               ))}
                             </div>
