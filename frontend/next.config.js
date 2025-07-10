@@ -2,9 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Enable static export for Netlify deployment
-  output: 'export',
-  trailingSlash: true,
+  // Enable static export for Netlify deployment (conditionally)
+  ...(process.env.DISABLE_STATIC_EXPORT !== 'true' && {
+    output: 'export',
+    trailingSlash: true,
+  }),
   
   // Static export requires unoptimized images
   images: {

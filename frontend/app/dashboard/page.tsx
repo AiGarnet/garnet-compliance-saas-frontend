@@ -21,6 +21,7 @@ import { EditVendorModal } from "@/components/vendors/EditVendorModal";
 import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
 import { AddVendorModal } from "@/components/vendors/AddVendorModal";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { FeedbackCard } from "@/components/dashboard/FeedbackCard";
 import { useActivity } from "@/hooks/useActivity";
 import { useToast } from "@/components/ui/Toast";
 import activityApiService from "@/lib/services/activityApiService";
@@ -457,10 +458,10 @@ function DashboardContent() {
           onAddVendor={() => setAddModalOpen(true)}
         />
         
-        {/* Two Column Layout - Conditional based on role */}
+        {/* Three Column Layout for Founder, Two Column for Sales Professional */}
         <div className={cn(
           "grid gap-6",
-          isFounder ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
+          isFounder ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 lg:grid-cols-2"
         )}>
           {/* Pending Tasks - Hidden for Founder */}
           {!isFounder && (
@@ -508,6 +509,9 @@ function DashboardContent() {
             </ul>
           </section>
           )}
+          
+          {/* Enterprise Feedback - Visible for both Founder and Sales Professional */}
+          <FeedbackCard limit={5} />
           
           {/* Recent Activity - Dynamic */}
           <RecentActivity limit={5} />

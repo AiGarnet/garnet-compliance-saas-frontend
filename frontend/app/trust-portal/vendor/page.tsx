@@ -40,13 +40,7 @@ import Header from '@/components/Header';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { 
-  VendorTrustPortalData, 
-  CreateFeedbackDto, 
-  FeedbackType, 
-  FeedbackPriority,
-  TrustPortalFeedback,
-  CreateFeedbackResponseDto,
-  ResponderType
+  VendorTrustPortalData
 } from '@/types/trustPortal';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
@@ -80,21 +74,8 @@ function VendorTrustPortalContent() {
   const { user, isAuthenticated } = useAuth();
   
   const [vendorData, setVendorData] = useState<VendorTrustPortalData | null>(null);
-  const [feedback, setFeedback] = useState<TrustPortalFeedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const [feedbackForm, setFeedbackForm] = useState<CreateFeedbackDto>({
-    vendorId: 0,
-    enterpriseContactEmail: '',
-    enterpriseContactName: '',
-    enterpriseCompanyName: '',
-    feedbackType: FeedbackType.GENERAL,
-    subject: '',
-    message: '',
-    priority: FeedbackPriority.MEDIUM
-  });
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // Enhanced state for checklist management
   const [trustPortalItems, setTrustPortalItems] = useState<TrustPortalItem[]>([]);
@@ -103,6 +84,41 @@ function VendorTrustPortalContent() {
   const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocument[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState<{ [key: string]: boolean }>({});
   const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
+  const [inviteToken, setInviteToken] = useState<string>('');
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
+  // Generate invite token for enterprise access
+  const generateInviteToken = async () => {
+    if (!vendorId) return;
+
+    setIsGeneratingToken(true);
+    try {
+      const response = await fetch(`/api/vendors/${vendorId}/generate-invite-token`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setInviteToken(data.inviteToken);
+        setShowInviteModal(true);
+      } else {
+        throw new Error('Failed to generate invite token');
+      }
+    } catch (error) {
+      console.error('Error generating invite token:', error);
+      alert('Failed to generate invite token. Please try again.');
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  };
+
+  // Copy invite link to clipboard
+  const copyInviteLink = () => {
+    const inviteLink = `${window.location.origin}/trust-portal/invite/${inviteToken}`;
+    navigator.clipboard.writeText(inviteLink);
+    alert('Invite link copied to clipboard!');
+  };
 
   // Fetch vendor trust portal data
   const fetchVendorData = async () => {
@@ -120,21 +136,7 @@ function VendorTrustPortalContent() {
       const data = await vendorAPI.trustPortal.getData(vendorId);
       setVendorData(data);
 
-      // Set vendor ID for feedback form
-      setFeedbackForm(prev => ({
-        ...prev,
-        vendorId: data.vendor.vendorId
-      }));
-
-      // Fetch feedback if authenticated as vendor
-      if (isAuthenticated) {
-        try {
-          const feedbackData = await vendorAPI.trustPortal.getVendorFeedback(vendorId);
-          setFeedback(feedbackData);
-        } catch (feedbackError) {
-          console.log('Could not fetch feedback - user may not have permission');
-        }
-      }
+      // Removed feedback-related code since vendors can't provide feedback
 
       // Fetch real-time trust portal items and supporting documents
       await Promise.all([
@@ -339,42 +341,7 @@ function VendorTrustPortalContent() {
     return formattedText;
   };
 
-  // Handle feedback form submission
-  const handleSubmitFeedback = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!feedbackForm.enterpriseContactEmail || !feedbackForm.subject || !feedbackForm.message) {
-      alert('Please fill in all required fields.');
-      return;
-    }
-
-    setIsSubmittingFeedback(true);
-    
-    try {
-      await vendorAPI.trustPortal.createFeedback(feedbackForm);
-      
-      // Reset form
-      setFeedbackForm(prev => ({
-        ...prev,
-        enterpriseContactEmail: '',
-        enterpriseContactName: '',
-        enterpriseCompanyName: '',
-        subject: '',
-        message: '',
-        feedbackType: FeedbackType.GENERAL,
-        priority: FeedbackPriority.MEDIUM
-      }));
-      
-      setShowFeedbackForm(false);
-      alert('Feedback submitted successfully! The vendor will be notified.');
-      
-    } catch (err: any) {
-      console.error('Error submitting feedback:', err);
-      alert('Failed to submit feedback. Please try again.');
-    } finally {
-      setIsSubmittingFeedback(false);
-    }
-  };
+  // Removed feedback submission function since vendors can't provide feedback
 
   useEffect(() => {
     fetchVendorData();
@@ -467,14 +434,24 @@ function VendorTrustPortalContent() {
                   </div>
                 </div>
                 
-                <button
-                  onClick={() => setShowFeedbackForm(true)}
-                  className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors flex items-center"
-                >
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Provide Feedback
-                </button>
-              </div>
+                                  <button
+                    onClick={generateInviteToken}
+                    disabled={isGeneratingToken}
+                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50"
+                  >
+                    {isGeneratingToken ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="h-5 w-5 mr-2" />
+                        Generate Invite Link
+                      </>
+                    )}
+                  </button>
+                </div>
               
               {vendor.description && (
                 <p className="mt-6 text-gray-700 leading-relaxed">
@@ -830,10 +807,6 @@ function VendorTrustPortalContent() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Compliance Status:</span>
-                    <span className="font-medium text-green-600">{vendor.status || 'Active'}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-600">Checklists Shared:</span>
                     <span className="font-medium">{trustPortalItems.length}</span>
                   </div>
@@ -857,176 +830,50 @@ function VendorTrustPortalContent() {
         </main>
       </div>
 
-      {/* Feedback Modal */}
-      {showFeedbackForm && (
+      {/* Invite Token Modal */}
+      {showInviteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
-                Provide Feedback to {vendor.companyName}
+                Share Trust Portal
               </h3>
               <button
-                onClick={() => setShowFeedbackForm(false)}
+                onClick={() => setShowInviteModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmitFeedback} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={feedbackForm.enterpriseContactEmail}
-                    onChange={(e) => setFeedbackForm(prev => ({
-                      ...prev,
-                      enterpriseContactEmail: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    placeholder="your.email@company.com"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={feedbackForm.enterpriseContactName}
-                    onChange={(e) => setFeedbackForm(prev => ({
-                      ...prev,
-                      enterpriseContactName: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    placeholder="John Doe"
-                  />
-                </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Share this link with enterprises to give them secure access to your trust portal without requiring login.
+              </p>
+              
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <p className="text-xs text-gray-500 mb-1">Invite Link:</p>
+                <p className="text-sm font-mono text-gray-800 break-all">
+                  {window.location.origin}/trust-portal/invite/{inviteToken}
+                </p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  value={feedbackForm.enterpriseCompanyName}
-                  onChange={(e) => setFeedbackForm(prev => ({
-                    ...prev,
-                    enterpriseCompanyName: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="Your Company Inc."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Feedback Type
-                  </label>
-                  <select
-                    value={feedbackForm.feedbackType}
-                    onChange={(e) => setFeedbackForm(prev => ({
-                      ...prev,
-                      feedbackType: e.target.value as FeedbackType
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  >
-                    <option value={FeedbackType.GENERAL}>General Feedback</option>
-                    <option value={FeedbackType.DOCUMENT_REQUEST}>Document Request</option>
-                    <option value={FeedbackType.CLARIFICATION}>Clarification Needed</option>
-                    <option value={FeedbackType.COMPLIANCE_ISSUE}>Compliance Issue</option>
-                    <option value={FeedbackType.FOLLOW_UP}>Follow Up</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority
-                  </label>
-                  <select
-                    value={feedbackForm.priority}
-                    onChange={(e) => setFeedbackForm(prev => ({
-                      ...prev,
-                      priority: e.target.value as FeedbackPriority
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  >
-                    <option value={FeedbackPriority.LOW}>Low</option>
-                    <option value={FeedbackPriority.MEDIUM}>Medium</option>
-                    <option value={FeedbackPriority.HIGH}>High</option>
-                    <option value={FeedbackPriority.URGENT}>Urgent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={feedbackForm.subject}
-                  onChange={(e) => setFeedbackForm(prev => ({
-                    ...prev,
-                    subject: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="Brief description of your feedback"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Message *
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={feedbackForm.message}
-                  onChange={(e) => setFeedbackForm(prev => ({
-                    ...prev,
-                    message: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="Please provide detailed feedback..."
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              
+              <div className="flex space-x-3">
                 <button
-                  type="button"
-                  onClick={() => setShowFeedbackForm(false)}
+                  onClick={copyInviteLink}
+                  className="flex-1 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Copy Link
+                </button>
+                <button
+                  onClick={() => setShowInviteModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingFeedback}
-                  className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center"
-                >
-                  {isSubmittingFeedback ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Submit Feedback
-                    </>
-                  )}
+                  Close
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
