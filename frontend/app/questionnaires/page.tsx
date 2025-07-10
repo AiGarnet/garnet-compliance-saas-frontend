@@ -552,56 +552,13 @@ const QuestionnairesPage = () => {
       const authToken = localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
       
-      console.log('🔐 AUTH CHECK:', {
+      console.log('🔐 AUTH CHECK (Optional):', {
         hasToken: !!authToken,
         hasUserData: !!userData,
         tokenPreview: authToken ? `${authToken.substring(0, 20)}...` : 'NO TOKEN',
-        isAuthenticated: !!authToken && !!userData
+        isAuthenticated: !!authToken && !!userData,
+        note: 'Authentication is optional for questionnaire features'
       });
-
-      // If no authentication, show a helpful error
-      if (!authToken) {
-        console.error('❌ VENDORS: No authentication token found');
-        setUploadError('Authentication required. Please log in to access vendors.');
-        
-        // Redirect to login after a delay
-        setTimeout(() => {
-          window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
-        }, 2000);
-        return;
-      }
-
-      // Validate token format
-      try {
-        const payload = JSON.parse(atob(authToken.split('.')[1]));
-        const now = Date.now() / 1000;
-        
-        if (payload.exp <= now) {
-          console.error('❌ VENDORS: Authentication token is expired');
-          setUploadError('Your session has expired. Please log in again.');
-          
-          // Clear expired token and redirect
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userData');
-          setTimeout(() => {
-            window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
-          }, 2000);
-          return;
-        }
-        
-        console.log('✅ VENDORS: Token is valid, expires at:', new Date(payload.exp * 1000));
-      } catch (tokenError) {
-        console.error('❌ VENDORS: Invalid token format:', tokenError);
-        setUploadError('Invalid authentication token. Please log in again.');
-        
-        // Clear invalid token and redirect
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        setTimeout(() => {
-          window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
-        }, 2000);
-        return;
-      }
 
       console.log('🔍 VENDORS: Making API call to load vendors...');
       const response = await vendorAPI.getAll();
@@ -629,15 +586,7 @@ const QuestionnairesPage = () => {
       console.error('❌ VENDORS: Error loading vendors:', error);
       
       // Handle specific error types
-      if (error.name === 'AuthenticationError' || error.message?.includes('Authentication')) {
-        setUploadError('Authentication failed. Please log in again to access vendors.');
-        // Redirect to login
-        setTimeout(() => {
-          window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname);
-        }, 2000);
-      } else if (error.name === 'OrganizationError') {
-        setUploadError('Organization access required. Please contact your administrator.');
-      } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+      if (error.message?.includes('Network') || error.message?.includes('fetch')) {
         setUploadError('Network error. Please check your connection and try again.');
       } else {
         setUploadError(`Failed to load vendors: ${error.message || 'Unknown error'}`);
@@ -2022,11 +1971,9 @@ const QuestionnairesPage = () => {
                   onChange={(e) => setSelectedVendorId(e.target.value)}
                 >
                   <option value="">
-                    {uploadError && uploadError.includes('Authentication') 
-                      ? 'Authentication Required - Please Login'
-                      : isLoadingVendors 
-                        ? 'Loading vendors...'
-                        : '🔽 Select Vendor to Get Started'
+                    {isLoadingVendors 
+                      ? 'Loading vendors...'
+                      : '🔽 Select Vendor to Get Started'
                     }
                   </option>
                   {!uploadError && !isLoadingVendors ? (
@@ -2051,40 +1998,7 @@ const QuestionnairesPage = () => {
           </div>
         </div>
 
-        {/* Debug Authentication Status */}
-        {uploadError && uploadError.includes('Authentication') && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="text-sm font-medium text-red-800 mb-2 flex items-center">
-              <AlertTriangle className="h-4 w-4 mr-1" />
-              Authentication Issue Detected
-            </h3>
-            <div className="text-xs text-red-700 space-y-1">
-              <p><strong>Error:</strong> {uploadError}</p>
-              <p><strong>Token Status:</strong> {typeof window !== 'undefined' && localStorage.getItem('authToken') ? 'Present' : 'Missing'}</p>
-              <p><strong>User Data:</strong> {typeof window !== 'undefined' && localStorage.getItem('userData') ? 'Present' : 'Missing'}</p>
-              <p><strong>Auth Loading:</strong> {authLoading ? 'Yes' : 'No'}</p>
-              <p><strong>Current URL:</strong> {typeof window !== 'undefined' ? window.location.href : 'N/A'}</p>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button 
-                onClick={() => window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)}
-                className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-              >
-                Go to Login
-              </button>
-              <button 
-                onClick={() => {
-                  localStorage.removeItem('authToken');
-                  localStorage.removeItem('userData');
-                  window.location.reload();
-                }}
-                className="text-sm bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
-              >
-                Clear Auth & Reload
-              </button>
-            </div>
-          </div>
-        )}
+
         
         {/* 4-Section Navigation */}
         <div className="mb-8">
