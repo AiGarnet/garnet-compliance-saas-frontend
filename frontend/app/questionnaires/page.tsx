@@ -1750,23 +1750,28 @@ const QuestionnairesPage = () => {
         return;
       }
 
+      console.log('🏛️ TRUST PORTAL: Sending supporting document to trust portal...');
+
       // Create trust portal entry for supporting document
       const trustPortalData = {
-        title: `Supporting Document: ${document.originalName}`,
-        description: document.description || `Supporting document uploaded for compliance review`,
-        category: 'Evidence', // Use valid category from DTO
+        title: `${document.originalName}`,
+        description: document.description || `Supporting document for compliance review`,
+        category: 'Evidence',
         fileUrl: document.spacesUrl,
         fileType: document.fileType,
         fileSize: document.fileSize.toString(),
-        vendorId: vendorIdNumber, // Ensure it's a number
+        vendorId: vendorIdNumber,
         isQuestionnaireAnswer: false,
         content: JSON.stringify({
+          documentType: 'supporting_document',
           documentId: document.id,
           filename: document.filename,
           originalName: document.originalName,
           uploadDate: document.uploadDate,
           description: document.description,
-          category: document.category
+          category: document.category || 'General',
+          fileSize: document.fileSize,
+          submissionDate: new Date().toISOString()
         })
       };
 
@@ -1788,14 +1793,43 @@ const QuestionnairesPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send document to trust portal');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to send document to trust portal');
       }
 
-      alert('Document successfully sent to Trust Portal!');
+      const result = await response.json();
+      console.log('✅ Successfully sent document to trust portal:', result);
+
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Document sent to Trust Portal successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
 
     } catch (error) {
-      console.error('Error sending document to trust portal:', error);
-      alert('Failed to send document to trust portal. Please try again.');
+      console.error('❌ Error sending document to trust portal:', error);
+      
+      // Show error notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Failed to send document to trust portal
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
     } finally {
       setSendingDocumentId(null);
       setSendingToTrustPortal(false);
@@ -1812,7 +1846,18 @@ const QuestionnairesPage = () => {
     }
 
     if (!question.answer || question.answer.trim() === '') {
-      alert('Question must have an answer before sending to trust portal');
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-yellow-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          Question must have an answer before sending to trust portal
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
       return;
     }
 
@@ -1826,15 +1871,19 @@ const QuestionnairesPage = () => {
         setUploadError('Invalid vendor selected. Please select a valid vendor.');
         return;
       }
+
+      console.log('🏛️ TRUST PORTAL: Sending individual question to trust portal...');
+
       // Create trust portal entry for individual question
       const trustPortalData = {
-        title: `Question: ${question.text.length > 100 ? question.text.substring(0, 100) + '...' : question.text}`,
+        title: `Q&A: ${question.text.length > 80 ? question.text.substring(0, 80) + '...' : question.text}`,
         description: question.answer,
-        category: 'Questionnaire', // Use valid category from DTO
-        vendorId: vendorIdNumber, // Ensure it's a number
+        category: 'Questionnaire',
+        vendorId: vendorIdNumber,
         isQuestionnaireAnswer: true,
         questionnaireId: question.id,
         content: JSON.stringify({
+          documentType: 'individual_question',
           questionId: question.id,
           questionText: question.text,
           answer: question.answer,
@@ -1863,14 +1912,43 @@ const QuestionnairesPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send question to trust portal');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to send question to trust portal');
       }
 
-      alert('Question successfully sent to Trust Portal!');
+      const result = await response.json();
+      console.log('✅ Successfully sent question to trust portal:', result);
+
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Question sent to Trust Portal successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
 
     } catch (error) {
-      console.error('Error sending question to trust portal:', error);
-      alert('Failed to send question to trust portal. Please try again.');
+      console.error('❌ Error sending question to trust portal:', error);
+      
+      // Show error notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Failed to send question to trust portal
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
     } finally {
       setSendingQuestionId(null);
       setSendingToTrustPortal(false);
@@ -1910,58 +1988,145 @@ const QuestionnairesPage = () => {
     }
 
     if (checklistGroup.id === 'manual') {
-      alert('Manual questions cannot be sent as a group. Please send individual questions separately.');
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-yellow-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          Manual questions cannot be sent as a group. Please send individual questions separately.
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
       return;
     }
 
     setSendingToTrustPortal(true);
-    setTrustPortalProgress({ current: 0, total: 3, item: 'Checking completion status...' });
+    setTrustPortalProgress({ current: 0, total: 5, item: 'Checking completion status...' });
 
     try {
       // Step 1: Check if checklist is ready
-      setTrustPortalProgress({ current: 1, total: 3, item: 'Validating checklist completion...' });
+      setTrustPortalProgress({ current: 1, total: 5, item: 'Validating checklist completion...' });
       const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
 
       if (!isReady) {
         const incomplete = completionStatus?.incompleteQuestions?.length || 0;
-        const needingDocs = completionStatus?.questionsNeedingDocs - completionStatus?.questionsWithDocs || 0;
+        const needingDocs = Math.max(0, (completionStatus?.questionsNeedingDocs || 0) - (completionStatus?.questionsWithDocs || 0));
         
-        let message = `Checklist is not ready for Trust Portal:\n`;
+        let message = `❌ Checklist is not ready for Trust Portal:\n\n`;
         if (incomplete > 0) {
           message += `• ${incomplete} questions need answers\n`;
         }
         if (needingDocs > 0) {
           message += `• ${needingDocs} questions need supporting documents\n`;
         }
-        message += `\nPlease complete all requirements before sending to Trust Portal.`;
+        message += `\n📋 Current Status:\n`;
+        message += `• Total Questions: ${completionStatus?.totalQuestions || 0}\n`;
+        message += `• Completed: ${completionStatus?.completedQuestions || 0}\n`;
+        message += `• Documents Required: ${completionStatus?.questionsNeedingDocs || 0}\n`;
+        message += `• Documents Uploaded: ${completionStatus?.questionsWithDocs || 0}\n\n`;
+        message += `✅ Please complete all requirements before sending to Trust Portal.`;
         
-        alert(message);
+                 // Show detailed error notification
+         if (typeof window !== 'undefined') {
+           const notification = window.document.createElement('div');
+           notification.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+           notification.innerHTML = `
+             <div class="flex items-start">
+               <svg class="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+               </svg>
+               <div>
+                 <div class="font-semibold">Checklist Not Ready</div>
+                 <div class="text-sm mt-1">
+                   ${incomplete > 0 ? `${incomplete} questions need answers. ` : ''}
+                   ${needingDocs > 0 ? `${needingDocs} questions need documents.` : ''}
+                 </div>
+               </div>
+             </div>
+           `;
+           window.document.body.appendChild(notification);
+           setTimeout(() => notification.remove(), 6000);
+         }
+        
         return;
       }
 
-      // Step 2: Send to trust portal
-      setTrustPortalProgress({ current: 2, total: 3, item: 'Sending to Trust Portal...' });
+      // Step 2: Prepare checklist data
+      setTrustPortalProgress({ current: 2, total: 5, item: 'Preparing checklist data...' });
+      
+      // Step 3: Send to trust portal
+      setTrustPortalProgress({ current: 3, total: 5, item: 'Sending to Trust Portal...' });
       
       const submitData = {
         title: `${checklistGroup.name} - Complete Compliance Questionnaire`,
-        message: `Completed compliance questionnaire with ${checklistGroup.questions.length} answered questions`
+        message: `Completed compliance questionnaire with ${checklistGroup.questions.length} answered questions. All requirements verified and ready for enterprise review.`
       };
 
-      await ChecklistService.sendChecklistToTrustPortal(checklistGroup.id, selectedVendorId, submitData);
+      console.log('🏛️ TRUST PORTAL: Sending complete checklist to trust portal...');
+      const result = await ChecklistService.sendChecklistToTrustPortal(checklistGroup.id, selectedVendorId, submitData);
 
-      setTrustPortalProgress({ current: 3, total: 3, item: 'Successfully sent!' });
+      setTrustPortalProgress({ current: 4, total: 5, item: 'Finalizing submission...' });
       
-      // Show success message with details
-      alert(`✅ Checklist "${checklistGroup.name}" successfully sent to Trust Portal!\n\n` +
-            `📊 Summary:\n` +
+      // Step 4: Success
+      setTrustPortalProgress({ current: 5, total: 5, item: 'Successfully sent!' });
+      
+      console.log('✅ Successfully sent checklist to trust portal:', result);
+      
+      // Show detailed success message
+      const successMessage = `✅ Checklist "${checklistGroup.name}" successfully sent to Trust Portal!\n\n` +
+            `📊 Submission Summary:\n` +
             `• ${completionStatus.totalQuestions} questions completed\n` +
             `• ${completionStatus.questionsWithDocs} supporting documents uploaded\n` +
-            `• Ready for enterprise review`);
+            `• Ready for enterprise review\n\n` +
+            `🔗 Trust Portal ID: ${result.trustPortalId}\n` +
+            `📧 Enterprise clients can now review your submission`;
+
+             // Show success notification
+       if (typeof window !== 'undefined') {
+         const notification = window.document.createElement('div');
+         notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+         notification.innerHTML = `
+           <div class="flex items-start">
+             <svg class="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+             </svg>
+             <div>
+               <div class="font-semibold">Sent to Trust Portal!</div>
+               <div class="text-sm mt-1">
+                 ${checklistGroup.name} with ${completionStatus.totalQuestions} questions sent successfully.
+               </div>
+             </div>
+           </div>
+         `;
+         window.document.body.appendChild(notification);
+         setTimeout(() => notification.remove(), 5000);
+       }
 
     } catch (error) {
-      console.error('Error sending checklist to trust portal:', error);
+      console.error('❌ Error sending checklist to trust portal:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Failed to send checklist to Trust Portal:\n${errorMessage}`);
+      
+             // Show error notification
+       if (typeof window !== 'undefined') {
+         const notification = window.document.createElement('div');
+         notification.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+         notification.innerHTML = `
+           <div class="flex items-start">
+             <svg class="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+             </svg>
+             <div>
+               <div class="font-semibold">Failed to Send</div>
+               <div class="text-sm mt-1">${errorMessage}</div>
+             </div>
+           </div>
+         `;
+         window.document.body.appendChild(notification);
+         setTimeout(() => notification.remove(), 5000);
+       }
     } finally {
       setSendingToTrustPortal(false);
       setTrustPortalProgress({ current: 0, total: 0, item: '' });
@@ -2032,57 +2197,84 @@ const QuestionnairesPage = () => {
 
 
         
-        {/* 4-Section Navigation */}
+        {/* Enhanced 4-Section Navigation */}
         <div className="mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
-            <nav className="flex space-x-1">
-                    <button 
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-2">
+            <nav className="flex space-x-2">
+              <button 
                 onClick={() => setActiveSection('upload')}
-                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-4 px-4 text-center font-semibold text-sm rounded-xl transition-all duration-300 relative overflow-hidden ${
                   activeSection === 'upload'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:shadow-md'
                 }`}
               >
-                <Upload className="w-4 h-4 inline mr-2" />
-                Checklist & Evidence Files
-                    </button>
-                            <button 
+                <div className="flex flex-col items-center space-y-1">
+                  <Upload className="w-5 h-5" />
+                  <span className="hidden sm:block">Checklist & Evidence</span>
+                  <span className="sm:hidden">Upload</span>
+                </div>
+                {activeSection === 'upload' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-300 rounded-full"></div>
+                )}
+              </button>
+              
+              <button 
                 onClick={() => setActiveSection('ai')}
-                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-4 px-4 text-center font-semibold text-sm rounded-xl transition-all duration-300 relative overflow-hidden ${
                   activeSection === 'ai'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 hover:shadow-md'
                 }`}
               >
-                <Bot className="w-4 h-4 inline mr-2" />
-                AI Questionnaire
-                            </button>
-                            <button 
+                <div className="flex flex-col items-center space-y-1">
+                  <Bot className="w-5 h-5" />
+                  <span className="hidden sm:block">AI Questionnaire</span>
+                  <span className="sm:hidden">AI</span>
+                </div>
+                {activeSection === 'ai' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-300 rounded-full"></div>
+                )}
+              </button>
+              
+              <button 
                 onClick={() => setActiveSection('docs')}
-                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-4 px-4 text-center font-semibold text-sm rounded-xl transition-all duration-300 relative overflow-hidden ${
                   activeSection === 'docs'
-                    ? 'bg-green-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 hover:shadow-md'
                 }`}
               >
-                <FolderOpen className="w-4 h-4 inline mr-2" />
-                Supporting Documents
-                            </button>
-                            <button 
+                <div className="flex flex-col items-center space-y-1">
+                  <FolderOpen className="w-5 h-5" />
+                  <span className="hidden sm:block">Supporting Documents</span>
+                  <span className="sm:hidden">Documents</span>
+                </div>
+                {activeSection === 'docs' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-300 rounded-full"></div>
+                )}
+              </button>
+              
+              <button 
                 onClick={() => setActiveSection('support')}
-                className={`flex-1 py-3 px-4 text-center font-semibold text-sm rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-4 px-4 text-center font-semibold text-sm rounded-xl transition-all duration-300 relative overflow-hidden ${
                   activeSection === 'support'
-                    ? 'bg-orange-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-md'
                 }`}
               >
-                <LifeBuoy className="w-4 h-4 inline mr-2" />
-                Request Assistance
-                            </button>
+                <div className="flex flex-col items-center space-y-1">
+                  <LifeBuoy className="w-5 h-5" />
+                  <span className="hidden sm:block">Request Assistance</span>
+                  <span className="sm:hidden">Support</span>
+                </div>
+                {activeSection === 'support' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-orange-300 rounded-full"></div>
+                )}
+              </button>
             </nav>
-                          </div>
-                        </div>
+          </div>
+        </div>
                         
         {/* Authentication Notice for Services */}
         {uploadError && uploadError.includes('Authentication') && (
@@ -2629,27 +2821,43 @@ const QuestionnairesPage = () => {
                                   ></div>
                                 </div>
                                 
-                                {/* Send Checklist to Trust Portal Button */}
+                                {/* Send Checklist to Trust Portal Button - Enhanced */}
                                 {checklistGroup.id !== 'manual' && 
                                  checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length === checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
-                                  <button
-                                    onClick={() => sendChecklistToTrustPortal(checklistGroup)}
-                                    disabled={sendingToTrustPortal}
-                                    className="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center text-xs font-medium"
-                                  >
-                                    {sendingToTrustPortal && trustPortalProgress.item ? (
-                                      <>
-                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                        {trustPortalProgress.item}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Upload className="h-3 w-3 mr-1" />
-                                        Send to Trust Portal
-                                      </>
-                                    )}
-                                  </button>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                                      ✓ Ready for Portal
+                                    </span>
+                                    <button
+                                      onClick={() => sendChecklistToTrustPortal(checklistGroup)}
+                                      disabled={sendingToTrustPortal}
+                                      className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-all duration-200 flex items-center text-sm font-semibold shadow-md hover:shadow-lg"
+                                    >
+                                      {sendingToTrustPortal && trustPortalProgress.item ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          <span className="hidden sm:inline">{trustPortalProgress.item}</span>
+                                          <span className="sm:hidden">Sending...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          <span className="hidden sm:inline">Send Complete Checklist to Trust Portal</span>
+                                          <span className="sm:hidden">Send to Portal</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                {/* Progress indicator for incomplete checklists */}
+                                {checklistGroup.id !== 'manual' && 
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length < checklistGroup.questions.length &&
+                                 checklistGroup.questions.length > 0 && (
+                                  <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                                    {checklistGroup.questions.length - checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length} questions pending
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -2822,22 +3030,24 @@ const QuestionnairesPage = () => {
                                 Regenerate
                               </button>
 
-                              {/* Send to Trust Portal - for Manual Questions */}
+                              {/* Send to Trust Portal - for Manual Questions - Enhanced */}
                               {(!question.checklistId || question.checklistId === 'manual') && question.answer && (
                                 <button
                                   onClick={() => sendQuestionToTrustPortal(question)}
                                   disabled={sendingQuestionId === question.id || sendingToTrustPortal}
-                                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                  className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 transition-all duration-200 flex items-center text-sm font-medium shadow-sm hover:shadow-md"
+                                  title="Send this individual question and answer to Trust Portal for enterprise review"
                                 >
                                   {sendingQuestionId === question.id ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                      Sending...
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Sending to Portal...
                                     </>
                                   ) : (
                                     <>
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Send to Trust Portal
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      <span className="hidden sm:inline">Send to Trust Portal</span>
+                                      <span className="sm:hidden">Send</span>
                                     </>
                                   )}
                                 </button>
@@ -3047,39 +3257,87 @@ const QuestionnairesPage = () => {
                       </div>
                     </div>
 
-                    {/* Simple Uploaded Documents List */}
+                    {/* Enhanced Uploaded Documents List */}
                     {uploadedSupportingDocs.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-gray-200">
-                        <h5 className="text-xs font-medium text-gray-600 mb-2">
-                          Uploaded ({uploadedSupportingDocs.length})
-                        </h5>
-                        <div className="space-y-2">
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-sm font-semibold text-gray-800">
+                            Supporting Documents ({uploadedSupportingDocs.length})
+                          </h5>
+                          <span className="text-xs text-gray-500">
+                            Ready for Trust Portal
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
                           {uploadedSupportingDocs.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded text-xs">
-                              <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                <FileText className="h-3 w-3 text-green-600 flex-shrink-0" />
-                                <span className="truncate font-medium">{doc.originalName}</span>
-                                {doc.category && (
-                                  <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                                    {doc.category}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-2 ml-2">
-                                <a
-                                  href={`/api/checklists/documents/${doc.id}/download`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  View
-                                </a>
-                                <button
-                                  onClick={() => deleteStandaloneSupportDoc(doc.id)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  Delete
-                                </button>
+                            <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3 flex-1 min-w-0">
+                                  <div className="p-2 bg-green-50 rounded-lg">
+                                    <FileText className="h-4 w-4 text-green-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h6 className="font-medium text-gray-900 text-sm truncate">
+                                      {doc.originalName}
+                                    </h6>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className="text-xs text-gray-500">
+                                        {(doc.fileSize / 1024).toFixed(1)} KB
+                                      </span>
+                                      {doc.category && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                          {doc.category}
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-gray-400">
+                                        {new Date(doc.uploadDate).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    {doc.description && (
+                                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                        {doc.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-3">
+                                  <a
+                                    href={`/api/checklists/documents/${doc.id}/download`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
+                                    title="View document"
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    View
+                                  </a>
+                                  <button
+                                    onClick={() => sendSupportingDocumentToTrustPortal(doc)}
+                                    disabled={sendingDocumentId === doc.id || sendingToTrustPortal}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 disabled:opacity-50 transition-colors"
+                                    title="Send to Trust Portal"
+                                  >
+                                    {sendingDocumentId === doc.id ? (
+                                      <>
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                        Sending...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Send to Portal
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors"
+                                    title="Delete document"
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -3254,7 +3512,7 @@ const QuestionnairesPage = () => {
                   onClick={confirmationDialog.onCancel}
                   disabled={confirmationDialog.isProcessing}
                   className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  >
                   Maybe Later
                 </button>
                     </div>
