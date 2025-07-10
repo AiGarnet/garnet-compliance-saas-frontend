@@ -62,6 +62,8 @@ interface ChecklistFile {
   questions: ExtractedQuestion[];
   extractionStatus: 'uploading' | 'extracting' | 'completed' | 'error';
   checklistId?: string;
+  sentToTrustPortal?: boolean;
+  trustPortalSubmissionDate?: Date;
 }
 
 interface SupportTicket {
@@ -1254,7 +1256,8 @@ const QuestionnairesPage = () => {
       console.log('📁 STANDALONE: Upload successful:', uploadResult);
       console.log('📁 File stored in: supporting-docs/ folder');
 
-      // Refresh the documents list from the database instead of just adding locally
+      // Force refresh the documents list from the database instead of just adding locally
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for backend processing
       await loadVendorSupportingDocuments(selectedVendorId);
       
       // Clear form
@@ -1267,6 +1270,20 @@ const QuestionnairesPage = () => {
       }
 
       console.log('✅ Standalone supporting document uploaded successfully!');
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Supporting document uploaded successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
       
     } catch (error) {
       console.error('❌ Error uploading standalone supporting document:', error);
@@ -1537,10 +1554,25 @@ const QuestionnairesPage = () => {
           : q
       ));
 
-      // Refresh supporting documents list
+      // Force refresh supporting documents list with delay
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for backend processing
       await loadVendorSupportingDocuments(selectedVendorId);
 
       console.log('✅ Supporting document uploaded successfully to DigitalOcean Spaces and linked to vendor!');
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Document uploaded for question successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
       
     } catch (error) {
       console.error('❌ Error uploading supporting document:', error);
@@ -2075,6 +2107,17 @@ const QuestionnairesPage = () => {
       
       console.log('✅ Successfully sent checklist to trust portal:', result);
       
+      // Mark checklist as sent to trust portal
+      setChecklists(prev => prev.map(c => 
+        c.checklistId === checklistGroup.id 
+          ? { 
+              ...c, 
+              sentToTrustPortal: true, 
+              trustPortalSubmissionDate: new Date() 
+            } 
+          : c
+      ));
+      
       // Show detailed success message
       const successMessage = `✅ Checklist "${checklistGroup.name}" successfully sent to Trust Portal!\n\n` +
             `📊 Submission Summary:\n` +
@@ -2535,18 +2578,29 @@ const QuestionnairesPage = () => {
                               <FileCheck className="h-6 w-6 text-blue-600 mr-3" />
                               <div>
                                 <span className="font-medium text-gray-900">{checklist.name}</span>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {checklist.questions.length > 0 
-                                    ? `${checklist.questions.length} questions loaded` 
-                                    : 'Questions ready to load'
-                                  }
-                                  {checklist.extractionStatus === 'completed' && (
-                                    <span className="ml-2 inline-flex items-center text-xs">
-                                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                                      Stored securely
-                                    </span>
-                                  )}
-                                </p>
+                                                                  <p className="text-sm text-gray-500 mt-1">
+                                    {checklist.questions.length > 0 
+                                      ? `${checklist.questions.length} questions loaded` 
+                                      : 'Questions ready to load'
+                                    }
+                                    {checklist.extractionStatus === 'completed' && (
+                                      <span className="ml-2 inline-flex items-center text-xs">
+                                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                        Stored securely
+                                      </span>
+                                    )}
+                                    {checklist.sentToTrustPortal && (
+                                      <span className="ml-2 inline-flex items-center text-xs">
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                                        Sent to Trust Portal
+                                        {checklist.trustPortalSubmissionDate && (
+                                          <span className="ml-1 text-gray-400">
+                                            ({checklist.trustPortalSubmissionDate.toLocaleDateString()})
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
