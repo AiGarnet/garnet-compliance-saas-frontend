@@ -99,11 +99,18 @@ function VendorTrustPortalContent() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setInviteToken(data.inviteToken);
-        setShowInviteModal(true);
+        const result = await response.json();
+        console.log('API Response:', result); // Debug log
+        
+        if (result.success && result.data?.inviteToken) {
+          setInviteToken(result.data.inviteToken);
+          setShowInviteModal(true);
+        } else {
+          throw new Error(result.error?.message || 'Failed to generate invite token');
+        }
       } else {
-        throw new Error('Failed to generate invite token');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate invite token');
       }
     } catch (error) {
       console.error('Error generating invite token:', error);
@@ -115,7 +122,7 @@ function VendorTrustPortalContent() {
 
   // Copy invite link to clipboard
   const copyInviteLink = () => {
-    const inviteLink = `${window.location.origin}/trust-portal/invite/${inviteToken}`;
+    const inviteLink = `${window.location.origin}/trust-portal/invite?token=${inviteToken}`;
     navigator.clipboard.writeText(inviteLink);
     alert('Invite link copied to clipboard!');
   };
@@ -854,7 +861,7 @@ function VendorTrustPortalContent() {
               <div className="bg-gray-50 rounded-lg p-3 mb-4">
                 <p className="text-xs text-gray-500 mb-1">Invite Link:</p>
                 <p className="text-sm font-mono text-gray-800 break-all">
-                  {window.location.origin}/trust-portal/invite/{inviteToken}
+                  {window.location.origin}/trust-portal/invite?token={inviteToken}
                 </p>
               </div>
               
