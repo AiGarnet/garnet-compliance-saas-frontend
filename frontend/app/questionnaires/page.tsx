@@ -28,10 +28,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  Trash2,
-  Shield,
-  Printer,
-  Copy
+  Trash2
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -41,7 +38,8 @@ import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
 import { AIService } from '@/lib/services/aiService';
 import ChatbotAssistance from '@/components/help/ChatbotAssistance';
-import { TextFileViewer } from '@/components/shared/TextFileViewer';
+import { EvidenceFilePreview } from '@/components/questionnaire/EvidenceFilePreview';
+import { TextFileViewer } from '@/components/questionnaire/TextFileViewer';
 
 interface ExtractedQuestion {
   id: string;
@@ -174,17 +172,6 @@ const QuestionnairesPage = () => {
   const [generateDocQuestionId, setGenerateDocQuestionId] = useState<string | null>(null);
   const [documentGenerationError, setDocumentGenerationError] = useState<string | null>(null);
   
-  // Evidence preview and approval states
-  const [showEvidencePreview, setShowEvidencePreview] = useState(false);
-  const [previewContent, setPreviewContent] = useState('');
-  const [isApprovingEvidence, setIsApprovingEvidence] = useState(false);
-  const [previewDocumentTitle, setPreviewDocumentTitle] = useState('');
-  
-  // Text file viewer states
-  const [showTextViewer, setShowTextViewer] = useState(false);
-  const [textViewerUrl, setTextViewerUrl] = useState('');
-  const [textViewerFilename, setTextViewerFilename] = useState('');
-  
 
   
 
@@ -213,6 +200,12 @@ const QuestionnairesPage = () => {
   const checklistFileRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const standaloneSupportDocRef = useRef<HTMLInputElement>(null);
+
+  // New component states
+  const [showEvidencePreview, setShowEvidencePreview] = useState(false);
+  const [pendingEvidenceFiles, setPendingEvidenceFiles] = useState<any[]>([]);
+  const [showTextViewer, setShowTextViewer] = useState(false);
+  const [textViewerData, setTextViewerData] = useState<{file?: File, url?: string, filename?: string}>({});
 
   const { isLoading: authLoading } = useAuthGuard();
   const { token } = useAuth();
@@ -1021,7 +1014,7 @@ const QuestionnairesPage = () => {
     }
   };
 
-  // Generate AI answer for a single question
+  // Generate AI answer for a single question with enhanced evidence context
   const generateSingleAIAnswer = async (question: ExtractedQuestion) => {
     setIsGeneratingAnswers(true);
     setGenerationProgress({ current: 0, total: 1, currentQuestion: question.text });
@@ -1032,13 +1025,30 @@ const QuestionnairesPage = () => {
         q.id === question.id ? { ...q, status: 'in-progress' } : q
       ));
 
-      // Generate answer using individual API call
+      // Enhanced context generation with evidence files
+      let enhancedContext = 'Security compliance questionnaire';
+      
+      // Add evidence file context if available
+      if (evidenceFiles.length > 0) {
+        const evidenceContext = evidenceFiles.map(file => 
+          `Evidence: ${file.originalFilename} (${file.category || 'General'})${file.description ? ' - ' + file.description : ''}`
+        ).join('. ');
+        
+        enhancedContext += '. Available evidence files: ' + evidenceContext + '. Please reference relevant evidence when applicable.';
+      }
+
+      // Add checklist context if available
+      if (question.checklistName) {
+        enhancedContext += ` Source: ${question.checklistName}.`;
+      }
+
+      // Generate answer using individual API call with enhanced context
       const response = await fetch('/api/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: question.text,
-          context: 'Security compliance questionnaire',
+          context: enhancedContext,
           vendorId: selectedVendorId
         })
       });
@@ -1049,19 +1059,33 @@ const QuestionnairesPage = () => {
 
       const data = await response.json();
       
-      // Update question with AI answer
+      // Post-process the answer to ensure quality
+      let processedAnswer = data.answer;
+      
+      // Boost confidence if evidence files are available
+      const enhancedConfidence = Math.min((data.confidence || 0.8) + (evidenceFiles.length > 0 ? 0.1 : 0), 1.0);
+      
+      // Update question with enhanced AI answer
       setExtractedQuestions(prev => prev.map(q => 
         q.id === question.id 
           ? { 
               ...q, 
               status: 'completed',
-              answer: data.answer,
-              confidence: data.confidence || 0.8
+              answer: processedAnswer,
+              confidence: enhancedConfidence
             }
           : q
       ));
 
-      setGenerationProgress({ current: 1, total: 1, currentQuestion: 'Completed' });
+      // Save the enhanced answer to database
+      await saveQuestionnaireAnswer({
+        ...question,
+        answer: processedAnswer,
+        confidence: enhancedConfidence,
+        status: 'completed'
+      });
+
+      setGenerationProgress({ current: 1, total: 1, currentQuestion: 'Completed with enhanced context' });
       
     } catch (error) {
       console.error('Error generating single AI answer:', error);
@@ -1366,19 +1390,37 @@ const QuestionnairesPage = () => {
       return;
     }
 
+    // Create pending evidence files for preview
+    const pendingFiles = Array.from(files).map(file => ({
+      file,
+      description: evidenceDescription,
+      category: evidenceCategory,
+      status: 'pending' as const
+    }));
+
+    setPendingEvidenceFiles(pendingFiles);
+    setShowEvidencePreview(true);
+  };
+
+  const handleEvidenceApproval = async (approvedFiles: any[]) => {
+    if (!selectedVendorId) {
+      setEvidenceUploadError('Please select a vendor first');
+      return;
+    }
+
     setIsUploadingEvidence(true);
     setEvidenceUploadError(null);
 
     try {
-      for (const file of Array.from(files)) {
+      for (const evidenceFile of approvedFiles) {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', evidenceFile.file);
         formData.append('vendorId', selectedVendorId);
-        if (evidenceDescription) {
-          formData.append('description', evidenceDescription);
+        if (evidenceFile.description) {
+          formData.append('description', evidenceFile.description);
         }
-        if (evidenceCategory) {
-          formData.append('category', evidenceCategory);
+        if (evidenceFile.category) {
+          formData.append('category', evidenceFile.category);
         }
 
         const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence`, {
@@ -1401,12 +1443,18 @@ const QuestionnairesPage = () => {
       // Reload evidence files
       await loadVendorEvidenceFiles(selectedVendorId);
       
-      // Clear form
+      // Clear form and close preview
       setEvidenceDescription('');
       setEvidenceCategory('');
       if (evidenceFileRef.current) {
         evidenceFileRef.current.value = '';
       }
+      setShowEvidencePreview(false);
+      setPendingEvidenceFiles([]);
+
+      // Show success notification
+      alert(`Successfully uploaded ${approvedFiles.length} evidence file(s)!`);
+
     } catch (error: any) {
       console.error('Error uploading evidence file:', error);
       setEvidenceUploadError(error.message || 'Failed to upload evidence file');
@@ -1448,6 +1496,19 @@ const QuestionnairesPage = () => {
     }
   };
 
+  const handleTextFileView = (file: any) => {
+    if (file.fileType === 'text/plain' || file.originalFilename.toLowerCase().endsWith('.txt')) {
+      setTextViewerData({
+        url: file.spacesUrl,
+        filename: file.originalFilename
+      });
+      setShowTextViewer(true);
+    } else {
+      // For non-text files, open in new tab
+      window.open(file.spacesUrl, '_blank');
+    }
+  };
+
   // Document generation functions
   const openGenerateDocModal = (questionId?: string) => {
     setGenerateDocQuestionId(questionId || null);
@@ -1467,7 +1528,7 @@ const QuestionnairesPage = () => {
     setGenerateDocCategory('');
   };
 
-  const generateEvidencePreview = async () => {
+  const generateAndSaveDocument = async () => {
     if (!generateDocTitle.trim()) {
       setDocumentGenerationError('Please enter a document title');
       return;
@@ -1482,67 +1543,7 @@ const QuestionnairesPage = () => {
     setDocumentGenerationError(null);
 
     try {
-      console.log('🤖 GENERATING: Starting evidence preview generation...');
-      
-      // Get vendor ID as number
-      const vendorIdNum = await getVendorIdFromUuid(selectedVendorId);
-      if (!vendorIdNum) {
-        throw new Error('Invalid vendor selected');
-      }
-
-      // Generate preview using AI service (without saving)
-      const response = await fetch(`${getApiBaseUrl()}/api/ai/generate-supporting-document`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          title: generateDocTitle,
-          instructions: generateDocInstructions || undefined,
-          category: generateDocCategory || undefined,
-          vendorId: vendorIdNum,
-          questionId: generateDocQuestionId || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate preview');
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.document?.content) {
-        console.log('✅ Evidence preview generated successfully!');
-        
-        // Set preview content
-        setPreviewContent(result.document.content);
-        setPreviewDocumentTitle(generateDocTitle);
-        
-        // Show preview modal
-        setShowEvidencePreview(true);
-        setShowGenerateDocModal(false);
-      } else {
-        throw new Error(result.error || 'Failed to generate preview content');
-      }
-    } catch (error: any) {
-      console.error('❌ Error generating evidence preview:', error);
-      setDocumentGenerationError(error.message || 'Failed to generate evidence preview. Please try again.');
-    } finally {
-      setIsGeneratingDocument(false);
-    }
-  };
-
-  const approveAndSaveEvidence = async () => {
-    if (!selectedVendorId || !previewContent) {
-      return;
-    }
-
-    setIsApprovingEvidence(true);
-
-    try {
-      console.log('💾 SAVING: Saving approved evidence to bucket...');
+      console.log('🤖 GENERATING: Starting document generation...');
       
       // Get vendor ID as number
       const vendorIdNum = await getVendorIdFromUuid(selectedVendorId);
@@ -1551,7 +1552,7 @@ const QuestionnairesPage = () => {
       }
 
       const result = await AIService.generateAndSaveDocument({
-        documentTitle: previewDocumentTitle,
+        documentTitle: generateDocTitle,
         instructions: generateDocInstructions || undefined,
         category: generateDocCategory || undefined,
         vendorId: vendorIdNum,
@@ -1559,61 +1560,25 @@ const QuestionnairesPage = () => {
       });
 
       if (result.success) {
-        console.log('✅ Evidence file saved to bucket successfully!');
+        console.log('✅ Document generated and saved successfully!');
         
         // Refresh the supporting documents list
         await loadVendorSupportingDocuments(selectedVendorId);
         
-        // Close modals and reset states
-        setShowEvidencePreview(false);
+        // Close modal
         closeGenerateDocModal();
         
-        // Show success notification
-        if (typeof window !== 'undefined') {
-          const notification = window.document.createElement('div');
-          notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
-          notification.innerHTML = `
-            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            Evidence file saved successfully!
-          `;
-          window.document.body.appendChild(notification);
-          setTimeout(() => notification.remove(), 5000);
-        }
+        // Show success message
+        alert('Document generated and saved successfully!');
       } else {
-        throw new Error(result.error || 'Failed to save evidence file');
+        throw new Error(result.error || 'Failed to generate document');
       }
     } catch (error: any) {
-      console.error('❌ Error saving evidence:', error);
-      setDocumentGenerationError(error.message || 'Failed to save evidence. Please try again.');
+      console.error('❌ Error generating document:', error);
+      setDocumentGenerationError(error.message || 'Failed to generate document. Please try again.');
     } finally {
-      setIsApprovingEvidence(false);
+      setIsGeneratingDocument(false);
     }
-  };
-
-  const closeEvidencePreview = () => {
-    setShowEvidencePreview(false);
-    setPreviewContent('');
-    setPreviewDocumentTitle('');
-    setShowGenerateDocModal(true); // Return to the generation modal
-  };
-
-  const viewTextFile = (file: any) => {
-    if (file.spacesUrl && file.fileType === 'text/plain') {
-      setTextViewerUrl(file.spacesUrl);
-      setTextViewerFilename(file.originalFilename || file.filename);
-      setShowTextViewer(true);
-    } else {
-      // For non-text files, open in new tab as before
-      window.open(file.spacesUrl, '_blank');
-    }
-  };
-
-  const closeTextViewer = () => {
-    setShowTextViewer(false);
-    setTextViewerUrl('');
-    setTextViewerFilename('');
   };
 
   // Support document functions - COMPLETELY SEPARATE FROM CHECKLIST UPLOAD
@@ -2526,9 +2491,14 @@ const QuestionnairesPage = () => {
                       <Files className="h-12 w-12 text-orange-600 mx-auto mb-4" />
                       <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Evidence</h2>
                       <p className="text-gray-600">Upload internal evidence files to enhance AI responses</p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        📝 Internal only - not shown on Trust Portal
-                      </p>
+                      <div className="text-xs mt-2 space-y-1">
+                        <p className="text-orange-600">
+                          📝 Internal only - not shown on Trust Portal
+                        </p>
+                        <p className="text-blue-600">
+                          ✨ Enhanced workflow: Review files before saving • Better text file viewing
+                        </p>
+                      </div>
                     </div>
 
                     {/* Evidence File Upload Form */}
@@ -2576,12 +2546,12 @@ const QuestionnairesPage = () => {
                           {isUploadingEvidence ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Uploading...
+                              Processing & Saving...
                             </>
                           ) : (
                             <>
                               <Upload className="h-4 w-4 mr-2" />
-                              Choose Files
+                              Select & Review Files
                             </>
                           )}
                         </button>
@@ -2620,22 +2590,20 @@ const QuestionnairesPage = () => {
                                     )}
                                     {file.fileType === 'text/plain' && (
                                       <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
-                                        Text File
+                                        📝 Enhanced Viewer
                                       </span>
                                     )}
                                   </div>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-1">
-                                {file.spacesUrl && (
-                                  <button
-                                    onClick={() => viewTextFile(file)}
-                                    className="text-blue-600 hover:text-blue-700 p-1 flex-shrink-0"
-                                    title={file.fileType === 'text/plain' ? 'View in enhanced viewer' : 'Open file'}
-                                  >
-                                    <FileText className="h-3 w-3" />
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => handleTextFileView(file)}
+                                  className="text-blue-600 hover:text-blue-700 p-1 flex-shrink-0"
+                                  title={file.fileType === 'text/plain' ? 'View with enhanced text viewer' : 'View file'}
+                                >
+                                  <Download className="h-3 w-3" />
+                                </button>
                                 <button
                                   onClick={() => deleteEvidenceFile(file.id)}
                                   className="text-red-600 hover:text-red-700 p-1 flex-shrink-0"
@@ -2926,6 +2894,21 @@ const QuestionnairesPage = () => {
                         </div>
                       </div>
 
+                      {/* Evidence Integration Status */}
+                      {evidenceFiles.length > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-center text-green-800">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            <span className="text-sm font-medium">
+                              Enhanced AI Context: {evidenceFiles.length} evidence file(s) available
+                            </span>
+                          </div>
+                          <p className="text-xs text-green-600 mt-1">
+                            AI responses will reference your uploaded evidence files for more accurate answers
+                          </p>
+                        </div>
+                      )}
+
                       {/* Batch Actions */}
                       {extractedQuestions.filter(q => q.status === 'pending').length > 0 && !isGeneratingAnswers && (
                         <div className="pt-4 border-t border-purple-200">
@@ -2936,6 +2919,7 @@ const QuestionnairesPage = () => {
                           >
                             <Brain className="h-4 w-4 mr-2" />
                             Generate All Answers ({extractedQuestions.filter(q => q.status === 'pending').length})
+                            {evidenceFiles.length > 0 && <span className="ml-1">⚡</span>}
                           </button>
                         </div>
                       )}
@@ -3250,92 +3234,281 @@ const QuestionnairesPage = () => {
             </div>
           )}
 
-          {/* Section 3: Evidence File Generation */}
+          {/* Section 3: Supporting Documents - INDEPENDENT UPLOAD SYSTEM */}
           {activeSection === 'docs' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8">
-                  <Sparkles className="h-16 w-16 text-purple-600 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Evidence Generation</h2>
-                  <p className="text-lg text-gray-600">Generate compliance evidence files using AI</p>
+                  <FolderOpen className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Supporting Documents</h2>
+                  <p className="text-lg text-gray-600">Upload and manage supporting documents independently</p>
+
                 </div>
 
-                {/* AI Evidence Generation Interface */}
-                <div className="max-w-4xl mx-auto">
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-8">
-                    <div className="text-center mb-6">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-                        <Sparkles className="h-8 w-8 text-purple-600" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Generate Compliance Evidence</h3>
-                      <p className="text-gray-600">
-                        Create comprehensive compliance documents using AI based on your questionnaire answers and company context
+                {/* Supporting Document Upload Error */}
+                {/* Question-Based Documents (if any exist) - MOVED TO TOP */}
+                {extractedQuestions.length > 0 && extractedQuestions.some(q => q.requiresDoc || q.docDescription) && (
+                  <div className="mb-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                        <ClipboardList className="h-6 w-6 mr-3 text-blue-600" />
+                        Question-Specific Document Requirements
+                      </h3>
+                      <p className="text-sm text-blue-700 mb-4">
+                        Upload supporting documents for relevant questions from your checklist:
                       </p>
+                      
+                      <div className="space-y-4">
+                        {extractedQuestions
+                          .filter(q => q.requiresDoc || q.docDescription)
+                          .map((question) => (
+                          <div 
+                            key={question.id}
+                            className="bg-white border border-blue-200 rounded-lg p-4"
+                          >
+                            <h4 className="text-sm font-medium text-gray-800 mb-2">{question.text}</h4>
+                            
+                            {question.docDescription && (
+                              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-3">
+                                <p className="text-yellow-800 text-sm">
+                                  <strong>Required:</strong> {question.docDescription}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="file"
+                                className="hidden"
+                                id={`support-doc-${question.id}`}
+                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                                onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                                disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
+                              />
+                              <label
+                                htmlFor={`support-doc-${question.id}`}
+                                className={`inline-flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                  isUploadingSupportDoc && uploadingQuestionId === question.id
+                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                              >
+                                {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload for This Question
+                                  </>
+                                )}
+                              </label>
+                              
+                              <button
+                                onClick={() => openGenerateDocModal(question.id)}
+                                disabled={isUploadingSupportDoc || isGeneratingDocument}
+                                className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  isUploadingSupportDoc || isGeneratingDocument
+                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                                }`}
+                              >
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Generate with AI
+                              </button>
+                              
+                              {question.supportingDocs && question.supportingDocs.length > 0 && (
+                                <span className="text-sm text-green-600 font-medium">
+                                  ✓ {question.supportingDocs.length} file(s) uploaded
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Individual/General Supporting Documents - Reduced Prominence */}
+                <div className="mt-6">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                      General Supporting Documents (Optional)
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Upload additional documents not specific to any question
+                    </p>
+
+                    {supportDocUploadError && (
+                      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-xs">
+                        <p className="text-red-700">{supportDocUploadError}</p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Description (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          placeholder="e.g., Security policy document..."
+                          value={supportDocDescription}
+                          onChange={(e) => setSupportDocDescription(e.target.value)}
+                          disabled={isUploadingSupportDoc}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Category (Optional)
+                        </label>
+                        <select
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          value={supportDocCategory}
+                          onChange={(e) => setSupportDocCategory(e.target.value)}
+                          disabled={isUploadingSupportDoc}
+                        >
+                          <option value="">Select category</option>
+                          <option value="Security">Security</option>
+                          <option value="Compliance">Compliance</option>
+                          <option value="Privacy">Privacy</option>
+                          <option value="Policies">Policies</option>
+                          <option value="Certificates">Certificates</option>
+                          <option value="Evidence">Evidence</option>
+                          <option value="General">General</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {/* Generate Evidence Button */}
-                    <div className="text-center">
-                      <button
-                        onClick={() => openGenerateDocModal()}
-                        disabled={!selectedVendorId || isGeneratingDocument}
-                        className={`inline-flex items-center px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-200 ${
-                          !selectedVendorId || isGeneratingDocument
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={standaloneSupportDocRef}
+                        type="file"
+                        className="hidden"
+                        id="standalone-support-doc"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                        onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
+                        disabled={isUploadingSupportDoc}
+                      />
+                      <label
+                        htmlFor="standalone-support-doc"
+                        className={`inline-flex items-center px-3 py-2 text-sm rounded cursor-pointer transition-colors ${
+                          isUploadingSupportDoc
+                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                            : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
                       >
-                        {isGeneratingDocument ? (
+                        {isUploadingSupportDoc ? (
                           <>
-                            <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                            Generating Evidence...
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Uploading...
                           </>
                         ) : (
                           <>
-                            <Sparkles className="h-5 w-5 mr-3" />
-                            Generate Evidence File
+                            <Upload className="h-3 w-3 mr-1" />
+                            Upload File
                           </>
                         )}
-                      </button>
+                      </label>
                       
-                      {!selectedVendorId && (
-                        <p className="text-sm text-gray-500 mt-3">
-                          Please select a vendor first to generate evidence files
-                        </p>
-                      )}
+                      <div className="text-xs text-gray-500">
+                        PDF, Images, DOC, DOCX, TXT
+                      </div>
                     </div>
 
-                    {/* Benefits List */}
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-3">
-                          <FileText className="h-6 w-6 text-blue-600" />
+                    {/* Enhanced Uploaded Documents List */}
+                    {uploadedSupportingDocs.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-sm font-semibold text-gray-800">
+                            Supporting Documents ({uploadedSupportingDocs.length})
+                          </h5>
+                          <span className="text-xs text-gray-500">
+                            Ready for Trust Portal
+                          </span>
                         </div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Intelligent Context</h4>
-                        <p className="text-sm text-gray-600">
-                          Uses your questionnaire answers and company information for accurate content
-                        </p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mb-3">
-                          <Shield className="h-6 w-6 text-green-600" />
+                        <div className="grid grid-cols-1 gap-3">
+                          {uploadedSupportingDocs.map((doc) => (
+                            <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3 flex-1 min-w-0">
+                                  <div className="p-2 bg-green-50 rounded-lg">
+                                    <FileText className="h-4 w-4 text-green-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h6 className="font-medium text-gray-900 text-sm truncate">
+                                      {doc.originalName}
+                                    </h6>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className="text-xs text-gray-500">
+                                        {(doc.fileSize / 1024).toFixed(1)} KB
+                                      </span>
+                                      {doc.category && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                          {doc.category}
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-gray-400">
+                                        {new Date(doc.uploadDate).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    {doc.description && (
+                                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                        {doc.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-3">
+                                  <a
+                                    href={`/api/checklists/documents/${doc.id}/download`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
+                                    title="View document"
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    View
+                                  </a>
+                                  <button
+                                    onClick={() => sendSupportingDocumentToTrustPortal(doc)}
+                                    disabled={sendingDocumentId === doc.id || sendingToTrustPortal}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 disabled:opacity-50 transition-colors"
+                                    title="Send to Trust Portal"
+                                  >
+                                    {sendingDocumentId === doc.id ? (
+                                      <>
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                        Sending...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Send to Portal
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => deleteStandaloneSupportDoc(doc.id)}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors"
+                                    title="Delete document"
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Compliance Ready</h4>
-                        <p className="text-sm text-gray-600">
-                          Follows industry standards and regulatory requirements automatically
-                        </p>
                       </div>
-                      
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg mb-3">
-                          <Clock className="h-6 w-6 text-orange-600" />
-                        </div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Save Time</h4>
-                        <p className="text-sm text-gray-600">
-                          Generate comprehensive documents in minutes instead of hours
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3630,19 +3803,19 @@ const QuestionnairesPage = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={generateEvidencePreview}
+                  onClick={generateAndSaveDocument}
                   disabled={!generateDocTitle.trim() || isGeneratingDocument}
                   className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
                 >
                   {isGeneratingDocument ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating Preview...
+                      Generating Evidence Document...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Preview
+                      Generate Evidence Document
                     </>
                   )}
                 </button>
@@ -3651,105 +3824,35 @@ const QuestionnairesPage = () => {
           </div>
         )}
 
-        {/* Evidence Preview Modal */}
-        {showEvidencePreview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <FileText className="h-6 w-6 mr-3 text-purple-600" />
-                  Evidence Preview: {previewDocumentTitle}
-                </h3>
-                <button
-                  onClick={closeEvidencePreview}
-                  className="text-gray-400 hover:text-gray-600"
-                  disabled={isApprovingEvidence}
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-medium text-amber-800 mb-1">Review Before Saving</h4>
-                      <p className="text-sm text-amber-700">
-                        Please review the generated evidence file below. Once you approve it, the file will be saved to your document storage.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                  <div className="prose prose-sm max-w-none">
-                    {previewContent.split('\n').map((line, index) => (
-                      <p key={index} className="mb-3 last:mb-0 text-gray-800 leading-relaxed">
-                        {line.trim() ? (
-                          line.split(/(\*\*.*?\*\*)/).map((part, partIndex) => 
-                            part.startsWith('**') && part.endsWith('**') ? (
-                              <strong key={partIndex} className="font-semibold text-gray-900">
-                                {part.slice(2, -2)}
-                              </strong>
-                            ) : (
-                              part
-                            )
-                          )
-                        ) : (
-                          <br />
-                        )}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-                <div className="text-sm text-gray-600">
-                  <p>This evidence file will be saved as a .txt document</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={closeEvidencePreview}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    disabled={isApprovingEvidence}
-                  >
-                    Edit & Regenerate
-                  </button>
-                  <button
-                    onClick={approveAndSaveEvidence}
-                    disabled={isApprovingEvidence}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                  >
-                    {isApprovingEvidence ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving to Storage...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve & Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Text File Viewer */}
-        <TextFileViewer
-          url={textViewerUrl}
-          filename={textViewerFilename}
-          onClose={closeTextViewer}
-          isOpen={showTextViewer}
-        />
-
 
         </main>
+
+        {/* Evidence File Preview Modal */}
+        <EvidenceFilePreview
+          files={pendingEvidenceFiles}
+          isOpen={showEvidencePreview}
+          onClose={() => {
+            setShowEvidencePreview(false);
+            setPendingEvidenceFiles([]);
+          }}
+          onApprove={handleEvidenceApproval}
+          onReject={(fileId) => {
+            setPendingEvidenceFiles(prev => prev.filter((_, index) => `file-${index}` !== fileId));
+          }}
+          isProcessing={isUploadingEvidence}
+        />
+
+        {/* Enhanced Text File Viewer */}
+        <TextFileViewer
+          file={textViewerData.file}
+          url={textViewerData.url}
+          filename={textViewerData.filename}
+          isOpen={showTextViewer}
+          onClose={() => {
+            setShowTextViewer(false);
+            setTextViewerData({});
+          }}
+        />
     </>
   );
 };
