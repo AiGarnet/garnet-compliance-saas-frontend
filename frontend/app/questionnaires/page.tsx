@@ -88,6 +88,7 @@ interface UploadedSupportingDocument {
   spacesKey?: string;
   description?: string;
   category?: string;
+  questionId?: string; // Link to question
 }
 
 // Add new confirmation dialog state
@@ -724,7 +725,7 @@ const QuestionnairesPage = () => {
     }
   };
 
-  // Load supporting documents for selected vendor
+  // Load supporting documents for selected vendor and link them to questions
   const loadVendorSupportingDocuments = async (vendorId: string) => {
     if (!vendorId || !isValidUUID(vendorId)) return;
     
@@ -744,11 +745,25 @@ const QuestionnairesPage = () => {
         spacesUrl: doc.spacesUrl,
         spacesKey: doc.spacesKey,
         description: 'Uploaded document', // Default description
-        category: 'General' // Default category
+        category: 'General', // Default category
+        questionId: doc.questionId // Store the question relationship
       }));
       
       setUploadedSupportingDocs(convertedDocs);
-      console.log(`📁 LOADING: Successfully loaded ${convertedDocs.length} supporting documents`);
+      
+      // Update questions with their associated documents
+      setExtractedQuestions(prev => prev.map(question => ({
+        ...question,
+        supportingDocs: convertedDocs
+          .filter(doc => doc.questionId === question.id)
+          .map(doc => ({
+            name: doc.filename,
+            size: doc.fileSize,
+            type: doc.fileType
+          })) as File[]
+      })));
+      
+      console.log(`📁 LOADING: Successfully loaded ${convertedDocs.length} supporting documents and linked to questions`);
       
     } catch (error) {
       console.error('❌ Error loading supporting documents:', error);
@@ -1630,9 +1645,15 @@ const QuestionnairesPage = () => {
           : q
       ));
 
-      // Force refresh supporting documents list with delay
+      // Force refresh supporting documents list with delay to allow backend processing
       await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for backend processing
       await loadVendorSupportingDocuments(selectedVendorId);
+      
+      // Clear the file input
+      const fileInput = document.getElementById(`support-doc-${questionId}`) as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
 
       console.log('✅ Supporting document uploaded successfully to DigitalOcean Spaces and linked to vendor!');
       
@@ -3276,55 +3297,72 @@ const QuestionnairesPage = () => {
                               </div>
                             )}
                             
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="file"
-                                className="hidden"
-                                id={`support-doc-${question.id}`}
-                                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
-                                onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
-                                disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
-                              />
-                              <label
-                                htmlFor={`support-doc-${question.id}`}
-                                className={`inline-flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
-                                  isUploadingSupportDoc && uploadingQuestionId === question.id
-                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                              >
-                                {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload for This Question
-                                  </>
-                                )}
-                              </label>
+                            {/* Check if documents already exist for this question */}
+                            {(() => {
+                              const existingDocs = uploadedSupportingDocs.filter(doc => doc.questionId === question.id);
+                              const hasDocuments = existingDocs.length > 0;
                               
-                              <button
-                                onClick={() => openGenerateDocModal(question.id)}
-                                disabled={isUploadingSupportDoc || isGeneratingDocument}
-                                className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  isUploadingSupportDoc || isGeneratingDocument
-                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                    : 'bg-purple-600 text-white hover:bg-purple-700'
-                                }`}
-                              >
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Generate with AI
-                              </button>
-                              
-                              {question.supportingDocs && question.supportingDocs.length > 0 && (
-                                <span className="text-sm text-green-600 font-medium">
-                                  ✓ {question.supportingDocs.length} file(s) uploaded
-                                </span>
-                              )}
-                            </div>
+                              return (
+                                <div className="flex items-center gap-3">
+                                  {!hasDocuments ? (
+                                    <>
+                                      <input
+                                        type="file"
+                                        className="hidden"
+                                        id={`support-doc-${question.id}`}
+                                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                                        onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
+                                        disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
+                                      />
+                                      <label
+                                        htmlFor={`support-doc-${question.id}`}
+                                        className={`inline-flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                          isUploadingSupportDoc && uploadingQuestionId === question.id
+                                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      >
+                                        {isUploadingSupportDoc && uploadingQuestionId === question.id ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Uploading...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            Upload for This Question
+                                          </>
+                                        )}
+                                      </label>
+                                    </>
+                                  ) : (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 w-full">
+                                      <div className="flex items-center text-green-800">
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        <span className="text-sm font-medium">
+                                          Document Requirements Fulfilled
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 space-y-1">
+                                        {existingDocs.map((doc) => (
+                                          <div key={doc.id} className="flex items-center text-sm text-green-700">
+                                            <FileText className="h-3 w-3 mr-2" />
+                                            <span className="truncate">{doc.filename}</span>
+                                            <span className="ml-2 text-green-600">
+                                              ({(doc.fileSize / 1024).toFixed(1)} KB)
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <p className="text-xs text-green-600 mt-2">
+                                        ✓ This question's document requirements are complete. 
+                                        No additional uploads needed.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
