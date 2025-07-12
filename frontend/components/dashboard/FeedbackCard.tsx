@@ -72,39 +72,30 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
     setError('');
     
     try {
-      // Fetch all vendors first to get vendor names
       const backendUrl = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
-      const vendorsResponse = await fetch(`${backendUrl}/api/vendors`);
-      const vendorsData = vendorsResponse.ok ? await vendorsResponse.json() : { data: [] };
-      const vendors = vendorsData.data || [];
       
-      // Create vendor lookup map
-      const vendorMap = vendors.reduce((acc: any, vendor: any) => {
-        acc[vendor.vendorId || vendor.id] = vendor.companyName || vendor.name;
-        return acc;
-      }, {});
+      // Get auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
-      // Fetch feedback for all vendors
-      const feedbackPromises = vendors.map(async (vendor: any) => {
-        try {
-          const vendorId = vendor.vendorId || vendor.id;
-          const response = await fetch(`${backendUrl}/api/trust-portal/vendor/${vendorId}/feedback`);
-          if (response.ok) {
-            const data = await response.json();
-            return (data.data || []).map((fb: any) => ({
-              ...fb,
-              vendorName: vendor.companyName || vendor.name
-            }));
-          }
-          return [];
-        } catch (error) {
-          console.error(`Error fetching feedback for vendor ${vendor.id}:`, error);
-          return [];
-        }
+      // Use the new endpoint to get all feedback for user's vendors
+      const response = await fetch(`${backendUrl}/api/trust-portal/feedback`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
-      const allFeedbackArrays = await Promise.all(feedbackPromises);
-      const allFeedback = allFeedbackArrays.flat();
+      if (!response.ok) {
+        throw new Error(`Failed to fetch feedback: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const allFeedback = result.data || [];
       
       // Sort by creation date (newest first) and limit
       const sortedFeedback = allFeedback
@@ -114,7 +105,7 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
       setFeedback(sortedFeedback);
     } catch (err: any) {
       console.error('Error fetching feedback:', err);
-      setError('Failed to load feedback');
+      setError(err.message || 'Failed to load feedback');
     } finally {
       setIsLoading(false);
     }
