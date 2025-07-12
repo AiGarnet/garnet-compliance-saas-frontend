@@ -83,7 +83,7 @@ export default function TrustPortalClient({ token }: { token: string }) {
   useEffect(() => {
     async function fetchVendorData() {
       try {
-        const response = await fetch(`/api/trust-portal/invite/${token}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/trust-portal/invite/${token}`);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -154,7 +154,7 @@ export default function TrustPortalClient({ token }: { token: string }) {
     setIsSubmittingFeedback(true);
 
     try {
-      const response = await fetch('/api/trust-portal/feedback', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/trust-portal/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
