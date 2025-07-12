@@ -22,6 +22,7 @@ import { DeleteVendorModal } from "@/components/vendors/DeleteVendorModal";
 import { AddVendorModal } from "@/components/vendors/AddVendorModal";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { FeedbackCard } from "@/components/dashboard/FeedbackCard";
+import { PendingTasks } from "@/components/dashboard/PendingTasks";
 import { useActivity } from "@/hooks/useActivity";
 import { useToast } from "@/components/ui/Toast";
 import activityApiService from "@/lib/services/activityApiService";
@@ -463,52 +464,8 @@ function DashboardContent() {
           "grid gap-6",
           isFounder ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 lg:grid-cols-2"
         )}>
-          {/* Pending Tasks - Hidden for Founder */}
-          {!isFounder && (
-            <section className="bg-white dark:bg-card-bg p-8 rounded-xl shadow-sm border border-gray-200 dark:border-card-border">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Pending Tasks</h2>
-              <a href="#" className="text-sm text-primary font-medium hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md px-2 py-1">
-                View All
-              </a>
-            </div>
-            
-            <ul className="space-y-4" role="list">
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium text-gray-800 dark:text-white">Complete SOC 2 gap assessment</span>
-                  <span className="bg-danger-light text-danger dark:bg-danger-light dark:text-danger-color text-xs px-2 py-1 rounded-full">High</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Assigned to you</span>
-                  <span className="text-gray-600 dark:text-gray-300">Due in 2 days</span>
-                </div>
-              </li>
-              
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium text-gray-800 dark:text-white">Review vendor documentation</span>
-                  <span className="bg-warning-light text-warning dark:bg-warning-light dark:text-warning-color text-xs px-2 py-1 rounded-full">Medium</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Assigned to you</span>
-                  <span className="text-gray-600 dark:text-gray-300">Due in 5 days</span>
-                </div>
-              </li>
-              
-              <li className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium text-gray-800 dark:text-white">Conduct security awareness training</span>
-                  <span className="bg-secondary-light text-secondary dark:bg-secondary-light dark:text-secondary-color text-xs px-2 py-1 rounded-full">Low</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Assigned to you</span>
-                  <span className="text-gray-600 dark:text-gray-300">Due in 1 week</span>
-                </div>
-              </li>
-            </ul>
-          </section>
-          )}
+          {/* Pending Tasks - Visible for both Founder and Sales Professional */}
+          <PendingTasks limit={5} />
           
           {/* Enterprise Feedback - Visible for both Founder and Sales Professional */}
           <FeedbackCard limit={5} />

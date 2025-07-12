@@ -121,6 +121,37 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
     setExpandedFeedback(newExpanded);
   };
 
+  const handleFeedbackClick = async (feedbackId: number) => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`${backendUrl}/api/dashboard/feedback/${feedbackId}/navigation`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && result.data.navigationUrl) {
+          window.location.href = result.data.navigationUrl;
+        }
+      } else {
+        console.error('Failed to get navigation info');
+      }
+    } catch (error) {
+      console.error('Error getting feedback navigation:', error);
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     return PRIORITY_COLORS[priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.MEDIUM;
   };
@@ -239,7 +270,8 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
           {feedback.map((item) => (
             <div
               key={item.id}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary/20 transition-colors"
+              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary/20 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer group"
+              onClick={() => handleFeedbackClick(item.id)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
@@ -295,15 +327,23 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
                       </span>
                     </div>
 
-                    {item.message.length > 100 && (
-                      <button
-                        onClick={() => toggleExpanded(item.id)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        {expandedFeedback.has(item.id) ? 'Show Less' : 'Show More'}
-                      </button>
-                    )}
+                    <div className="flex items-center justify-between">
+                      {item.message.length > 100 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpanded(item.id);
+                          }}
+                          className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          {expandedFeedback.has(item.id) ? 'Show Less' : 'Show More'}
+                        </button>
+                      )}
+                      <div className="text-xs text-gray-500 group-hover:text-primary transition-colors">
+                        Click to navigate to relevant section →
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
