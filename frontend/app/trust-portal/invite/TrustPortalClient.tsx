@@ -31,6 +31,7 @@ interface ChecklistQuestion {
 interface VendorData {
   vendor: {
     id: number;
+    vendorId?: number;
     uuid: string;
     companyName: string;
     contactEmail: string;
@@ -161,7 +162,7 @@ export default function TrustPortalClient({ token }: { token: string }) {
         },
         body: JSON.stringify({
           ...feedbackForm,
-          vendorId: vendorData?.vendor.id,
+          vendorId: vendorData?.vendor.vendorId || vendorData?.vendor.id,
           inviteToken: token
         }),
       });
