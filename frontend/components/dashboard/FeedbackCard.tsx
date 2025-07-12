@@ -73,7 +73,8 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
     
     try {
       // Fetch all vendors first to get vendor names
-      const vendorsResponse = await fetch('/api/vendors');
+      const backendUrl = process.env.NEXT_PUBLIC_RAILWAY_BACKEND_URL || 'https://garnet-compliance-saas-production.up.railway.app';
+      const vendorsResponse = await fetch(`${backendUrl}/api/vendors`);
       const vendorsData = vendorsResponse.ok ? await vendorsResponse.json() : { data: [] };
       const vendors = vendorsData.data || [];
       
@@ -87,7 +88,7 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
       const feedbackPromises = vendors.map(async (vendor: any) => {
         try {
           const vendorId = vendor.vendorId || vendor.id;
-          const response = await fetch(`/api/trust-portal/vendor/${vendorId}/feedback`);
+          const response = await fetch(`${backendUrl}/api/trust-portal/vendor/${vendorId}/feedback`);
           if (response.ok) {
             const data = await response.json();
             return (data.data || []).map((fb: any) => ({
