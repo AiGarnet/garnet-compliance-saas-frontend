@@ -72,8 +72,8 @@ export default function TrustPortalClient({ token }: { token: string }) {
     enterpriseContactEmail: '',
     enterpriseContactName: '',
     enterpriseCompanyName: '',
-    feedbackType: 'GENERAL',
-    priority: 'MEDIUM',
+    feedbackType: 'general',
+    priority: 'medium',
     subject: '',
     message: ''
   });
@@ -173,8 +173,8 @@ export default function TrustPortalClient({ token }: { token: string }) {
           enterpriseContactEmail: '',
           enterpriseContactName: '',
           enterpriseCompanyName: '',
-          feedbackType: 'GENERAL',
-          priority: 'MEDIUM',
+          feedbackType: 'general',
+          priority: 'medium',
           subject: '',
           message: ''
         });
@@ -506,11 +506,11 @@ export default function TrustPortalClient({ token }: { token: string }) {
                   value={feedbackForm.feedbackType}
                   onChange={(e) => setFeedbackForm({...feedbackForm, feedbackType: e.target.value})}
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="DOCUMENT_REQUEST">Document Request</option>
-                  <option value="CLARIFICATION">Clarification</option>
-                  <option value="COMPLIANCE_ISSUE">Compliance Issue</option>
-                  <option value="FOLLOW_UP">Follow Up</option>
+                  <option value="general">General</option>
+                  <option value="document_request">Document Request</option>
+                  <option value="clarification">Clarification</option>
+                  <option value="compliance_issue">Compliance Issue</option>
+                  <option value="follow_up">Follow Up</option>
                 </select>
               </div>
               
@@ -523,10 +523,10 @@ export default function TrustPortalClient({ token }: { token: string }) {
                   value={feedbackForm.priority}
                   onChange={(e) => setFeedbackForm({...feedbackForm, priority: e.target.value})}
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
                 </select>
               </div>
             </div>
