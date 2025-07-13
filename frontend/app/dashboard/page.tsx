@@ -392,15 +392,15 @@ function DashboardContent() {
     <>
       <Header />
       
-      <main id="main-content" className="flex flex-col gap-8 px-4 md:px-8 py-8 bg-body-bg dark:bg-body-bg">
+      <main id="main-content" className="flex flex-col gap-8 px-4 md:px-8 py-8 bg-body-bg dark:bg-body-bg min-h-screen">
         {/* Top bar with conditional dev mode toggle */}
         <div className="flex justify-between items-center">
           <section className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Welcome back, {user?.full_name || user?.email || 'User'}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              {user?.organization ? `${user.organization} - ` : ''}Here's an overview of your organization's compliance status
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              {user?.organization ? `${user.organization} • ` : ''}Here's an overview of your organization's compliance status
             </p>
           </section>
           {/* Dev mode toggle - hidden for both Sales Professional and Founder */}
@@ -410,7 +410,9 @@ function DashboardContent() {
         </div>
         
         {/* Enhanced Organization Stats - Shows real-time data */}
-        <OrganizationStats />
+        <div className="mb-2">
+          <OrganizationStats />
+        </div>
         
         {/* Debug controls for testing - only visible in dev mode and not for Sales Professional or Founder */}
         {isDevMode && !isSalesProfessional && !isFounder && (
@@ -465,14 +467,29 @@ function DashboardContent() {
           isFounder ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 lg:grid-cols-2"
         )}>
           {/* Pending Tasks - Visible for both Founder and Sales Professional */}
-          <PendingTasks limit={5} />
+          <div className="lg:col-span-1">
+            <PendingTasks limit={5} />
+          </div>
           
           {/* Enterprise Feedback - Visible for both Founder and Sales Professional */}
-          <FeedbackCard limit={5} />
+          <div className="lg:col-span-1">
+            <FeedbackCard limit={5} />
+          </div>
           
-          {/* Recent Activity - Dynamic */}
-          <RecentActivity limit={5} />
+          {/* Recent Activity - Dynamic, only for Founder */}
+          {isFounder && (
+            <div className="lg:col-span-1 xl:col-span-1">
+              <RecentActivity limit={5} />
+            </div>
+          )}
         </div>
+
+        {/* For Sales Professional, show Recent Activity in full width below */}
+        {!isFounder && (
+          <div className="mt-6">
+            <RecentActivity limit={8} />
+          </div>
+        )}
       </main>
 
       {/* Edit Vendor Modal */}

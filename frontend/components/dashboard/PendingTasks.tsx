@@ -201,106 +201,134 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
   }
 
   return (
-    <section className={cn("bg-white dark:bg-card-bg p-6 rounded-xl shadow-sm border border-gray-200 dark:border-card-border", className)}>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-          <Clock className="h-5 w-5 mr-2 text-orange-500" />
-          Pending Tasks
-          {tasks.length > 0 && (
-            <span className="ml-2 bg-orange-100 text-orange-800 text-sm px-2 py-1 rounded-full">
-              {tasks.length}
-            </span>
-          )}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={fetchPendingTasks}
-            className="text-primary hover:text-primary/80 transition-colors"
-            title="Refresh tasks"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+    <section className={cn("bg-white dark:bg-card-bg rounded-xl shadow-sm border border-gray-200 dark:border-card-border overflow-hidden", className)}>
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Pending Tasks
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {tasks.length} task{tasks.length !== 1 ? 's' : ''} requiring attention
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {tasks.length > 0 && (
+              <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 text-sm px-3 py-1 rounded-full font-medium">
+                {tasks.length}
+              </span>
+            )}
+            <button
+              onClick={fetchPendingTasks}
+              className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+              title="Refresh tasks"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {tasks.length === 0 ? (
-        <div className="text-center py-8">
-          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">All Caught Up!</h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            No pending compliance tasks. Great job staying on top of your workflow!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => {
-            const TaskIcon = TASK_ICONS[task.type] || FileText;
-            return (
-              <div
-                key={task.id}
-                onClick={() => handleTaskClick(task)}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-all cursor-pointer group"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
+      {/* Content */}
+      <div className="p-6">
+        {tasks.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">All Caught Up!</h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-sm mx-auto">
+              No pending compliance tasks. Great job staying on top of your workflow!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {tasks.map((task) => {
+              const TaskIcon = TASK_ICONS[task.type] || FileText;
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => handleTaskClick(task)}
+                  className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-all cursor-pointer border border-transparent hover:border-orange-200 dark:hover:border-orange-700"
+                >
+                  <div className="flex items-start space-x-4">
+                    {/* Task Icon */}
                     <div className={cn(
-                      "p-2 rounded-lg",
-                      PRIORITY_COLORS[task.priority]
+                      "flex-shrink-0 p-2.5 rounded-lg transition-colors",
+                      task.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30' :
+                      task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                      'bg-blue-100 dark:bg-blue-900/30'
                     )}>
-                      <TaskIcon className="h-4 w-4" />
+                      <TaskIcon className={cn(
+                        "h-5 w-5",
+                        task.priority === 'high' ? 'text-red-600 dark:text-red-400' :
+                        task.priority === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-blue-600 dark:text-blue-400'
+                      )} />
                     </div>
+                    
+                    {/* Task Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm group-hover:text-orange-900 dark:group-hover:text-orange-100 transition-colors">
                           {task.title}
                         </h4>
                         <span className={cn(
-                          "text-xs px-2 py-1 rounded-full border",
-                          PRIORITY_COLORS[task.priority]
+                          "text-xs px-2.5 py-1 rounded-full font-medium border",
+                          task.priority === 'high' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' :
+                          task.priority === 'medium' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' :
+                          'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
                         )}>
-                          {task.priority}
+                          {task.priority.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                      
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                         {task.description}
                       </p>
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        {task.vendorName && (
-                          <span className="flex items-center">
-                            <Users className="h-3 w-3 mr-1" />
-                            {task.vendorName}
-                          </span>
-                        )}
-                        {task.checklistName && (
-                          <span className="flex items-center">
-                            <FileText className="h-3 w-3 mr-1" />
-                            {task.checklistName}
-                          </span>
-                        )}
-                        {task.estimatedTime && (
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {task.estimatedTime}
-                          </span>
-                        )}
+                      
+                      {/* Task Metadata */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                          {task.vendorName && (
+                            <span className="flex items-center bg-white dark:bg-gray-700 px-2 py-1 rounded border">
+                              <Users className="h-3 w-3 mr-1" />
+                              {task.vendorName}
+                            </span>
+                          )}
+                          {task.estimatedTime && (
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {task.estimatedTime}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-500 transition-colors" />
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-500 transition-colors flex-shrink-0 ml-2" />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
+      {/* Footer */}
       {tasks.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between text-sm">
-            <p className="text-gray-500 dark:text-gray-400">
-              {tasks.length} pending task{tasks.length !== 1 ? 's' : ''} found
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {tasks.length} pending task{tasks.length !== 1 ? 's' : ''} • Click to take action
             </p>
-            <button className="text-primary hover:text-primary/80 transition-colors flex items-center">
+            <button className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors flex items-center font-medium">
               View All Tasks
               <ArrowRight className="h-3 w-3 ml-1" />
             </button>

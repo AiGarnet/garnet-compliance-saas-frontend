@@ -197,118 +197,174 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
   }
 
   return (
-    <section className={cn("bg-white dark:bg-card-bg p-6 rounded-xl shadow-sm border border-gray-200 dark:border-card-border", className)}>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-          <MessageSquare className="h-5 w-5 mr-2 text-primary" />
-          Enterprise Feedback
-          {feedback.length > 0 && (
-            <span className="ml-2 bg-primary/10 text-primary text-sm px-2 py-1 rounded-full">
-              {feedback.length}
-            </span>
-          )}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={fetchFeedback}
-            className="text-primary hover:text-primary/80 transition-colors"
-            title="Refresh feedback"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          <a
-            href="/trust-portal"
-            className="text-sm text-primary font-medium hover:text-primary/80 transition-colors flex items-center"
-          >
-            View All
-            <ArrowUpRight className="h-3 w-3 ml-1" />
-          </a>
+    <section className={cn("bg-white dark:bg-card-bg rounded-xl shadow-sm border border-gray-200 dark:border-card-border overflow-hidden", className)}>
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Enterprise Feedback
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {feedback.length} feedback item{feedback.length !== 1 ? 's' : ''} from customers
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {feedback.length > 0 && (
+              <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-sm px-3 py-1 rounded-full font-medium">
+                {feedback.length}
+              </span>
+            )}
+            <button
+              onClick={fetchFeedback}
+              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+              title="Refresh feedback"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <a
+              href="/trust-portal"
+              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+              title="View all feedback"
+            >
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </div>
 
-      {feedback.length === 0 ? (
-        <div className="text-center py-8">
-          <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Feedback Yet</h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            Enterprise feedback will appear here when customers provide input on your trust portal.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {feedback.map((item) => (
-            <div
-              key={item.id}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary/20 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                        {item.subject}
-                      </h4>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className="text-xs text-gray-500 flex items-center">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {item.vendorName}
+      {/* Content */}
+      <div className="p-6">
+        {feedback.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+              <MessageCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Feedback Yet</h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-sm mx-auto">
+              Enterprise feedback will appear here when customers provide input on your trust portal.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {feedback.map((item) => (
+              <div
+                key={item.id}
+                className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-700"
+              >
+                <div className="flex items-start space-x-4">
+                  {/* Priority Indicator */}
+                  <div className={cn(
+                    "flex-shrink-0 p-2.5 rounded-lg",
+                    item.priority === 'URGENT' ? 'bg-red-100 dark:bg-red-900/30' :
+                    item.priority === 'HIGH' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                    item.priority === 'MEDIUM' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                    'bg-green-100 dark:bg-green-900/30'
+                  )}>
+                    <MessageSquare className={cn(
+                      "h-5 w-5",
+                      item.priority === 'URGENT' ? 'text-red-600 dark:text-red-400' :
+                      item.priority === 'HIGH' ? 'text-orange-600 dark:text-orange-400' :
+                      item.priority === 'MEDIUM' ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-green-600 dark:text-green-400'
+                    )} />
+                  </div>
+                  
+                  {/* Feedback Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0 mr-4">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm group-hover:text-blue-900 dark:group-hover:text-blue-100 transition-colors line-clamp-1">
+                          {item.subject}
+                        </h4>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center bg-white dark:bg-gray-700 px-2 py-1 rounded border">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {item.vendorName}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                            <User className="h-3 w-3 mr-1" />
+                            {item.enterpriseCompanyName || 'Enterprise'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <span className={cn(
+                          "text-xs px-2.5 py-1 rounded-full font-medium border",
+                          item.priority === 'URGENT' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' :
+                          item.priority === 'HIGH' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800' :
+                          item.priority === 'MEDIUM' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' :
+                          'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                        )}>
+                          {item.priority}
                         </span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500 flex items-center">
-                          <User className="h-3 w-3 mr-1" />
-                          {item.enterpriseCompanyName || 'Enterprise'}
+                        <span className={cn(
+                          "text-xs px-2.5 py-1 rounded-full font-medium",
+                          getStatusColor(item.status)
+                        )}>
+                          {item.status.replace('_', ' ')}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <span className={cn(
-                        "text-xs px-2 py-1 rounded-full border",
-                        getPriorityColor(item.priority)
-                      )}>
-                        {item.priority}
-                      </span>
-                      <span className={cn(
-                        "text-xs px-2 py-1 rounded-full",
-                        getStatusColor(item.status)
-                      )}>
-                        {item.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                    {expandedFeedback.has(item.id) ? item.message : truncateMessage(item.message)}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <span className="flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />
-                        {item.enterpriseContactEmail}
-                      </span>
-                      <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDate(item.createdAt)}
-                      </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                        {FEEDBACK_TYPE_LABELS[item.feedbackType as keyof typeof FEEDBACK_TYPE_LABELS] || item.feedbackType}
-                      </span>
+                    <div className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                      {expandedFeedback.has(item.id) ? item.message : truncateMessage(item.message)}
                     </div>
 
-                    {item.message.length > 100 && (
-                      <button
-                        onClick={() => toggleExpanded(item.id)}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        {expandedFeedback.has(item.id) ? 'Show Less' : 'Show More'}
-                      </button>
-                    )}
+                    {/* Feedback Metadata */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {item.enterpriseContactEmail}
+                        </span>
+                        <span className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(item.createdAt)}
+                        </span>
+                        <span className="px-2 py-1 bg-white dark:bg-gray-700 rounded border text-xs">
+                          {FEEDBACK_TYPE_LABELS[item.feedbackType as keyof typeof FEEDBACK_TYPE_LABELS] || item.feedbackType}
+                        </span>
+                      </div>
+
+                      {item.message.length > 100 && (
+                        <button
+                          onClick={() => toggleExpanded(item.id)}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center font-medium"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          {expandedFeedback.has(item.id) ? 'Show Less' : 'Show More'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      {feedback.length > 0 && (
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {feedback.length} feedback item{feedback.length !== 1 ? 's' : ''} • Monitor customer responses
+            </p>
+            <a
+              href="/trust-portal"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center font-medium"
+            >
+              View All Feedback
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </a>
+          </div>
         </div>
       )}
     </section>
