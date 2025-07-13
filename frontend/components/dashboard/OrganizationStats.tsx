@@ -110,6 +110,19 @@ export const OrganizationStats: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
+  // Initialize default stats to prevent undefined errors
+  const defaultStats: OrganizationStatsData = {
+    totalVendors: 0,
+    vendorsByStatus: {},
+    totalQuestionnaires: 0,
+    completedQuestionnaires: 0,
+    pendingQuestionnaires: 0,
+    supportingDocumentsCount: 0,
+    checklistsUploadedCount: 0,
+    organizationName: user?.organization || 'Your Organization',
+    recentActivity: 0
+  };
+
   const fetchOrganizationStats = async () => {
     if (!user?.organization_id) {
       setError('User organization not found');
@@ -128,17 +141,32 @@ export const OrganizationStats: React.FC = () => {
         supportingDocsCountResponse,
         checklistsCountResponse
       ] = await Promise.all([
-        activityApiService.getVendors(),
-        activityApiService.getRecentActivities(10, user.id),
-        ChecklistService.getOrganizationSupportingDocumentsCount(user.organization_id).catch(() => 0),
-        ChecklistService.getOrganizationChecklistCount(user.organization_id).catch(() => 0)
+        activityApiService.getVendors().catch((err) => {
+          console.error('Error fetching vendors:', err);
+          return { success: false, data: [], error: err };
+        }),
+        activityApiService.getRecentActivities(10, user.id).catch((err) => {
+          console.error('Error fetching activities:', err);
+          return { success: false, data: [], error: err };
+        }),
+        ChecklistService.getOrganizationSupportingDocumentsCount(user.organization_id).catch((err) => {
+          console.error('Error fetching supporting docs count:', err);
+          return 0;
+        }),
+        ChecklistService.getOrganizationChecklistCount(user.organization_id).catch((err) => {
+          console.error('Error fetching checklist count:', err);
+          return 0;
+        })
       ]);
       
-      if (!vendorsResponse.success) {
-        throw new Error(vendorsResponse.error?.message || 'Failed to fetch vendor data');
+      // Handle vendors response with fallback
+      let vendors = [];
+      if (vendorsResponse.success && vendorsResponse.data) {
+        vendors = vendorsResponse.data;
+      } else {
+        console.warn('Failed to fetch vendors, using empty array:', vendorsResponse.error);
+        vendors = [];
       }
-
-      const vendors = vendorsResponse.data || [];
       
       // Calculate vendor statistics
       const vendorsByStatus = vendors.reduce((acc: { [key: string]: number }, vendor: any) => {
@@ -168,6 +196,8 @@ export const OrganizationStats: React.FC = () => {
     } catch (err: any) {
       console.error('Error fetching organization stats:', err);
       setError(err.message || 'Failed to load organization statistics');
+      // Set default stats to prevent undefined errors
+      setStats(defaultStats);
     } finally {
       setIsLoading(false);
     }

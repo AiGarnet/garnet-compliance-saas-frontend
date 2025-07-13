@@ -81,15 +81,32 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch pending tasks');
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API Error: ${response.status} - ${response.statusText}`);
       }
 
       const result = await response.json();
-      const pendingTasks = result.data || [];
+      console.log('Pending tasks API response:', result);
+      
+      // Handle both direct array and wrapped response
+      const pendingTasks = Array.isArray(result) ? result : (result.data || result || []);
 
-      // Add action URLs to tasks
-      const tasksWithUrls = pendingTasks.map((task: any) => ({
-        ...task,
+      // Ensure we have an array and add action URLs to tasks
+      const tasksArray = Array.isArray(pendingTasks) ? pendingTasks : [];
+      const tasksWithUrls = tasksArray.map((task: any) => ({
+        id: task.id || `task-${Date.now()}-${Math.random()}`,
+        type: task.type || 'question_generation',
+        title: task.title || 'Unknown Task',
+        description: task.description || 'No description available',
+        priority: task.priority || 'medium',
+        checklistId: task.checklistId,
+        checklistName: task.checklistName,
+        vendorId: task.vendorId,
+        vendorName: task.vendorName,
+        questionsCount: task.questionsCount,
+        missingDocumentsCount: task.missingDocumentsCount,
+        estimatedTime: task.estimatedTime,
         actionUrl: getActionUrl(task)
       }));
 
@@ -99,6 +116,8 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
     } catch (err: any) {
       console.error('Error fetching pending tasks:', err);
       setError(err.message || 'Failed to load pending tasks');
+      // Set empty array to prevent undefined errors
+      setTasks([]);
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +234,7 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
       ) : (
         <div className="space-y-3">
           {tasks.map((task) => {
-            const TaskIcon = TASK_ICONS[task.type];
+            const TaskIcon = TASK_ICONS[task.type] || FileText;
             return (
               <div
                 key={task.id}

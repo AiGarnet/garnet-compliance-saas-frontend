@@ -148,7 +148,7 @@ export default function TrustPortalClient({ token }: { token: string }) {
   const handleDownloadDocument = async (document: any) => {
     try {
       if (document.spacesUrl) {
-        const link = document.createElement('a');
+        const link = window.document.createElement('a');
         link.href = document.spacesUrl;
         link.download = document.filename;
         link.target = '_blank';
@@ -312,97 +312,103 @@ export default function TrustPortalClient({ token }: { token: string }) {
                     <div className="space-y-4">
                       {initial.map((checklist) => (
                         <div key={checklist.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => toggleChecklist(checklist.id)}
-                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left transition-colors"
-                >
-                  <h3 className="font-medium text-gray-900">{checklist.name}</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      {checklist.questions?.length || 0} questions
-                    </span>
-                    {expandedChecklists.has(checklist.id) ? (
-                      <ChevronUp className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </div>
-                </button>
-                
-                {expandedChecklists.has(checklist.id) && checklist.questions && (
-                  <div className="p-4 space-y-4">
-                    {checklist.questions.map((question, qIndex) => (
-                      <div key={question.id} className="mb-3">
-                        <h4 className="font-medium text-gray-900 mb-2">
-                          Q{qIndex + 1}: {question.questionText}
-                        </h4>
-                        
-                        {question.aiAnswer && (
-                          <div className="bg-blue-50 rounded-lg p-4 mb-3">
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h5 className="font-medium text-blue-900 mb-1">AI-Generated Answer</h5>
-                                <div 
-                                  className="text-blue-800 text-sm leading-relaxed"
-                                  dangerouslySetInnerHTML={{
-                                    __html: formatAnswerText(question.aiAnswer)
-                                  }}
-                                />
-                                {question.confidenceScore && (
-                                  <div className="mt-2 flex items-center">
-                                    <span className="text-xs text-blue-600 mr-2">Confidence:</span>
-                                    <div className="flex-1 bg-blue-200 rounded-full h-2 max-w-20">
-                                      <div 
-                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${(question.confidenceScore || 0) * 100}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-xs text-blue-600 ml-2">
-                                      {Math.round((question.confidenceScore || 0) * 100)}%
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                          <button
+                            onClick={() => toggleChecklist(checklist.id)}
+                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left transition-colors"
+                          >
+                            <h3 className="font-medium text-gray-900">{checklist.name}</h3>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-500">
+                                {checklist.questions?.length || 0} questions
+                              </span>
+                              {expandedChecklists.has(checklist.id) ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
                             </div>
-                          </div>
-                        )}
+                          </button>
+                          
+                          {expandedChecklists.has(checklist.id) && checklist.questions && (
+                            <div className="p-4 space-y-4">
+                              {checklist.questions.map((question: ChecklistQuestion, qIndex: number) => (
+                                <div key={question.id} className="mb-3">
+                                  <h4 className="font-medium text-gray-900 mb-2">
+                                    Q{qIndex + 1}: {question.questionText}
+                                  </h4>
+                                  
+                                  {question.aiAnswer && (
+                                    <div className="bg-blue-50 rounded-lg p-4 mb-3">
+                                      <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0">
+                                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <CheckCircle className="h-5 w-5 text-blue-600" />
+                                          </div>
+                                        </div>
+                                        <div className="flex-1">
+                                          <h5 className="font-medium text-blue-900 mb-1">AI-Generated Answer</h5>
+                                          <div 
+                                            className="text-blue-800 text-sm leading-relaxed"
+                                            dangerouslySetInnerHTML={{
+                                              __html: formatAnswerText(question.aiAnswer)
+                                            }}
+                                          />
+                                          {question.confidenceScore && (
+                                            <div className="mt-2 flex items-center">
+                                              <span className="text-xs text-blue-600 mr-2">Confidence:</span>
+                                              <div className="flex-1 bg-blue-200 rounded-full h-2 max-w-20">
+                                                <div 
+                                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                  style={{ width: `${(question.confidenceScore || 0) * 100}%` }}
+                                                ></div>
+                                              </div>
+                                              <span className="text-xs text-blue-600 ml-2">
+                                                {Math.round((question.confidenceScore || 0) * 100)}%
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
 
-                        {question.supportingDocuments && question.supportingDocuments.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <h6 className="text-sm font-medium text-gray-700 mb-2">Supporting Documents:</h6>
-                            <div className="space-y-1">
-                              {question.supportingDocuments.map((doc: any, docIndex: number) => (
-                                <div key={docIndex} className="flex items-center justify-between text-sm">
-                                  <span className="text-gray-600 flex items-center">
-                                    <FileText className="h-3 w-3 mr-1" />
-                                    {doc.filename}
-                                  </span>
-                                  <div className="flex space-x-1">
-                                    <button
-                                      onClick={() => handleViewDocument(doc)}
-                                      className="text-blue-600 hover:text-blue-800 p-1 rounded"
-                                      title="View document"
-                                    >
-                                      <Eye className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDownloadDocument(doc)}
-                                      className="text-green-600 hover:text-green-800 p-1 rounded"
-                                      title="Download document"
-                                    >
-                                      <Download className="h-3 w-3" />
-                                    </button>
-                                  </div>
+                                  {question.supportingDocuments && question.supportingDocuments.length > 0 && (
+                                    <div className="bg-gray-50 rounded-lg p-3">
+                                      <h6 className="text-sm font-medium text-gray-700 mb-2">Supporting Documents:</h6>
+                                      <div className="space-y-1">
+                                        {question.supportingDocuments.map((doc: any, docIndex: number) => (
+                                          <div key={docIndex} className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-600 flex items-center">
+                                              <FileText className="h-3 w-3 mr-1" />
+                                              {doc.filename}
+                                            </span>
+                                            <div className="flex space-x-1">
+                                              <button
+                                                onClick={() => handleViewDocument(doc)}
+                                                className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                                title="View document"
+                                              >
+                                                <Eye className="h-3 w-3" />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDownloadDocument(doc)}
+                                                className="text-green-600 hover:text-green-800 p-1 rounded"
+                                                title="Download document"
+                                              >
+                                                <Download className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
-                                                </div>
-                    ))}
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -512,10 +518,6 @@ export default function TrustPortalClient({ token }: { token: string }) {
               </div>
             );
           })()}
-        )}
-              </div>
-            ))}
-          </div>
         </section>
       )}
 
