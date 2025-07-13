@@ -197,6 +197,16 @@ const QuestionnairesPage = () => {
   const [sendingDocumentId, setSendingDocumentId] = useState<string | null>(null);
   const [trustPortalProgress, setTrustPortalProgress] = useState({ current: 0, total: 0, item: '' });
   
+  // Follow-up modal state
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [followUpData, setFollowUpData] = useState({
+    isFollowUp: false,
+    followUpType: 'initial' as string,
+    followUpReason: '',
+    parentSubmissionId: null as number | null
+  });
+  const [pendingSubmissionData, setPendingSubmissionData] = useState<any>(null);
+  
   // File refs
   const checklistFileRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -1968,6 +1978,90 @@ const QuestionnairesPage = () => {
   /**
    * Send individual question to trust portal (for manual questions)
    */
+  // Function to handle individual question submission after follow-up modal
+  const processQuestionSubmission = async (submissionData: any) => {
+    setSendingQuestionId(submissionData.questionId);
+    setSendingToTrustPortal(true);
+    
+    try {
+      // Add follow-up data to the submission
+      const enhancedSubmissionData = {
+        ...submissionData,
+        isFollowUp: followUpData.isFollowUp,
+        followUpType: followUpData.followUpType,
+        followUpReason: followUpData.followUpReason,
+        parentSubmissionId: followUpData.parentSubmissionId
+      };
+      
+      console.log('🏛️ TRUST PORTAL: Sending question with follow-up data:', enhancedSubmissionData);
+      
+      // Continue with the original submission logic
+      const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdNumber) {
+        throw new Error('Invalid vendor selected. Please select a valid vendor.');
+      }
+
+      const trustPortalData = {
+        ...enhancedSubmissionData,
+        vendorId: vendorIdNumber,
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/trust-portal/items`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(trustPortalData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to send question to trust portal');
+      }
+
+      const result = await response.json();
+      
+      console.log('✅ Successfully sent question to trust portal:', result);
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          ${followUpData.isFollowUp ? 'Follow-up' : 'Initial'} question sent to Trust Portal successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
+      
+      // Reset follow-up data
+      setFollowUpData({
+        isFollowUp: false,
+        followUpType: 'initial',
+        followUpReason: '',
+        parentSubmissionId: null
+      });
+      
+    } catch (error) {
+      console.error('❌ Error sending question to trust portal:', error);
+      setUploadError('Failed to send question to trust portal. Please try again.');
+    } finally {
+      setSendingQuestionId(null);
+      setSendingToTrustPortal(false);
+      setPendingSubmissionData(null);
+    }
+  };
+
   const sendQuestionToTrustPortal = async (question: ExtractedQuestion) => {
     if (!selectedVendorId) {
       setUploadError('Please select a vendor first');
@@ -2001,14 +2095,14 @@ const QuestionnairesPage = () => {
         return;
       }
 
-      console.log('🏛️ TRUST PORTAL: Sending individual question to trust portal...');
+      console.log('🏛️ TRUST PORTAL: Preparing individual question submission...');
 
-      // Create trust portal entry for individual question
-      const trustPortalData = {
+      // Prepare submission data
+      const submissionData = {
+        questionId: question.id,
         title: `Q&A: ${question.text.length > 80 ? question.text.substring(0, 80) + '...' : question.text}`,
         description: question.answer,
         category: 'Questionnaire',
-        vendorId: vendorIdNumber,
         isQuestionnaireAnswer: true,
         questionnaireId: question.id,
         content: JSON.stringify({
@@ -2025,28 +2119,11 @@ const QuestionnairesPage = () => {
         })
       };
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/trust-portal/items`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(trustPortalData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Failed to send question to trust portal');
-      }
-
-      const result = await response.json();
-      console.log('✅ Successfully sent question to trust portal:', result);
+      // Show follow-up modal
+      setPendingSubmissionData(submissionData);
+      setShowFollowUpModal(true);
+      setSendingToTrustPortal(false); // Reset loading state while modal is open
+      return; // Exit function, modal will handle the actual submission
 
       // Show success notification
       if (typeof window !== 'undefined') {
@@ -2110,6 +2187,88 @@ const QuestionnairesPage = () => {
   /**
    * Send complete checklist to trust portal (when all questions are completed)
    */
+  // Function to handle the actual submission after follow-up modal
+  const processTrustPortalSubmission = async (submissionData: any) => {
+    setSendingToTrustPortal(true);
+    
+    try {
+      // Add follow-up data to the submission
+      const enhancedSubmissionData = {
+        ...submissionData,
+        isFollowUp: followUpData.isFollowUp,
+        followUpType: followUpData.followUpType,
+        followUpReason: followUpData.followUpReason,
+        parentSubmissionId: followUpData.parentSubmissionId
+      };
+      
+      console.log('🏛️ TRUST PORTAL: Sending submission with follow-up data:', enhancedSubmissionData);
+      
+      // Continue with the original submission logic
+      const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
+      if (!vendorIdNumber) {
+        throw new Error('Invalid vendor selected. Please select a valid vendor.');
+      }
+
+      const trustPortalData = {
+        ...enhancedSubmissionData,
+        vendorId: vendorIdNumber,
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/trust-portal`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(trustPortalData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to send checklist to trust portal');
+      }
+
+      const result = await response.json();
+      
+      console.log('✅ Successfully sent to trust portal:', result);
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const notification = window.document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+        notification.innerHTML = `
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          ${followUpData.isFollowUp ? 'Follow-up' : 'Initial'} submission sent to Trust Portal successfully!
+        `;
+        window.document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      }
+      
+      // Reset follow-up data
+      setFollowUpData({
+        isFollowUp: false,
+        followUpType: 'initial',
+        followUpReason: '',
+        parentSubmissionId: null
+      });
+      
+    } catch (error) {
+      console.error('❌ Error sending to trust portal:', error);
+      setUploadError('Failed to send to trust portal. Please try again.');
+    } finally {
+      setSendingToTrustPortal(false);
+      setPendingSubmissionData(null);
+    }
+  };
+
   const sendChecklistToTrustPortal = async (checklistGroup: any) => {
     if (!selectedVendorId) {
       setUploadError('Please select a vendor first');
@@ -2186,16 +2345,20 @@ const QuestionnairesPage = () => {
       // Step 2: Prepare checklist data
       setTrustPortalProgress({ current: 2, total: 5, item: 'Preparing checklist data...' });
       
-      // Step 3: Send to trust portal
-      setTrustPortalProgress({ current: 3, total: 5, item: 'Sending to Trust Portal...' });
+      // Step 3: Show follow-up modal before sending
+      setTrustPortalProgress({ current: 3, total: 5, item: 'Preparing submission...' });
       
       const submitData = {
+        checklistId: checklistGroup.id,
         title: `${checklistGroup.name} - Complete Compliance Questionnaire`,
         message: `Completed compliance questionnaire with ${checklistGroup.questions.length} answered questions. All requirements verified and ready for enterprise review.`
       };
 
-      console.log('🏛️ TRUST PORTAL: Sending complete checklist to trust portal...');
-      const result = await ChecklistService.sendChecklistToTrustPortal(checklistGroup.id, selectedVendorId, submitData);
+      // Show follow-up modal
+      setPendingSubmissionData(submitData);
+      setShowFollowUpModal(true);
+      setSendingToTrustPortal(false); // Reset loading state while modal is open
+      return; // Exit function, modal will handle the actual submission
 
       setTrustPortalProgress({ current: 4, total: 5, item: 'Finalizing submission...' });
       
@@ -2280,6 +2443,116 @@ const QuestionnairesPage = () => {
       </div>
     );
   }
+
+  // Follow-up modal component
+  const FollowUpModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 className="text-lg font-semibold mb-4">Submission Type</h3>
+        <p className="text-gray-600 mb-4">
+          Is this a follow-up submission in response to enterprise feedback, or an initial submission?
+        </p>
+        
+        <div className="space-y-4">
+          <label className="flex items-center space-x-3">
+            <input
+              type="radio"
+              name="submissionType"
+              value="initial"
+              checked={!followUpData.isFollowUp}
+              onChange={() => setFollowUpData(prev => ({ ...prev, isFollowUp: false, followUpType: 'initial' }))}
+              className="w-4 h-4 text-indigo-600"
+            />
+            <div>
+              <div className="font-medium">Initial Submission</div>
+              <div className="text-sm text-gray-500">This is a new, original submission</div>
+            </div>
+          </label>
+          
+          <label className="flex items-center space-x-3">
+            <input
+              type="radio"
+              name="submissionType"
+              value="follow_up"
+              checked={followUpData.isFollowUp}
+              onChange={() => setFollowUpData(prev => ({ ...prev, isFollowUp: true, followUpType: 'follow_up' }))}
+              className="w-4 h-4 text-indigo-600"
+            />
+            <div>
+              <div className="font-medium">Follow-up Submission</div>
+              <div className="text-sm text-gray-500">This is in response to enterprise feedback</div>
+            </div>
+          </label>
+        </div>
+        
+        {followUpData.isFollowUp && (
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Follow-up Type
+              </label>
+              <select
+                value={followUpData.followUpType}
+                onChange={(e) => setFollowUpData(prev => ({ ...prev, followUpType: e.target.value }))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="follow_up">General Follow-up</option>
+                <option value="resubmission">Resubmission</option>
+                <option value="clarification">Clarification</option>
+                <option value="additional_docs">Additional Documents</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for Follow-up
+              </label>
+              <textarea
+                value={followUpData.followUpReason}
+                onChange={(e) => setFollowUpData(prev => ({ ...prev, followUpReason: e.target.value }))}
+                placeholder="Please describe why this is a follow-up submission..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+        
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            onClick={() => {
+              setShowFollowUpModal(false);
+              setPendingSubmissionData(null);
+              setFollowUpData({
+                isFollowUp: false,
+                followUpType: 'initial',
+                followUpReason: '',
+                parentSubmissionId: null
+              });
+            }}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              if (pendingSubmissionData) {
+                setShowFollowUpModal(false);
+                if (pendingSubmissionData.checklistId) {
+                  await processTrustPortalSubmission(pendingSubmissionData);
+                } else if (pendingSubmissionData.questionId) {
+                  await processQuestionSubmission(pendingSubmissionData);
+                }
+              }
+            }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -3891,6 +4164,9 @@ const QuestionnairesPage = () => {
             setTextViewerData({});
           }}
         />
+        
+        {/* Follow-up Modal */}
+        {showFollowUpModal && <FollowUpModal />}
     </>
   );
 };

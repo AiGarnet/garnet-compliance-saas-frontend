@@ -119,6 +119,25 @@ export default function TrustPortalClient({ token }: { token: string }) {
     setExpandedChecklists(newExpanded);
   };
 
+  // Group checklists by follow-up status
+  const groupChecklistsByFollowUp = (checklists: any[]) => {
+    const initial: any[] = [];
+    const followUp: any[] = [];
+    
+    checklists.forEach(checklist => {
+      // Check if any questions in this checklist are follow-ups
+      const hasFollowUp = checklist.questions?.some((q: any) => q.isFollowUp);
+      
+      if (hasFollowUp) {
+        followUp.push(checklist);
+      } else {
+        initial.push(checklist);
+      }
+    });
+    
+    return { initial, followUp };
+  };
+
   const formatAnswerText = (text: string) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -278,9 +297,21 @@ export default function TrustPortalClient({ token }: { token: string }) {
             Compliance Checklists
           </h2>
           
-          <div className="space-y-4">
-            {vendorData.checklists.map((checklist) => (
-              <div key={checklist.id} className="border border-gray-200 rounded-lg overflow-hidden">
+          {(() => {
+            const { initial, followUp } = groupChecklistsByFollowUp(vendorData.checklists);
+            
+            return (
+              <div className="space-y-6">
+                {/* Initial Submissions */}
+                {initial.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full mr-2"></div>
+                      Initial Submissions
+                    </h3>
+                    <div className="space-y-4">
+                      {initial.map((checklist) => (
+                        <div key={checklist.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 <button
                   onClick={() => toggleChecklist(checklist.id)}
                   className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left transition-colors"
@@ -370,12 +401,118 @@ export default function TrustPortalClient({ token }: { token: string }) {
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </div>
+                                                </div>
                     ))}
+                    </div>
                   </div>
                 )}
+                
+                {/* Follow-up Submissions */}
+                {followUp.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-orange-600 rounded-full mr-2"></div>
+                      Follow-up Submissions
+                      <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                        In response to feedback
+                      </span>
+                    </h3>
+                    <div className="space-y-4">
+                      {followUp.map((checklist) => (
+                        <div key={checklist.id} className="border border-orange-200 rounded-lg overflow-hidden bg-orange-50">
+                          <button
+                            onClick={() => toggleChecklist(checklist.id)}
+                            className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 flex items-center justify-between text-left transition-colors"
+                          >
+                            <h3 className="font-medium text-gray-900">{checklist.name}</h3>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-500">
+                                {checklist.questions?.length || 0} questions
+                              </span>
+                              {expandedChecklists.has(checklist.id) ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
+                            </div>
+                          </button>
+                          
+                          {expandedChecklists.has(checklist.id) && checklist.questions && (
+                            <div className="p-4 space-y-4 bg-white">
+                              {checklist.questions.map((question: any, qIndex: number) => (
+                                <div key={question.id} className="mb-3">
+                                  <h4 className="font-medium text-gray-900 mb-2">
+                                    Q{qIndex + 1}: {question.questionText}
+                                  </h4>
+                                  
+                                  {question.aiAnswer && (
+                                    <div className="bg-orange-50 rounded-lg p-4 mb-3">
+                                      <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0">
+                                          <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                            <CheckCircle className="h-5 w-5 text-orange-600" />
+                                          </div>
+                                        </div>
+                                        <div className="flex-1">
+                                          <h5 className="font-medium text-orange-900 mb-1">Follow-up Response</h5>
+                                          <div 
+                                            className="text-orange-800 text-sm leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: formatAnswerText(question.aiAnswer) }}
+                                          />
+                                          {question.confidenceScore && (
+                                            <div className="mt-2 text-xs text-orange-700">
+                                              Confidence: {Math.round(question.confidenceScore * 100)}%
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {question.supportingDocuments && question.supportingDocuments.length > 0 && (
+                                    <div className="bg-gray-50 rounded-lg p-3">
+                                      <h6 className="text-sm font-medium text-gray-700 mb-2">Supporting Documents:</h6>
+                                      <div className="space-y-1">
+                                        {question.supportingDocuments.map((doc: any, docIndex: number) => (
+                                          <div key={docIndex} className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-600 flex items-center">
+                                              <FileText className="h-3 w-3 mr-1" />
+                                              {doc.filename}
+                                            </span>
+                                            <div className="flex space-x-1">
+                                              <button
+                                                onClick={() => handleViewDocument(doc)}
+                                                className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                                title="View document"
+                                              >
+                                                <Eye className="h-3 w-3" />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDownloadDocument(doc)}
+                                                className="text-green-600 hover:text-green-800 p-1 rounded"
+                                                title="Download document"
+                                              >
+                                                <Download className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        )}
               </div>
             ))}
           </div>
