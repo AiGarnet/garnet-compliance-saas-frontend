@@ -11,6 +11,7 @@ import {
   BarChart3, 
   Users, 
   CheckCircle, 
+  Check,
   ArrowRight, 
   Star,
   Clock,
@@ -705,8 +706,21 @@ const GarnetLandingPage = () => {
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
                 <Link 
+                  href="/pricing" 
+                  className="text-black font-semibold text-sm lg:text-base px-3 py-2 hover:text-purple-600 transition-colors"
+                >
+                  Pricing
+                </Link>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+              >
+                <Link 
                   href="/contact" 
-                  className="text-black font-semibold text-sm lg:text-base px-3 py-2"
+                  className="text-black font-semibold text-sm lg:text-base px-3 py-2 hover:text-purple-600 transition-colors"
                 >
                   Contact Us
                 </Link>
@@ -1828,6 +1842,152 @@ const GarnetLandingPage = () => {
         </div>
       </section>
       */}
+
+      {/* Pricing Section */}
+      <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Simple, Transparent <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Pricing</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Start free and scale as you grow. No hidden fees, no long-term contracts.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                name: 'Starter',
+                price: '$1',
+                period: '/month',
+                description: 'Perfect for individuals and solopreneurs',
+                features: ['2 questionnaires/month', 'GDPR framework', 'Basic Trust Portal', 'Community support'],
+                icon: <Zap className="h-8 w-8 text-blue-600" />,
+                buttonText: 'Get Started',
+                buttonClass: 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300'
+              },
+              {
+                name: 'Growth',
+                price: '$49',
+                period: '/month',
+                description: 'For early-stage startups',
+                features: ['Unlimited questionnaires', '3 compliance frameworks', 'Enhanced Trust Portal', 'Email support (48h SLA)'],
+                icon: <Shield className="h-8 w-8 text-purple-600" />,
+                buttonText: 'Start Growth',
+                buttonClass: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl',
+                popular: true
+              },
+              {
+                name: 'Scale',
+                price: '$199',
+                period: '/month',
+                description: 'For small to mid-sized businesses',
+                features: ['10 compliance frameworks', 'Full Trust Portal + custom subdomain', 'Priority support + live chat', 'Advanced audit reports'],
+                icon: <BarChart3 className="h-8 w-8 text-pink-600" />,
+                buttonText: 'Start Scale',
+                buttonClass: 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
+              },
+              {
+                name: 'Enterprise',
+                price: 'From $499',
+                period: '/month',
+                description: 'For established companies',
+                features: ['Unlimited frameworks & users', '24×7 support + account manager', 'API access + integrations', 'Custom compliance reviews'],
+                icon: <Users className="h-8 w-8 text-indigo-600" />,
+                buttonText: 'Contact Sales',
+                buttonClass: 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
+              }
+            ].map((plan, index) => (
+              <motion.div
+                key={plan.name}
+                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
+                  plan.popular 
+                    ? 'border-purple-500 ring-4 ring-purple-500/20 scale-105' 
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.1 * index }}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
+                      <Star className="h-4 w-4 mr-1" />
+                      Most Popular
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-8">
+                  <div className="flex items-center mb-4">
+                    {plan.icon}
+                    <h3 className="text-2xl font-bold text-gray-900 ml-3">{plan.name}</h3>
+                  </div>
+
+                  <p className="text-gray-600 mb-6">{plan.description}</p>
+
+                  <div className="mb-6">
+                    <div className="flex items-baseline">
+                      <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
+                      {plan.period && <span className="text-gray-500 ml-2">{plan.period}</span>}
+                    </div>
+                  </div>
+
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-start">
+                        <Check className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={() => {
+                      if (plan.name === 'Starter') {
+                        openWaitlist();
+                      } else if (plan.name === 'Enterprise') {
+                        window.location.href = '/contact';
+                      } else {
+                        window.location.href = '/pricing';
+                      }
+                    }}
+                    className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center ${plan.buttonClass}`}
+                  >
+                    {plan.buttonText}
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <p className="text-gray-600 mb-4">Save 17% with annual billing</p>
+              <a 
+                href="/pricing" 
+                className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium"
+              >
+                View detailed pricing <ArrowRight className="h-4 w-4 ml-1" />
+              </a>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
       <section className="py-20 bg-white">
