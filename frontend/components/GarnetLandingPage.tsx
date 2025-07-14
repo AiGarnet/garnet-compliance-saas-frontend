@@ -647,6 +647,7 @@ const GarnetLandingPage = () => {
   const [isIndustryFormOpen, setIsIndustryFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   
   // Track if user has scrolled past hero section
   const showNavButton = useScrollPastHero();
@@ -710,6 +711,18 @@ const GarnetLandingPage = () => {
       default:
         return <Zap className="h-8 w-8 text-gray-600" />;
     }
+  };
+
+  const toggleCardExpansion = (tierId: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tierId)) {
+        newSet.delete(tierId);
+      } else {
+        newSet.add(tierId);
+      }
+      return newSet;
+    });
   };
 
   const handleSelectPlan = async (tier: PricingTier) => {
@@ -2107,11 +2120,11 @@ const GarnetLandingPage = () => {
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch">
             {PRICING_TIERS.map((tier, index) => (
               <motion.div
                 key={tier.id}
-                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
+                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl h-full flex flex-col ${
                   tier.popular 
                     ? 'border-purple-500 ring-4 ring-purple-500/20 scale-105' 
                     : 'border-gray-200 hover:border-purple-300'
@@ -2130,49 +2143,91 @@ const GarnetLandingPage = () => {
                   </div>
                 )}
 
-                <div className="p-8">
+                <div className="p-4 sm:p-6 flex flex-col h-full">
                   {/* Plan Icon & Name */}
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-3">
                     {getPlanIcon(tier.id)}
-                    <h3 className="text-2xl font-bold text-gray-900 ml-3">{tier.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 ml-3">{tier.name}</h3>
                   </div>
 
                   {/* Description */}
-                  <p className="text-gray-600 mb-6">{tier.description}</p>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{tier.description}</p>
 
                   {/* Price */}
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <div className="flex items-baseline">
-                      <span className="text-4xl font-bold text-gray-900">
+                      <span className="text-2xl sm:text-3xl font-bold text-gray-900">
                         {formatPrice(tier.price[billingCycle])}
                       </span>
                       {tier.price[billingCycle] > 0 && (
-                        <span className="text-gray-500 ml-2">
+                        <span className="text-gray-500 ml-2 text-sm">
                           /{billingCycle === 'monthly' ? 'month' : 'year'}
                         </span>
                       )}
                     </div>
                     {billingCycle === 'annual' && tier.price.monthly > 0 && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-xs text-green-600 mt-1">
                         Save ${calculateAnnualSavings(tier.price.monthly)} per year
                       </p>
                     )}
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-3 mb-8">
-                    {tier.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        <Check className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="flex-grow mb-4">
+                    <ul className="space-y-2 text-sm">
+                      {tier.features.slice(0, 3).map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                      
+                      {/* Expandable Features */}
+                      <AnimatePresence>
+                        {expandedCards.has(tier.id) && tier.features.length > 3 && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            {tier.features.slice(3).map((feature, featureIndex) => (
+                              <li key={featureIndex + 3} className="flex items-start mb-2">
+                                <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <span className="text-gray-700">{feature}</span>
+                              </li>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Show More/Less Button */}
+                      {tier.features.length > 3 && (
+                        <li className="mt-2">
+                          <button
+                            onClick={() => toggleCardExpansion(tier.id)}
+                            className="text-purple-600 hover:text-purple-700 text-xs font-medium flex items-center transition-colors"
+                          >
+                            {expandedCards.has(tier.id) ? (
+                              <>
+                                Show less <ChevronDown className="h-3 w-3 ml-1 rotate-180 transition-transform" />
+                              </>
+                            ) : (
+                              <>
+                                Show more ({tier.features.length - 3} more) <ChevronDown className="h-3 w-3 ml-1 transition-transform" />
+                              </>
+                            )}
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
 
                   {/* CTA Button */}
                   <button
                     onClick={() => handleSelectPlan(tier)}
-                    className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center ${
+                    className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center mt-auto ${
                       tier.popular
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
                         : tier.id === 'starter'
@@ -2184,7 +2239,7 @@ const GarnetLandingPage = () => {
                     {tier.id === 'growth' && 'Start Growth Plan'}
                     {tier.id === 'scale' && 'Start Scale Plan'}
                     {tier.id === 'enterprise' && 'Contact Sales'}
-                    <ArrowRight className="h-5 w-5 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </button>
                 </div>
               </motion.div>
