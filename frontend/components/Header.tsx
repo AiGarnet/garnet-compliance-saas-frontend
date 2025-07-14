@@ -114,6 +114,11 @@ export default function Header({ locale = 'en' }: HeaderProps) {
       baseItems.splice(1, 0, { href: '/vendors', label: t.vendors });
     }
     
+    // Add admin link only for admin users
+    if (user.role === 'admin') {
+      baseItems.push({ href: '/admin', label: 'Admin' });
+    }
+    
     return baseItems;
   };
 

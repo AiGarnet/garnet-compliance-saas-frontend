@@ -1,7 +1,8 @@
 // Role constants
 export const ROLES = {
   SALES_PROFESSIONAL: 'sales_professional',
-  FOUNDER: 'founder'
+  FOUNDER: 'founder',
+  ADMIN: 'admin'
 } as const;
 
 // Type definition for roles
@@ -10,13 +11,15 @@ export type UserRole = typeof ROLES[keyof typeof ROLES];
 // Role display names
 export const ROLE_DISPLAY_NAMES = {
   [ROLES.SALES_PROFESSIONAL]: 'Sales Professional',
-  [ROLES.FOUNDER]: 'Founder'
+  [ROLES.FOUNDER]: 'Founder',
+  [ROLES.ADMIN]: 'Administrator'
 } as const;
 
 // Role descriptions
 export const ROLE_DESCRIPTIONS = {
   [ROLES.SALES_PROFESSIONAL]: 'Full access to all platform features with customized dashboard view focused on sales activities',
-  [ROLES.FOUNDER]: 'Full access to all platform features with customized dashboard view focused on high-level insights'
+  [ROLES.FOUNDER]: 'Full access to all platform features with customized dashboard view focused on high-level insights',
+  [ROLES.ADMIN]: 'Complete administrative access to manage users, vendors, organizations, and system settings'
 } as const;
 
 // Role permissions
@@ -42,6 +45,20 @@ export const ROLE_PERMISSIONS = {
     canManageVendors: false,
     canCreateQuestionnaires: true,
     canViewReports: true
+  },
+  [ROLES.ADMIN]: {
+    canAccessDashboard: true,
+    canAccessQuestionnaires: true,
+    canAccessVendors: true,
+    canAccessCompliance: true,
+    canAccessAnalytics: true,
+    canAccessTrustPortal: true,
+    canManageVendors: true,
+    canCreateQuestionnaires: true,
+    canViewReports: true,
+    canManageUsers: true,
+    canManageOrganizations: true,
+    canAccessAdminPanel: true
   }
 } as const;
 
