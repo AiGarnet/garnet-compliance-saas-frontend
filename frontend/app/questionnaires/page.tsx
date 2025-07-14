@@ -1553,6 +1553,15 @@ const QuestionnairesPage = () => {
     setGenerateDocCategory('');
   };
 
+  const openGenerateEvidenceModal = () => {
+    setGenerateDocQuestionId(null); // No specific question for evidence files
+    setGenerateDocTitle('Evidence Document');
+    setGenerateDocInstructions('Generate comprehensive evidence file for compliance documentation');
+    setGenerateDocCategory('Evidence File');
+    setDocumentGenerationError(null);
+    setShowGenerateDocModal(true);
+  };
+
   const generateAndSaveDocument = async () => {
     if (!generateDocTitle.trim()) {
       setDocumentGenerationError('Please enter a document title');
@@ -1587,14 +1596,20 @@ const QuestionnairesPage = () => {
       if (result.success) {
         console.log('✅ Document generated and saved successfully!');
         
-        // Refresh the supporting documents list
-        await loadVendorSupportingDocuments(selectedVendorId);
+        // Refresh appropriate list based on document type
+        if (generateDocQuestionId) {
+          // This is a supporting document for a specific question
+          await loadVendorSupportingDocuments(selectedVendorId);
+        } else {
+          // This is an evidence file (general document)
+          await loadVendorEvidenceFiles(selectedVendorId);
+        }
         
         // Close modal
         closeGenerateDocModal();
         
         // Show success message
-        alert('Document generated and saved successfully!');
+        alert('Evidence document generated and saved successfully!');
       } else {
         throw new Error(result.error || 'Failed to generate document');
       }
@@ -2846,6 +2861,24 @@ const QuestionnairesPage = () => {
                             <>
                               <Upload className="h-4 w-4 mr-2" />
                               Select & Review Files
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => openGenerateEvidenceModal()}
+                          disabled={isGeneratingDocument || !selectedVendorId}
+                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center justify-center text-sm"
+                        >
+                          {isGeneratingDocument ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Generate Evidence File
                             </>
                           )}
                         </button>
