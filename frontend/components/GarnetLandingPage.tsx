@@ -49,6 +49,118 @@ import {
   FileText
 } from 'lucide-react';
 
+// Pricing interface
+interface PricingTier {
+  id: string;
+  name: string;
+  description: string;
+  price: {
+    monthly: number;
+    annual: number;
+  };
+  features: string[];
+  popular?: boolean;
+  stripePriceIds?: {
+    monthly?: string;
+    annual?: string;
+  };
+}
+
+// Pricing data
+const PRICING_TIERS: PricingTier[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    description: 'Perfect for individuals and solopreneurs getting started',
+    price: {
+      monthly: 1,
+      annual: 10,
+    },
+    features: [
+      'AI-assisted questionnaire answering',
+      'Up to 2 questionnaires per month',
+      'Single compliance framework checklist (GDPR)',
+      'Basic Trust Portal with one document upload',
+      'Community support via knowledge base',
+      'In-memory processing only',
+    ],
+    stripePriceIds: {
+      monthly: 'prod_Sfp1VRqDGvVRx7',
+      annual: 'prod_Sfp1ZWsl26QR25',
+    },
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    description: 'For early-stage startups needing regular compliance automation',
+    price: {
+      monthly: 49,
+      annual: 490,
+    },
+    features: [
+      'Everything in Starter',
+      'Unlimited AI-generated questionnaires (up to 100 questions each)',
+      'Support for up to 3 compliance frameworks',
+      'Enhanced Trust Portal customization (logo + two documents)',
+      'Email support with 48-hour SLA',
+      'Exportable audit logs',
+      'Basic analytics dashboard',
+    ],
+    popular: true,
+    stripePriceIds: {
+      monthly: 'prod_Sfp2fcOpPyqK0Z',
+      annual: 'prod_Sfp2zDuOd8J0nV',
+    },
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    description: 'For small to mid-sized businesses with ongoing compliance demands',
+    price: {
+      monthly: 199,
+      annual: 1990,
+    },
+    features: [
+      'Everything in Growth',
+      'Advanced context-aware AI suggestions',
+      'Up to 10 compliance frameworks (AML, OFAC, FCPA, ISO 27001)',
+      'Full Trust Portal: unlimited documents + custom subdomain',
+      'Priority email support and live chat',
+      'Advanced audit reports (PDF/CSV)',
+      'Role-based access control (up to 5 sales professionals)',
+      'Scheduled compliance reminders and expiry alerts',
+    ],
+    stripePriceIds: {
+      monthly: 'prod_Sfp3u5vmjT85eF',
+      annual: 'prod_Sfp3XUakNwtOnM',
+    },
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    description: 'For established companies with complex, multi-jurisdictional compliance needs',
+    price: {
+      monthly: 499,
+      annual: 4990,
+    },
+    features: [
+      'Everything in Scale',
+      'Unlimited frameworks and user seats',
+      'SLA-backed 24×7 support and dedicated account manager',
+      'API access for integrations (SSO, ERP, HRIS)',
+      'Advanced webhooks',
+      'Quarterly compliance reviews and feature workshops',
+      'Optional add-ons: automated sanctions/PEP screening',
+      'AI fine-tuning',
+      'Custom integrations',
+    ],
+    stripePriceIds: {
+      monthly: 'prod_Sfp4M6qs4B0onm',
+      annual: 'prod_Sfp5HIpH9J8esc',
+    },
+  },
+];
+
 // Counter component for animated statistics
 const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) => {
   const [count, setCount] = useState(0);
@@ -534,6 +646,7 @@ const GarnetLandingPage = () => {
   const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
   const [isIndustryFormOpen, setIsIndustryFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   
   // Track if user has scrolled past hero section
   const showNavButton = useScrollPastHero();
@@ -561,6 +674,102 @@ const GarnetLandingPage = () => {
   
   const closeIndustryForm = () => {
     setIsIndustryFormOpen(false);
+  };
+
+  const scrollToPricing = () => {
+    const pricingSection = document.getElementById('pricing');
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
+  // Helper functions for pricing
+  const formatPrice = (price: number): string => {
+    return price === 0 ? 'Free' : `$${price}`;
+  };
+
+  const calculateAnnualSavings = (monthlyPrice: number): number => {
+    const annualPrice = monthlyPrice * 12;
+    const discountedAnnualPrice = annualPrice * 0.83; // 17% discount
+    return Math.round(annualPrice - discountedAnnualPrice);
+  };
+
+  const getPlanIcon = (planId: string) => {
+    switch (planId) {
+      case 'starter':
+        return <Zap className="h-8 w-8 text-blue-600" />;
+      case 'growth':
+        return <Shield className="h-8 w-8 text-purple-600" />;
+      case 'scale':
+        return <BarChart3 className="h-8 w-8 text-pink-600" />;
+      case 'enterprise':
+        return <Users className="h-8 w-8 text-indigo-600" />;
+      default:
+        return <Zap className="h-8 w-8 text-gray-600" />;
+    }
+  };
+
+  const handleSelectPlan = async (tier: PricingTier) => {
+    if (tier.id === 'starter') {
+      // Free tier - open waitlist
+      openWaitlist();
+      return;
+    }
+
+    if (tier.id === 'enterprise') {
+      // Enterprise tier - redirect to contact
+      window.location.href = '/contact';
+      return;
+    }
+
+    // For paid plans, check if user is authenticated first
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      // Redirect to signup/login
+      window.location.href = '/auth/signup';
+      return;
+    }
+
+    try {
+      // Get the price ID based on billing cycle
+      const priceId = billingCycle === 'monthly' 
+        ? tier.stripePriceIds?.monthly 
+        : tier.stripePriceIds?.annual;
+
+      if (!priceId) {
+        throw new Error('Price ID not found');
+      }
+
+      // Create checkout session
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          priceId,
+          billingCycle,
+          successUrl: `${window.location.origin}/dashboard?success=true`,
+          cancelUrl: `${window.location.origin}/?canceled=true`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe checkout
+      window.location.href = data.data.url;
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      alert('Failed to start checkout. Please try again.');
+    }
   };
 
   const features = [
@@ -705,12 +914,12 @@ const GarnetLandingPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                <Link 
-                  href="/pricing" 
-                  className="text-black font-semibold text-sm lg:text-base px-3 py-2 hover:text-purple-600 transition-colors"
+                <button 
+                  onClick={scrollToPricing}
+                  className="text-black font-semibold text-sm lg:text-base px-3 py-2 hover:text-purple-600 transition-colors cursor-pointer"
                 >
                   Pricing
-                </Link>
+                </button>
               </motion.div>
               
               <motion.div
@@ -1844,7 +2053,7 @@ const GarnetLandingPage = () => {
       */}
 
       {/* Pricing Section */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+      <section id="pricing" className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             className="text-center mb-16"
@@ -1861,54 +2070,49 @@ const GarnetLandingPage = () => {
             </p>
           </motion.div>
 
+          {/* Billing Toggle */}
+          <div className="flex justify-center mb-12">
+            <motion.div 
+              className="bg-white rounded-full p-1 shadow-lg border border-gray-200"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="flex">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    billingCycle === 'monthly'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 relative ${
+                    billingCycle === 'annual'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
+                >
+                  Annual
+                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                    Save 17%
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                name: 'Starter',
-                price: '$1',
-                period: '/month',
-                description: 'Perfect for individuals and solopreneurs',
-                features: ['2 questionnaires/month', 'GDPR framework', 'Basic Trust Portal', 'Community support'],
-                icon: <Zap className="h-8 w-8 text-blue-600" />,
-                buttonText: 'Get Started',
-                buttonClass: 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300'
-              },
-              {
-                name: 'Growth',
-                price: '$49',
-                period: '/month',
-                description: 'For early-stage startups',
-                features: ['Unlimited questionnaires', '3 compliance frameworks', 'Enhanced Trust Portal', 'Email support (48h SLA)'],
-                icon: <Shield className="h-8 w-8 text-purple-600" />,
-                buttonText: 'Start Growth',
-                buttonClass: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl',
-                popular: true
-              },
-              {
-                name: 'Scale',
-                price: '$199',
-                period: '/month',
-                description: 'For small to mid-sized businesses',
-                features: ['10 compliance frameworks', 'Full Trust Portal + custom subdomain', 'Priority support + live chat', 'Advanced audit reports'],
-                icon: <BarChart3 className="h-8 w-8 text-pink-600" />,
-                buttonText: 'Start Scale',
-                buttonClass: 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
-              },
-              {
-                name: 'Enterprise',
-                price: 'From $499',
-                period: '/month',
-                description: 'For established companies',
-                features: ['Unlimited frameworks & users', '24×7 support + account manager', 'API access + integrations', 'Custom compliance reviews'],
-                icon: <Users className="h-8 w-8 text-indigo-600" />,
-                buttonText: 'Contact Sales',
-                buttonClass: 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
-              }
-            ].map((plan, index) => (
+            {PRICING_TIERS.map((tier, index) => (
               <motion.div
-                key={plan.name}
+                key={tier.id}
                 className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
-                  plan.popular 
+                  tier.popular 
                     ? 'border-purple-500 ring-4 ring-purple-500/20 scale-105' 
                     : 'border-gray-200 hover:border-purple-300'
                 }`}
@@ -1917,7 +2121,7 @@ const GarnetLandingPage = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.1 * index }}
               >
-                {plan.popular && (
+                {tier.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
                       <Star className="h-4 w-4 mr-1" />
@@ -1927,22 +2131,37 @@ const GarnetLandingPage = () => {
                 )}
 
                 <div className="p-8">
+                  {/* Plan Icon & Name */}
                   <div className="flex items-center mb-4">
-                    {plan.icon}
-                    <h3 className="text-2xl font-bold text-gray-900 ml-3">{plan.name}</h3>
+                    {getPlanIcon(tier.id)}
+                    <h3 className="text-2xl font-bold text-gray-900 ml-3">{tier.name}</h3>
                   </div>
 
-                  <p className="text-gray-600 mb-6">{plan.description}</p>
+                  {/* Description */}
+                  <p className="text-gray-600 mb-6">{tier.description}</p>
 
+                  {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline">
-                      <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                      {plan.period && <span className="text-gray-500 ml-2">{plan.period}</span>}
+                      <span className="text-4xl font-bold text-gray-900">
+                        {formatPrice(tier.price[billingCycle])}
+                      </span>
+                      {tier.price[billingCycle] > 0 && (
+                        <span className="text-gray-500 ml-2">
+                          /{billingCycle === 'monthly' ? 'month' : 'year'}
+                        </span>
+                      )}
                     </div>
+                    {billingCycle === 'annual' && tier.price.monthly > 0 && (
+                      <p className="text-sm text-green-600 mt-1">
+                        Save ${calculateAnnualSavings(tier.price.monthly)} per year
+                      </p>
+                    )}
                   </div>
 
+                  {/* Features */}
                   <ul className="space-y-3 mb-8">
-                    {plan.features.map((feature, featureIndex) => (
+                    {tier.features.map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start">
                         <Check className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">{feature}</span>
@@ -1950,19 +2169,21 @@ const GarnetLandingPage = () => {
                     ))}
                   </ul>
 
+                  {/* CTA Button */}
                   <button
-                    onClick={() => {
-                      if (plan.name === 'Starter') {
-                        openWaitlist();
-                      } else if (plan.name === 'Enterprise') {
-                        window.location.href = '/contact';
-                      } else {
-                        window.location.href = '/pricing';
-                      }
-                    }}
-                    className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center ${plan.buttonClass}`}
+                    onClick={() => handleSelectPlan(tier)}
+                    className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center ${
+                      tier.popular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                        : tier.id === 'starter'
+                        ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300'
+                        : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
+                    }`}
                   >
-                    {plan.buttonText}
+                    {tier.id === 'starter' && 'Get Started Free'}
+                    {tier.id === 'growth' && 'Start Growth Plan'}
+                    {tier.id === 'scale' && 'Start Scale Plan'}
+                    {tier.id === 'enterprise' && 'Contact Sales'}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </button>
                 </div>
@@ -1978,12 +2199,12 @@ const GarnetLandingPage = () => {
               transition={{ duration: 0.6, delay: 0.4 }}
             >
               <p className="text-gray-600 mb-4">Save 17% with annual billing</p>
-              <a 
-                href="/pricing" 
-                className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium"
+              <button 
+                onClick={scrollToPricing}
+                className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
               >
-                View detailed pricing <ArrowRight className="h-4 w-4 ml-1" />
-              </a>
+                Scroll to top of pricing <ArrowRight className="h-4 w-4 ml-1" />
+              </button>
             </motion.div>
           </div>
         </div>
