@@ -459,11 +459,8 @@ function DashboardContent() {
           onAddVendor={() => setAddModalOpen(true)}
         />
         
-        {/* Three Column Layout for Founder, Two Column for Sales Professional */}
-        <div className={cn(
-          "grid gap-6",
-          isFounder ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 lg:grid-cols-2"
-        )}>
+        {/* Vertical Layout - Cards stacked one below another */}
+        <div className="space-y-6">
           {/* Pending Tasks - Visible for both Founder and Sales Professional */}
           <PendingTasks limit={5} />
           
