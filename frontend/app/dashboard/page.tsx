@@ -462,7 +462,7 @@ function DashboardContent() {
         {/* Vertical Layout - Cards stacked one below another */}
         <div className="space-y-6">
           {/* Pending Tasks - Visible for both Founder and Sales Professional */}
-          <PendingTasks limit={5} />
+          {/* <PendingTasks limit={5} /> */}
           
           {/* Enterprise Feedback - Visible for both Founder and Sales Professional */}
           <FeedbackCard limit={5} />
