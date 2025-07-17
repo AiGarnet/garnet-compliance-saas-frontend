@@ -270,7 +270,7 @@ const QuestionnairesContent = () => {
             docDescription: q.documentDescription,
             checklistId: q.checklistId,
             checklistName: checklist.name,
-            isDone: !!q.aiAnswer,
+            isDone: false, // Always start as not done, user needs to mark as done after reviewing
             isEditing: false
           }));
           
@@ -2345,7 +2345,7 @@ const QuestionnairesContent = () => {
 
       // Additional frontend validation to include 'done' status questions
       const frontendCompletedQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => 
-        q.status === 'completed' || q.status === 'done'
+        q.isDone || q.status === 'done'
       );
       const frontendIsComplete = frontendCompletedQuestions.length === checklistGroup.questions.length && 
         checklistGroup.questions.length > 0;
@@ -3280,30 +3280,30 @@ const QuestionnairesContent = () => {
                                   <p className="text-sm text-gray-600">
                                     {checklistGroup.questions.length} questions • 
                                     <span className="ml-1 text-green-600 font-medium">
-                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length} completed
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length} completed
                                     </span> • 
                                     <span className="ml-1 text-yellow-600 font-medium">
-                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'pending').length} pending
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => !q.isDone && q.status !== 'done').length} pending
                                     </span>
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <span className="text-xs text-gray-500">
-                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed' || q.status === 'done').length / checklistGroup.questions.length) * 100)}% complete
+                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length / checklistGroup.questions.length) * 100)}% complete
                                 </span>
                                 <div className="w-20 bg-gray-200 rounded-full h-2">
                                   <div 
                                     className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed' || q.status === 'done').length / checklistGroup.questions.length) * 100}%` 
+                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length / checklistGroup.questions.length) * 100}%` 
                                     }}
                                   ></div>
                                 </div>
                                 
                                 {/* Send Checklist to Trust Portal Button - Enhanced */}
                                 {checklistGroup.id !== 'manual' && 
-                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length === checklistGroup.questions.length &&
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length === checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
@@ -3333,10 +3333,10 @@ const QuestionnairesContent = () => {
                                 
                                 {/* Progress indicator for incomplete checklists */}
                                 {checklistGroup.id !== 'manual' && 
-                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length < checklistGroup.questions.length &&
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length < checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
                                   <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                                    {checklistGroup.questions.length - checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length} questions pending
+                                    {checklistGroup.questions.length - checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length} questions pending
                                   </div>
                                 )}
                               </div>
@@ -3390,6 +3390,12 @@ const QuestionnairesContent = () => {
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
                                   <AlertCircle className="h-4 w-4 mr-1" />
                                   Needs Support
+                                </span>
+                              )}
+                              {(question.isDone || question.status === 'done') && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Done
                                 </span>
                               )}
                             </div>
@@ -3479,9 +3485,9 @@ const QuestionnairesContent = () => {
                             </button>
                           )}
 
-                          {(question.status === 'completed' || question.status === 'done') && (
+                                                        {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
-                              {!question.isDone && (
+                              {!question.isDone && question.status === 'completed' && (
                                 <>
                                   <button
                                     onClick={() => markQuestionAsDone(question.id)}
