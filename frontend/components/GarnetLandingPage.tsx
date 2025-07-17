@@ -85,8 +85,8 @@ const PRICING_TIERS: PricingTier[] = [
       'In-memory processing only',
     ],
     stripePriceIds: {
-      monthly: 'prod_Sfp1VRqDGvVRx7',
-      annual: 'prod_Sfp1ZWsl26QR25',
+      monthly: 'price_1RkTN7GCn6F00HoYDpK3meuM',
+      annual: 'price_1RkTNZGCn6F00HoYk0lq4LvE',
     },
   },
   {
@@ -108,8 +108,8 @@ const PRICING_TIERS: PricingTier[] = [
     ],
     popular: true,
     stripePriceIds: {
-      monthly: 'prod_Sfp2fcOpPyqK0Z',
-      annual: 'prod_Sfp2zDuOd8J0nV',
+      monthly: 'price_1RkTOCGCn6F00HoYoEtLd3FO',
+      annual: 'price_1RkTOhGCn6F00HoYmMXNHSZp',
     },
   },
   {
@@ -131,8 +131,8 @@ const PRICING_TIERS: PricingTier[] = [
       'Scheduled compliance reminders and expiry alerts',
     ],
     stripePriceIds: {
-      monthly: 'prod_Sfp3u5vmjT85eF',
-      annual: 'prod_Sfp3XUakNwtOnM',
+      monthly: 'price_1RkTP6GCn6F00HoYVgzc2Byh',
+      annual: 'price_1RkTPdGCn6F00HoYznfbj9C6',
     },
   },
   {
@@ -155,8 +155,8 @@ const PRICING_TIERS: PricingTier[] = [
       'Custom integrations',
     ],
     stripePriceIds: {
-      monthly: 'prod_Sfp4M6qs4B0onm',
-      annual: 'prod_Sfp5HIpH9J8esc',
+      monthly: 'price_1RkTQXGCn6F00HoYS2peeQy2',
+      annual: 'price_1RkTR8GCn6F00HoYhtKtutCX',
     },
   },
 ];
@@ -600,7 +600,7 @@ const CountdownTimer = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            Join us on our journey to revolutionize enterprise sales operations
+            Join us on our journey to revolutionize enterprise sales operations
           </motion.p>
         </motion.div>
 

@@ -528,7 +528,7 @@ export default function DashboardPage() {
     <SubscriptionGuard 
       fallbackMessage="You need an active subscription to access the dashboard and manage your compliance data."
     >
-      <DashboardContent />
+    <DashboardContent />
     </SubscriptionGuard>
   );
 }

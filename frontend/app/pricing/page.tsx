@@ -56,15 +56,15 @@ const PRICING_TIERS: PricingTier[] = [
     limits: {
       questionnaires: 2,
       vendors: 1,
-      users: 1,
+      users: 50,
       storage: '0GB',
       frameworks: ['GDPR'],
       dataRetention: '7 days',
       support: 'Community (knowledge base)',
     },
     stripePriceIds: {
-      monthly: 'prod_Sfp1VRqDGvVRx7',
-      annual: 'prod_Sfp1ZWsl26QR25',
+      monthly: 'price_1RkTN7GCn6F00HoYDpK3meuM',
+      annual: 'price_1RkTNZGCn6F00HoYk0lq4LvE',
     },
     color: 'from-blue-500 to-blue-600',
     icon: <Rocket className="h-6 w-6" />
@@ -92,7 +92,7 @@ const PRICING_TIERS: PricingTier[] = [
     limits: {
       questionnaires: 'unlimited',
       vendors: 'unlimited',
-      users: 3,
+      users: 50,
       storage: '5GB',
       frameworks: ['GDPR', 'PDPA', 'SOC 2'],
       dataRetention: '30 days',
@@ -100,8 +100,8 @@ const PRICING_TIERS: PricingTier[] = [
     },
     popular: true,
     stripePriceIds: {
-      monthly: 'prod_Sfp2fcOpPyqK0Z',
-      annual: 'prod_Sfp2zDuOd8J0nV',
+      monthly: 'price_1RkTOCGCn6F00HoYoEtLd3FO',
+      annual: 'price_1RkTOhGCn6F00HoYmMXNHSZp',
     },
     color: 'from-purple-500 to-purple-600',
     icon: <Zap className="h-6 w-6" />
@@ -131,7 +131,7 @@ const PRICING_TIERS: PricingTier[] = [
     limits: {
       questionnaires: 'unlimited',
       vendors: 'unlimited',
-      users: 6,
+      users: 50,
       storage: '50GB',
       frameworks: ['GDPR', 'PDPA', 'SOC 2', 'AML', 'OFAC', 'FCPA', 'ISO 27001', 'HIPAA', 'PCI DSS', 'Custom'],
       dataRetention: '1 year',
@@ -139,8 +139,8 @@ const PRICING_TIERS: PricingTier[] = [
     },
     recommended: true,
     stripePriceIds: {
-      monthly: 'prod_Sfp3u5vmjT85eF',
-      annual: 'prod_Sfp3XUakNwtOnM',
+      monthly: 'price_1RkTP6GCn6F00HoYVgzc2Byh',
+      annual: 'price_1RkTPdGCn6F00HoYznfbj9C6',
     },
     color: 'from-green-500 to-green-600',
     icon: <BarChart3 className="h-6 w-6" />
@@ -172,15 +172,15 @@ const PRICING_TIERS: PricingTier[] = [
     limits: {
       questionnaires: 'unlimited',
       vendors: 'unlimited',
-      users: 'unlimited',
+      users: 50,
       storage: 'unlimited',
       frameworks: ['All frameworks + custom'],
       dataRetention: 'unlimited',
       support: '24/7 dedicated support',
     },
     stripePriceIds: {
-      monthly: 'prod_Sfp4gH7tLmN9aP',
-      annual: 'prod_Sfp4VWxYnOaQ8R',
+      monthly: 'price_1RkTQXGCn6F00HoYS2peeQy2',
+      annual: 'price_1RkTR8GCn6F00HoYhtKtutCX',
     },
     color: 'from-amber-500 to-amber-600',
     icon: <Crown className="h-6 w-6" />
@@ -286,13 +286,13 @@ const PricingPage = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-5xl font-bold text-gray-900 mb-4">
-              Choose Your <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Plan</span>
+            Choose Your <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Plan</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
               Scale your compliance automation with plans designed for every stage of your business journey
             </p>
-            
-            {/* Billing Toggle */}
+
+        {/* Billing Toggle */}
             <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg border">
               <button
                 onClick={() => setBillingCycle('monthly')}
@@ -391,10 +391,10 @@ const PricingPage = () => {
                           <Check className="h-4 w-4 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-700 text-sm">{feature}</span>
                         </motion.li>
-                      ))}
+                  ))}
                     </AnimatePresence>
-                  </ul>
-                  
+                </ul>
+
                   {/* Show More/Less Button */}
                   {tier.features.length > 4 && (
                     <button
@@ -464,7 +464,7 @@ const PricingPage = () => {
             <div className="flex items-center justify-center mb-4">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                 <MessageCircle className="h-6 w-6 text-white" />
-              </div>
+            </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Have Questions?</h2>
             <p className="text-gray-600 mb-6">
