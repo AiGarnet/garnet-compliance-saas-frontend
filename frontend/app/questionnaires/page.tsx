@@ -2335,16 +2335,18 @@ const QuestionnairesContent = () => {
     setSendingToTrustPortal(true);
     
     try {
-      // Add follow-up data to the submission
+      // Use the follow-up data from submissionData (which includes our defaults)
       const enhancedSubmissionData = {
         ...submissionData,
-        isFollowUp: followUpData.isFollowUp,
-        followUpType: followUpData.followUpType,
-        followUpReason: followUpData.followUpReason,
-        parentSubmissionId: followUpData.parentSubmissionId
+        // Use submissionData follow-up values if available, otherwise fall back to followUpData state
+        isFollowUp: submissionData.isFollowUp ?? followUpData.isFollowUp,
+        followUpType: submissionData.followUpType ?? followUpData.followUpType,
+        followUpReason: submissionData.followUpReason ?? followUpData.followUpReason,
+        parentSubmissionId: submissionData.parentSubmissionId ?? followUpData.parentSubmissionId
       };
       
-      console.log('🏛️ TRUST PORTAL: Sending submission with follow-up data:', enhancedSubmissionData);
+      console.log('🏛️ TRUST PORTAL: Input submissionData:', submissionData);
+      console.log('🏛️ TRUST PORTAL: Enhanced submission data:', enhancedSubmissionData);
       
       // Continue with the original submission logic
       const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
@@ -2560,6 +2562,7 @@ const QuestionnairesContent = () => {
       };
       
       // Directly process the submission with initial submission data
+      console.log('🚀 SENDING TO TRUST PORTAL: enhancedSubmitData:', enhancedSubmitData);
       await processTrustPortalSubmission(enhancedSubmitData);
       return;
 
