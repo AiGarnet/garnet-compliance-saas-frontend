@@ -150,6 +150,16 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
       throw new Error(error.message || error.error || `HTTP ${response.status}`);
     }
 
+    // Handle 204 No Content responses (like delete operations)
+    if (response.status === 204) {
+      console.log('✅ API Success Response (No Content):', {
+        endpoint,
+        status: response.status,
+        message: 'Operation completed successfully'
+      });
+      return null;
+    }
+
     const responseData = await response.json();
     console.log('✅ API Success Response:', {
       endpoint,

@@ -1839,14 +1839,22 @@ const QuestionnairesContent = () => {
       // Remove questions from extractedQuestions that belong to this checklist
       setExtractedQuestions(prev => prev.filter(q => q.checklistId !== checklist.checklistId));
       
-      // Force reload vendor checklists to ensure fresh data
-      if (selectedVendorId) {
-        await loadVendorChecklists(selectedVendorId);
-        // Also refresh AI Questionnaire section
-        await loadAllVendorQuestionsForAI(selectedVendorId);
-      }
-      
       console.log(`✅ Successfully deleted checklist: ${checklist.name}`);
+      
+      // Clear any previous error messages and show success
+      setUploadError(null);
+      
+      // Force reload vendor checklists to ensure fresh data (in separate try-catch to not affect deletion success)
+      if (selectedVendorId) {
+        try {
+          await loadVendorChecklists(selectedVendorId);
+          // Also refresh AI Questionnaire section
+          await loadAllVendorQuestionsForAI(selectedVendorId);
+        } catch (reloadError) {
+          console.warn('⚠️ Warning: Failed to reload data after successful deletion:', reloadError);
+          // Don't show error to user since deletion was successful
+        }
+      }
       
     } catch (error) {
       console.error('❌ Error deleting checklist:', error);
@@ -1854,9 +1862,13 @@ const QuestionnairesContent = () => {
       
       // Force reload on error to ensure UI state matches backend
       if (selectedVendorId) {
-        await loadVendorChecklists(selectedVendorId);
-        // Also refresh AI Questionnaire section
-        await loadAllVendorQuestionsForAI(selectedVendorId);
+        try {
+          await loadVendorChecklists(selectedVendorId);
+          // Also refresh AI Questionnaire section
+          await loadAllVendorQuestionsForAI(selectedVendorId);
+        } catch (reloadError) {
+          console.warn('⚠️ Warning: Failed to reload data after deletion error:', reloadError);
+        }
       }
     }
   };
