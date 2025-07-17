@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Building2, Shield, FileText, Search, Users, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, Eye, Star, Globe } from 'lucide-react';
+import { Building2, Shield, FileText, Search, Users, ChevronRight, ExternalLink, CheckCircle, AlertTriangle, Eye, Star, Globe, Clock } from 'lucide-react';
 import { vendors as vendorAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth/AuthContext';
 import Header from '@/components/Header';
 import { MobileNavigation } from '@/components/MobileNavigation';
 import { TrustPortalVendor } from '@/types/trustPortal';
+import SubmissionHistory from '@/components/trust-portal/SubmissionHistory';
 import Link from 'next/link';
 
 export default function TrustPortalPage() {
@@ -145,6 +146,13 @@ export default function TrustPortalPage() {
               </div>
             </div>
           </div>
+
+          {/* Recent Submissions Section */}
+          {isAuthenticated && (
+            <div className="mb-8">
+              <SubmissionHistory limit={5} showTitle={true} />
+            </div>
+          )}
 
           {/* Loading State */}
           {isLoadingVendors && (

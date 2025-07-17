@@ -381,6 +381,9 @@ export const vendors = {
     // Get all vendors that have trust portal content
     getVendorsWithItems: () => apiCall('/api/trust-portal/vendors'),
     
+    // Get recent submissions for current user
+    getRecentSubmissions: (limit?: number) => apiCall(`/api/trust-portal/submissions/recent${limit ? `?limit=${limit}` : ''}`),
+    
     // Generate invite link for a vendor
     generateInviteLink: (vendorId: string) => apiCall(`/api/vendors/${vendorId}/trust-portal/invite`, {
       method: 'POST',
