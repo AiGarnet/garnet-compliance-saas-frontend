@@ -919,6 +919,12 @@ function VendorTrustPortalContent() {
                                   <div className="text-sm text-gray-600">Total Questions</div>
                                 </div>
                                 <div className="text-center">
+                                  <div className="text-2xl font-bold text-green-600">
+                                    {(checklist as any).dataCompleteness === 'complete-with-bucket-data' ? '✓' : '⊘'}
+                                  </div>
+                                  <div className="text-sm text-gray-600">Complete Data</div>
+                                </div>
+                                <div className="text-center">
                                   <div className="text-2xl font-bold text-green-600">{checklist.questions?.length || 0}</div>
                                   <div className="text-sm text-gray-600">Completed</div>
                                 </div>
@@ -976,6 +982,32 @@ function VendorTrustPortalContent() {
                             {isExpanded && details && (
                               <div className="p-6 bg-gray-50">
                                 <div className="space-y-6">
+                                  {/* Complete Data Information */}
+                                  {(checklist as any).extractedText && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                      <h5 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+                                        <FileText className="h-5 w-5 mr-2" />
+                                        📄 Original Document Content
+                                      </h5>
+                                      <div className="bg-white border border-blue-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                                          {(checklist as any).extractedText.substring(0, 1500)}
+                                          {(checklist as any).extractedText.length > 1500 && '\n\n... (content truncated for display)'}
+                                        </pre>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-between text-sm">
+                                        <div className="text-blue-700">
+                                          ✅ Complete checklist data retrieved from secure storage
+                                        </div>
+                                        {(checklist as any).metadata && (
+                                          <div className="text-blue-600">
+                                            Extracted: {new Date((checklist as any).metadata.extractionDate).toLocaleDateString()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {/* Questions and Answers */}
                                   <div>
                                     <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
