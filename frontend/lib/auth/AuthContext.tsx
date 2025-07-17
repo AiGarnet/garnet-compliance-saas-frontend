@@ -15,14 +15,25 @@ interface User {
   created_at: string;
 }
 
+interface Subscription {
+  id: string;
+  status: 'active' | 'inactive' | 'past_due' | 'canceled';
+  planId: string;
+  planName: string;
+  customerId: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  subscription: Subscription | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasActiveSubscription: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   hasAccess: (requiredRole?: string | string[]) => boolean;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,6 +65,7 @@ const removeCookie = (name: string) => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -182,8 +194,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     removeCookie('authToken');
     setToken(null);
     setUser(null);
+    setSubscription(null);
     router.push('/auth/login');
   }, [router]);
+
+  // Function to fetch user subscription
+  const refreshSubscription = useCallback(async () => {
+    if (!token || !user) {
+      setSubscription(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/subscription`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data.data);
+      } else {
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setSubscription(null);
+    }
+  }, [token, user]);
 
   // Memoize the hasAccess function to prevent re-renders
   const hasAccess = useCallback((requiredRole?: string | string[]) => {
@@ -202,17 +242,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const isAuthenticated = useMemo(() => !!user && !!token, [user, token]);
+  const hasActiveSubscription = useMemo(() => 
+    !!subscription && (subscription.status === 'active' || subscription.status === 'past_due'), 
+    [subscription]
+  );
+
+  // Fetch subscription when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user && token) {
+      refreshSubscription();
+    }
+  }, [isAuthenticated, user, token, refreshSubscription]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const value: AuthContextType = useMemo(() => ({
     user,
     token,
+    subscription,
     isLoading,
     isAuthenticated,
+    hasActiveSubscription,
     login,
     logout,
     hasAccess,
-  }), [user, token, isLoading, isAuthenticated, logout, hasAccess]);
+    refreshSubscription,
+  }), [user, token, subscription, isLoading, isAuthenticated, hasActiveSubscription, logout, hasAccess, refreshSubscription]);
 
   return (
     <AuthContext.Provider value={value}>

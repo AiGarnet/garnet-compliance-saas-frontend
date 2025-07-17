@@ -203,8 +203,8 @@ export default function SignupPage() {
       // Login to get the auth token for payment processing
       await login(formData.email, formData.password);
 
-      // If a paid plan is selected, proceed to payment
-      if (selectedPlan && selectedPlan.id !== 'starter' && selectedPlan.id !== 'enterprise') {
+      // If any plan is selected (except enterprise), proceed to payment
+      if (selectedPlan && selectedPlan.id !== 'enterprise') {
         const authToken = localStorage.getItem('authToken');
         if (!authToken) {
           throw new Error('Authentication failed');
@@ -242,9 +242,12 @@ export default function SignupPage() {
 
         // Redirect to Stripe checkout
         window.location.href = checkoutData.data.url;
+      } else if (selectedPlan && selectedPlan.id === 'enterprise') {
+        // For enterprise plans, redirect to contact page
+        router.push('/contact?plan=enterprise');
       } else {
-        // For free plans, redirect directly to dashboard
-        router.push('/dashboard');
+        // If no plan is selected, redirect to pricing page to select a plan
+        router.push('/pricing?signup=true&message=Please select a subscription plan to continue');
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during signup");

@@ -12,6 +12,7 @@ import { EvidenceCount } from "@/components/vendors/EvidenceCount";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { hasPermission } from "@/lib/auth/roles";
 import { safeMap } from '@/lib/utils/arrayUtils';
 
@@ -22,7 +23,7 @@ interface SimpleVendor {
   status: string;
 }
 
-const VendorsPage = () => {
+const VendorsContent = () => {
   const { user } = useAuth();
   const [vendors, setVendors] = useState<SimpleVendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -385,6 +386,16 @@ const VendorsPage = () => {
         onConfirm={handleConfirmDelete}
       />
     </>
+  );
+};
+
+const VendorsPage = () => {
+  return (
+    <SubscriptionGuard 
+      fallbackMessage="You need an active subscription to access and manage vendors."
+    >
+      <VendorsContent />
+    </SubscriptionGuard>
   );
 };
 

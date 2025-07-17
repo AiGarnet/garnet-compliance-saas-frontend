@@ -14,6 +14,7 @@ import { DevModeToggle } from "@/components/DevModeToggle";
 import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { ROLES } from "@/lib/auth/roles";
 import { VendorStatus, Vendor } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
@@ -524,6 +525,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <DashboardContent />
+    <SubscriptionGuard 
+      fallbackMessage="You need an active subscription to access the dashboard and manage your compliance data."
+    >
+      <DashboardContent />
+    </SubscriptionGuard>
   );
 }

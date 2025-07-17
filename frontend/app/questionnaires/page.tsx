@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { 
   ClipboardList, 
   X, 
@@ -108,7 +109,7 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-const QuestionnairesPage = () => {
+const QuestionnairesContent = () => {
   const router = useRouter();
   
   // State declarations
@@ -4201,6 +4202,16 @@ const QuestionnairesPage = () => {
         {/* Follow-up Modal */}
         {showFollowUpModal && <FollowUpModal />}
     </>
+  );
+};
+
+const QuestionnairesPage = () => {
+  return (
+    <SubscriptionGuard 
+      fallbackMessage="You need an active subscription to access and manage questionnaires."
+    >
+      <QuestionnairesContent />
+    </SubscriptionGuard>
   );
 };
 
