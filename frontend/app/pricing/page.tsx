@@ -518,36 +518,6 @@ const PricingPage = () => {
             ))}
           </div>
 
-          {/* Additional Information */}
-          <div className="text-center mt-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="bg-white rounded-xl p-6 shadow-lg max-w-4xl mx-auto"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Can I change plans anytime?</h4>
-                  <p className="text-sm text-gray-600">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Is there a free trial?</h4>
-                  <p className="text-sm text-gray-600">The Starter plan is free forever. You can also try paid plans with our 14-day money-back guarantee.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">What payment methods do you accept?</h4>
-                  <p className="text-sm text-gray-600">We accept all major credit cards, PayPal, and bank transfers for enterprise customers.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Do you offer discounts for nonprofits?</h4>
-                  <p className="text-sm text-gray-600">Yes, we offer special pricing for nonprofit organizations. Contact our sales team for details.</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
           {/* Contact Section */}
           <div className="text-center mt-8">
             <motion.div

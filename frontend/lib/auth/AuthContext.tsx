@@ -242,10 +242,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const isAuthenticated = useMemo(() => !!user && !!token, [user, token]);
-  const hasActiveSubscription = useMemo(() => 
-    !!subscription && (subscription.status === 'active' || subscription.status === 'past_due'), 
-    [subscription]
-  );
+  const hasActiveSubscription = useMemo(() => {
+    // Special access for testing accounts - bypass subscription requirements
+    if (user?.email && ['testing1@garnetai.net', 'testing2@garnetai.net'].includes(user.email)) {
+      console.log(`🎯 Special access granted for testing account: ${user.email}`);
+      return true;
+    }
+    
+    // Normal subscription check
+    return !!subscription && (subscription.status === 'active' || subscription.status === 'past_due');
+  }, [subscription, user?.email]);
 
   // Fetch subscription when user logs in
   useEffect(() => {
