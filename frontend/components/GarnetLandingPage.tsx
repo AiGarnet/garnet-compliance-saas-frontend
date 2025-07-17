@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import WaitlistForm from './WaitlistForm';
+
 import IndustryRequestForm from './IndustryRequestForm';
 import { 
   Shield, 
@@ -643,7 +643,7 @@ const CountdownTimer = () => {
 const GarnetLandingPage = () => {
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
+
   const [isIndustryFormOpen, setIsIndustryFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
@@ -661,13 +661,7 @@ const GarnetLandingPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const openWaitlist = () => {
-    setIsWaitlistOpen(true);
-  };
 
-  const closeWaitlist = () => {
-    setIsWaitlistOpen(false);
-  };
   
   const openIndustryForm = () => {
     setIsIndustryFormOpen(true);
@@ -726,63 +720,17 @@ const GarnetLandingPage = () => {
   };
 
   const handleSelectPlan = async (tier: PricingTier) => {
-    if (tier.id === 'starter') {
-      // Free tier - open waitlist
-      openWaitlist();
-      return;
-    }
-
     if (tier.id === 'enterprise') {
       // Enterprise tier - redirect to contact
       window.location.href = '/contact';
       return;
     }
 
-    // For paid plans, check if user is authenticated first
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-      // Redirect to signup/login
-      window.location.href = '/auth/signup';
-      return;
-    }
-
-    try {
-      // Get the price ID based on billing cycle
-      const priceId = billingCycle === 'monthly' 
-        ? tier.stripePriceIds?.monthly 
-        : tier.stripePriceIds?.annual;
-
-      if (!priceId) {
-        throw new Error('Price ID not found');
-      }
-
-      // Create checkout session
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          priceId,
-          billingCycle,
-          successUrl: `${window.location.origin}/dashboard?success=true`,
-          cancelUrl: `${window.location.origin}/?canceled=true`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create checkout session');
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.data.url;
-    } catch (error) {
-      console.error('Failed to create checkout session:', error);
-      alert('Failed to start checkout. Please try again.');
-    }
+    // For all other plans (including starter), redirect to signup with plan info
+    const searchParams = new URLSearchParams();
+    searchParams.set('plan', tier.id);
+    searchParams.set('billing', billingCycle);
+    window.location.href = `/auth/signup?${searchParams.toString()}`;
   };
 
   const features = [
@@ -948,7 +896,7 @@ const GarnetLandingPage = () => {
                 </Link>
               </motion.div>
               
-              {/* Dynamic Join Waitlist Button */}
+              {/* Dynamic Get Started Button */}
               <AnimatePresence>
                 {showNavButton && (
                   <motion.button 
@@ -960,7 +908,7 @@ const GarnetLandingPage = () => {
                       transition: { duration: 0.2, ease: "easeOut" }
                     }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={openWaitlist}
+                    onClick={() => window.location.href = '/auth/signup'}
                     initial={{ opacity: 0, x: 30, scale: 0.95 }}
                     animate={{ 
                       opacity: 1, 
@@ -1010,7 +958,7 @@ const GarnetLandingPage = () => {
                       }
                     }}
                   >
-                    Join Waitlist
+                    Get Started
                   </motion.button>
                 )}
               </AnimatePresence>
@@ -1030,7 +978,7 @@ const GarnetLandingPage = () => {
                 </Link>
               </motion.div>
               
-              {/* Dynamic Join Waitlist Button - Mobile */}
+              {/* Dynamic Get Started Button - Mobile */}
               <AnimatePresence>
                 {showNavButton && (
                   <motion.button 
@@ -1042,7 +990,7 @@ const GarnetLandingPage = () => {
                       transition: { duration: 0.2, ease: "easeOut" }
                     }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={openWaitlist}
+                    onClick={() => window.location.href = '/auth/signup'}
                     initial={{ opacity: 0, x: 30, scale: 0.95 }}
                     animate={{ 
                       opacity: 1, 
@@ -1092,7 +1040,7 @@ const GarnetLandingPage = () => {
                       }
                     }}
                   >
-                    Join Waitlist
+                    Get Started
                   </motion.button>
                 )}
               </AnimatePresence>
@@ -1211,7 +1159,7 @@ const GarnetLandingPage = () => {
                 background: "linear-gradient(to right, #8b5cf6, #ec4899)"
               }}
               whileTap={{ scale: 0.95 }}
-                onClick={openWaitlist}
+                onClick={() => window.location.href = '/auth/signup'}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ 
@@ -1221,7 +1169,7 @@ const GarnetLandingPage = () => {
                   stiffness: 100
                 }}
             >
-                Join Waitlist
+                Get Started
                 <motion.div
                   className="ml-2"
                   animate={{ x: [0, 4, 0] }}
@@ -2355,12 +2303,12 @@ const GarnetLandingPage = () => {
                   background: "#f8fafc"
                 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={openWaitlist}
+                onClick={() => window.location.href = '/auth/signup'}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                Join Waitlist
+                Get Started
                 <motion.div
                   className="ml-2"
                   animate={{ x: [0, 4, 0] }}
@@ -2385,8 +2333,7 @@ const GarnetLandingPage = () => {
         </div>
       </section>
 
-      {/* Waitlist Form Modal */}
-      <WaitlistForm isOpen={isWaitlistOpen} onClose={closeWaitlist} />
+
 
       {/* Industry Request Form Modal */}
       <IndustryRequestForm isOpen={isIndustryFormOpen} onClose={closeIndustryForm} />

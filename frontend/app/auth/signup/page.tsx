@@ -3,10 +3,108 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info } from "lucide-react";
+import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info, CreditCard, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { auth } from "../../../lib/api";
 import { ROLES, ROLE_DISPLAY_NAMES, isValidRole } from "@/lib/auth/roles";
+interface PricingTier {
+  id: string;
+  name: string;
+  description: string;
+  price: {
+    monthly: number;
+    annual: number;
+  };
+  features: string[];
+  popular?: boolean;
+  stripePriceIds?: {
+    monthly?: string;
+    annual?: string;
+  };
+}
+
+const PRICING_TIERS: PricingTier[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    description: 'Perfect for individuals and solopreneurs getting started',
+    price: {
+      monthly: 1,
+      annual: 10,
+    },
+    features: [
+      'AI-assisted questionnaire answering',
+      'Up to 2 questionnaires per month',
+      'Single compliance framework checklist (GDPR)',
+      'Basic Trust Portal with one document upload',
+      'Community support via knowledge base',
+    ],
+    stripePriceIds: {
+      monthly: 'prod_Sfp1VRqDGvVRx7',
+      annual: 'prod_Sfp1ZWsl26QR25',
+    },
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    description: 'For early-stage startups needing regular compliance automation',
+    price: {
+      monthly: 49,
+      annual: 490,
+    },
+    features: [
+      'Everything in Starter',
+      'Unlimited AI-generated questionnaires',
+      'Support for up to 3 compliance frameworks',
+      'Enhanced Trust Portal customization',
+      'Email support with 48-hour SLA',
+      'Exportable audit logs',
+    ],
+    popular: true,
+    stripePriceIds: {
+      monthly: 'prod_Sfp2fcOpPyqK0Z',
+      annual: 'prod_Sfp2zDuOd8J0nV',
+    },
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    description: 'For growing companies with advanced compliance needs',
+    price: {
+      monthly: 149,
+      annual: 1490,
+    },
+    features: [
+      'Everything in Growth',
+      'Advanced AI capabilities with custom training',
+      'Support for all compliance frameworks',
+      'Custom integrations and API access',
+      'Priority support with 24-hour SLA',
+      'Advanced analytics and reporting',
+    ],
+    stripePriceIds: {
+      monthly: 'prod_Sfp3abc123',
+      annual: 'prod_Sfp3def456',
+    },
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    description: 'Custom solutions for large organizations',
+    price: {
+      monthly: 0,
+      annual: 0,
+    },
+    features: [
+      'Everything in Scale',
+      'Custom deployment options',
+      'Dedicated account manager',
+      'On-premise or private cloud',
+      'Custom SLA and support terms',
+      'Advanced security and compliance features',
+    ],
+  },
+];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -27,6 +125,12 @@ export default function SignupPage() {
   const [error, setError] = useState("");
 
   const redirectTo = searchParams?.get('redirect') || null;
+  const selectedPlanId = searchParams?.get('plan') || null;
+  const selectedBilling = (searchParams?.get('billing') as 'monthly' | 'annual') || 'monthly';
+  const paymentCanceled = searchParams?.get('canceled') === 'true';
+  
+  // Find the selected plan
+  const selectedPlan = selectedPlanId ? PRICING_TIERS.find(tier => tier.id === selectedPlanId) : null;
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -87,6 +191,7 @@ export default function SignupPage() {
     setError("");
 
     try {
+      // First, create the user account
       const data = await auth.signup({
         email: formData.email,
         password: formData.password,
@@ -95,8 +200,52 @@ export default function SignupPage() {
         organization: formData.organization || null,
       });
 
-      // Use AuthContext login method to properly handle tokens and cookies
+      // Login to get the auth token for payment processing
       await login(formData.email, formData.password);
+
+      // If a paid plan is selected, proceed to payment
+      if (selectedPlan && selectedPlan.id !== 'starter' && selectedPlan.id !== 'enterprise') {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+          throw new Error('Authentication failed');
+        }
+
+        // Get the price ID based on billing cycle
+        const priceId = selectedBilling === 'monthly' 
+          ? selectedPlan.stripePriceIds?.monthly 
+          : selectedPlan.stripePriceIds?.annual;
+
+        if (!priceId) {
+          throw new Error('Price ID not found for selected plan');
+        }
+
+        // Create checkout session
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            priceId,
+            billingCycle: selectedBilling,
+            successUrl: `${window.location.origin}/dashboard?success=true&plan=${selectedPlan.id}`,
+            cancelUrl: `${window.location.origin}/auth/signup?plan=${selectedPlan.id}&billing=${selectedBilling}&canceled=true`,
+          }),
+        });
+
+        const checkoutData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(checkoutData.message || 'Failed to create checkout session');
+        }
+
+        // Redirect to Stripe checkout
+        window.location.href = checkoutData.data.url;
+      } else {
+        // For free plans, redirect directly to dashboard
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred during signup");
     } finally {
@@ -138,6 +287,57 @@ export default function SignupPage() {
           </p>
         </div>
 
+        {/* Selected Plan Display */}
+        {selectedPlan && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <CreditCard className="h-5 w-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-purple-800">
+                  Selected Plan: {selectedPlan.name}
+                  {selectedPlan.popular && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                      Most Popular
+                    </span>
+                  )}
+                </h3>
+                <p className="text-sm text-purple-700 mt-1">
+                  {selectedPlan.description}
+                </p>
+                <div className="mt-2">
+                  <span className="text-lg font-bold text-purple-900">
+                    {selectedPlan.price[selectedBilling] === 0 
+                      ? 'Custom Pricing' 
+                      : `$${selectedPlan.price[selectedBilling]}${selectedBilling === 'monthly' ? '/month' : '/year'}`
+                    }
+                  </span>
+                  {selectedBilling === 'annual' && selectedPlan.price.monthly > 0 && (
+                    <span className="ml-2 text-sm text-green-600 font-medium">
+                      Save ${Math.round((selectedPlan.price.monthly * 12 - selectedPlan.price.annual))}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs text-purple-600 font-medium mb-1">Included features:</p>
+                  <ul className="text-xs text-purple-700 space-y-1">
+                    {selectedPlan.features.slice(0, 3).map((feature, index) => (
+                      <li key={index} className="flex items-center">
+                        <Check className="h-3 w-3 text-green-500 mr-1" />
+                        {feature}
+                      </li>
+                    ))}
+                    {selectedPlan.features.length > 3 && (
+                      <li className="text-purple-600">
+                        ...and {selectedPlan.features.length - 3} more features
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Redirect Message */}
         {redirectTo && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -159,6 +359,15 @@ export default function SignupPage() {
         {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="bg-white shadow-xl rounded-lg p-8 space-y-6">
+            {/* Payment Canceled Message */}
+            {paymentCanceled && (
+              <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
+                <p className="text-sm text-orange-600">
+                  Payment was canceled. You can create your account and set up payment later, or try again.
+                </p>
+              </div>
+            )}
+            
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -341,10 +550,18 @@ export default function SignupPage() {
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating account...
+                  {selectedPlan && selectedPlan.id !== 'starter' && selectedPlan.id !== 'enterprise' 
+                    ? 'Creating account & setting up payment...' 
+                    : 'Creating account...'
+                  }
                 </div>
               ) : (
-                "Create account"
+                <>
+                  {selectedPlan && selectedPlan.id !== 'starter' && selectedPlan.id !== 'enterprise' 
+                    ? `Create account & pay $${selectedPlan.price[selectedBilling]}` 
+                    : 'Create account'
+                  }
+                </>
               )}
             </button>
           </div>
