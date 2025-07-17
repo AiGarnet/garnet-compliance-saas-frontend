@@ -125,10 +125,13 @@ export default function TrustPortalClient({ token }: { token: string }) {
     const followUp: any[] = [];
     
     checklists.forEach(checklist => {
-      // Check if any questions in this checklist are follow-ups
-      const hasFollowUp = checklist.questions?.some((q: any) => q.isFollowUp);
+      // Check if this checklist is a follow-up based on trust portal submission data
+      // The follow-up info comes from the trust portal item, not individual questions
+      const isFollowUpChecklist = checklist.isFollowUp || 
+                                  checklist.followUpType !== 'initial' ||
+                                  checklist.parentSubmissionId;
       
-      if (hasFollowUp) {
+      if (isFollowUpChecklist) {
         followUp.push(checklist);
       } else {
         initial.push(checklist);

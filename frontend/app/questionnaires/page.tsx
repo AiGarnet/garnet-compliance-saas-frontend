@@ -2339,12 +2339,16 @@ const QuestionnairesContent = () => {
       let response;
       if (submissionData.checklistId) {
         // For checklist submissions, use the specialized checklist endpoint
-        response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/vendor/${vendorIdNumber}/send-to-trust-portal`, {
+        response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/vendor/${selectedVendorId}/send-to-trust-portal`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
             title: submissionData.title,
-            message: submissionData.message
+            message: submissionData.message,
+            isFollowUp: enhancedSubmissionData.isFollowUp,
+            followUpType: enhancedSubmissionData.followUpType,
+            followUpReason: enhancedSubmissionData.followUpReason,
+            parentSubmissionId: enhancedSubmissionData.parentSubmissionId
           }),
         });
       } else {
