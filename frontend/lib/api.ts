@@ -378,8 +378,29 @@ export const vendors = {
 
   // Trust Portal Management
   trustPortal: {
-    // Get all vendors that have trust portal content
-    getVendorsWithItems: () => apiCall('/api/trust-portal/vendors'),
+    // Get all vendors that have trust portal content (organization-filtered)
+    getVendorsWithItems: (organizationId?: string) => {
+      // Get organization_id from user data if not provided
+      if (!organizationId && typeof window !== 'undefined') {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            organizationId = user.organization_id;
+          } catch (error) {
+            console.error('Failed to parse user data:', error);
+          }
+        }
+      }
+      
+      const params = new URLSearchParams();
+      if (organizationId) {
+        params.append('organization_id', organizationId);
+      }
+      
+      const url = `/api/trust-portal/vendors${params.toString() ? `?${params.toString()}` : ''}`;
+      return apiCall(url);
+    },
     
     // Get recent submissions for current user
     getRecentSubmissions: (limit?: number) => apiCall(`/api/trust-portal/submissions/recent${limit ? `?limit=${limit}` : ''}`),
