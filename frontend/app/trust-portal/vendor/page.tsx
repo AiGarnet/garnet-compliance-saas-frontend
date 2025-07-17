@@ -143,9 +143,59 @@ function VendorTrustPortalContent() {
       const data = await vendorAPI.trustPortal.getData(vendorId);
       setVendorData(data);
 
-      // Removed feedback-related code since vendors can't provide feedback
+      // Use the checklists data directly from the API response
+      if (data.checklists && data.checklists.length > 0) {
+        console.log('Found parsed checklists in API response:', data.checklists);
+        
+        // Populate checklistDetails directly from the parsed checklists
+        const detailsMap: { [key: string]: ChecklistDetails } = {};
+        
+        data.checklists.forEach((checklist: any) => {
+          // Create a proper Checklist object
+          const checklistObj: Checklist = {
+            id: checklist.id,
+            vendorId: vendorId,
+            name: checklist.name,
+            fileType: 'application/json',
+            fileSize: 0,
+            originalFilename: 'trust-portal-checklist.json',
+            extractionStatus: 'completed',
+            questionCount: checklist.questions?.length || 0,
+            uploadDate: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            spacesKey: '',
+            spacesUrl: ''
+          };
 
-      // Fetch real-time trust portal items and supporting documents
+          // Map questions to proper ChecklistQuestion objects
+          const questions: ChecklistQuestion[] = (checklist.questions || []).map((q: any): ChecklistQuestion => ({
+            id: q.id,
+            checklistId: checklist.id,
+            vendorId: vendorId,
+            questionText: q.questionText,
+            questionOrder: 0,
+            status: q.status || 'completed',
+            aiAnswer: q.aiAnswer,
+            confidenceScore: q.confidenceScore,
+            requiresDocument: q.requiresDocument || false,
+            documentDescription: q.documentDescription,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            supportingDocuments: q.supportingDocuments || []
+          }));
+
+          detailsMap[checklist.id] = {
+            checklist: checklistObj,
+            questions: questions,
+            supportingDocuments: [] // Will be populated separately
+          };
+        });
+
+        setChecklistDetails(detailsMap);
+      }
+
+      // Fetch trust portal items and supporting documents
       await Promise.all([
         fetchTrustPortalItems(),
         fetchSupportingDocuments()
@@ -188,6 +238,27 @@ function VendorTrustPortalContent() {
     try {
       const documents = await ChecklistService.getVendorSupportingDocuments(vendorId);
       setSupportingDocuments(documents);
+      
+      // Link supporting documents to their respective checklists
+      if (documents.length > 0) {
+        setChecklistDetails(prev => {
+          const updated = { ...prev };
+          
+          // For each checklist, find and attach its supporting documents
+          Object.keys(updated).forEach(checklistId => {
+            const checklistDocs = documents.filter(doc => 
+              updated[checklistId].questions.some(q => q.id === doc.questionId)
+            );
+            
+            updated[checklistId] = {
+              ...updated[checklistId],
+              supportingDocuments: checklistDocs
+            };
+          });
+          
+          return updated;
+        });
+      }
     } catch (error) {
       console.error('Error fetching supporting documents:', error);
     }
@@ -206,10 +277,86 @@ function VendorTrustPortalContent() {
     setIsLoadingDetails(prev => ({ ...prev, [checklistId]: true }));
 
     try {
-      const [checklistData, questions] = await Promise.all([
-        ChecklistService.getChecklist(checklistId, vendorId),
-        ChecklistService.getChecklistQuestions(checklistId, vendorId)
-      ]);
+      // First, try to parse checklist data from the trust portal item content
+      let checklistData: { checklist: Checklist } | null = null;
+      let questions: ChecklistQuestion[] = [];
+      
+      if (trustPortalItem.content) {
+        try {
+          const parsedContent = JSON.parse(trustPortalItem.content);
+          if (parsedContent.questions && Array.isArray(parsedContent.questions)) {
+            // Use data from trust portal item (already sent to trust portal)
+            // Create a minimal Checklist object with required fields
+            const minimalChecklist: Checklist = {
+              id: parsedContent.checklistId || checklistId,
+              vendorId: vendorId,
+              name: parsedContent.checklistName || 'Compliance Questionnaire',
+              fileType: 'application/json',
+              fileSize: 0,
+              originalFilename: 'trust-portal-checklist.json',
+              extractionStatus: 'completed',
+              questionCount: parsedContent.questions.length,
+              uploadDate: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              spacesKey: '',
+              spacesUrl: ''
+            };
+
+            checklistData = { checklist: minimalChecklist };
+            
+            questions = parsedContent.questions.map((q: any): ChecklistQuestion => ({
+              id: q.id,
+              checklistId: parsedContent.checklistId || checklistId,
+              vendorId: vendorId,
+              questionText: q.question || q.questionText,
+              questionOrder: q.questionOrder || 0,
+              status: q.status || 'completed',
+              aiAnswer: q.answer || q.aiAnswer,
+              confidenceScore: q.confidenceScore || null,
+              requiresDocument: q.requiresDocument || false,
+              documentDescription: q.documentDescription || null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }));
+          }
+        } catch (parseError) {
+          console.error('Error parsing trust portal item content:', parseError);
+        }
+      }
+      
+      // If we couldn't parse from trust portal content, fall back to API calls
+      if (!checklistData || questions.length === 0) {
+        console.log('Falling back to API calls for checklist details');
+        try {
+          const [apiChecklistData, apiQuestions] = await Promise.all([
+            ChecklistService.getChecklist(checklistId, vendorId),
+            ChecklistService.getChecklistQuestions(checklistId, vendorId)
+          ]);
+          checklistData = apiChecklistData;
+          questions = apiQuestions;
+        } catch (apiError) {
+          console.error('Error fetching from API:', apiError);
+          // If both parsing and API fail, create minimal data structure
+          const minimalChecklist: Checklist = {
+            id: checklistId,
+            vendorId: vendorId,
+            name: trustPortalItem.title || 'Compliance Questionnaire',
+            fileType: 'application/json',
+            fileSize: 0,
+            originalFilename: 'error-checklist.json',
+            extractionStatus: 'error',
+            questionCount: 0,
+            uploadDate: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            spacesKey: '',
+            spacesUrl: ''
+          };
+          checklistData = { checklist: minimalChecklist };
+          questions = [];
+        }
+      }
 
       // Filter supporting documents for this checklist
       const checklistSupportingDocs = supportingDocuments.filter(doc => 
@@ -226,6 +373,31 @@ function VendorTrustPortalContent() {
       }));
     } catch (error) {
       console.error('Error loading checklist details:', error);
+      // Create minimal error state with proper Checklist structure
+      const errorChecklist: Checklist = {
+        id: checklistId,
+        vendorId: vendorId,
+        name: trustPortalItem.title || 'Compliance Questionnaire',
+        fileType: 'application/json',
+        fileSize: 0,
+        originalFilename: 'error-checklist.json',
+        extractionStatus: 'error',
+        questionCount: 0,
+        uploadDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        spacesKey: '',
+        spacesUrl: ''
+      };
+
+      setChecklistDetails(prev => ({
+        ...prev,
+        [checklistId]: {
+          checklist: errorChecklist,
+          questions: [],
+          supportingDocuments: []
+        }
+      }));
     } finally {
       setIsLoadingDetails(prev => ({ ...prev, [checklistId]: false }));
     }
@@ -478,12 +650,12 @@ function VendorTrustPortalContent() {
                     <Shield className="h-6 w-6 mr-2 text-blue-600" />
                     Compliance Checklists
                     <span className="ml-2 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full">
-                      {trustPortalItems.length}
+                      {trustPortalItems.length + (vendorData.checklists?.length || 0)}
                     </span>
                   </h2>
                 </div>
                 <div className="p-6">
-                  {trustPortalItems.length === 0 ? (
+                  {trustPortalItems.length === 0 && (!vendorData.checklists || vendorData.checklists.length === 0) ? (
                     <div className="text-center py-12">
                       <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Compliance Checklists</h3>
@@ -491,6 +663,7 @@ function VendorTrustPortalContent() {
                     </div>
                   ) : (
                     <div className="space-y-6">
+                      {/* Display trust portal items */}
                       {trustPortalItems.map((item) => {
                         let content;
                         try {
@@ -506,8 +679,8 @@ function VendorTrustPortalContent() {
                         const isDeleting = deletingItems.has(item.id);
 
                         return (
-                          <div key={item.id} className="border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200">
-                            {/* Checklist Header */}
+                          <div key={`trust-portal-${item.id}`} className="border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200">
+                            {/* Trust Portal Item content - keeping existing display logic */}
                             <div className="p-6 border-b border-gray-100">
                               <div className="flex items-start justify-between mb-4">
                                 <div className="flex-1">
@@ -705,6 +878,197 @@ function VendorTrustPortalContent() {
                                     <p className="text-gray-600">Failed to load checklist details</p>
                                   </div>
                                 )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Display additional checklists from vendorData that aren't in trust portal items */}
+                      {vendorData.checklists && vendorData.checklists.map((checklist) => {
+                        // Check if this checklist is already shown in trust portal items
+                        const alreadyShown = trustPortalItems.some(item => item.questionnaireId === checklist.id);
+                        if (alreadyShown) return null;
+                        
+                        const isExpanded = expandedChecklists.has(checklist.id);
+                        const details = checklistDetails[checklist.id];
+                        
+                        return (
+                          <div key={`vendor-checklist-${checklist.id}`} className="border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200">
+                            {/* Checklist Header */}
+                            <div className="p-6 border-b border-gray-100">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                                    {checklist.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mb-3">
+                                    Compliance questionnaire with {checklist.questions?.length || 0} questions
+                                  </p>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-4">
+                                  <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
+                                    Completed
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-blue-600">{checklist.questions?.length || 0}</div>
+                                  <div className="text-sm text-gray-600">Total Questions</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-green-600">{checklist.questions?.length || 0}</div>
+                                  <div className="text-sm text-gray-600">Completed</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-purple-600">
+                                    {details?.supportingDocuments?.length || 0}
+                                  </div>
+                                  <div className="text-sm text-gray-600">Support Docs</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm text-gray-600">Available</div>
+                                  <div className="text-sm font-medium">In Trust Portal</div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4 text-sm">
+                                  <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                    Compliance Questionnaire
+                                  </span>
+                                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                    {checklist.name}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const newExpanded = new Set(expandedChecklists);
+                                    if (expandedChecklists.has(checklist.id)) {
+                                      newExpanded.delete(checklist.id);
+                                    } else {
+                                      newExpanded.add(checklist.id);
+                                    }
+                                    setExpandedChecklists(newExpanded);
+                                  }}
+                                  className="flex items-center text-primary hover:text-primary/80 transition-colors text-sm font-medium"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <EyeOff className="h-4 w-4 mr-1" />
+                                      Hide Details
+                                      <ChevronUp className="h-4 w-4 ml-1" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View Details
+                                      <ChevronDown className="h-4 w-4 ml-1" />
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expanded Checklist Details */}
+                            {isExpanded && details && (
+                              <div className="p-6 bg-gray-50">
+                                <div className="space-y-6">
+                                  {/* Questions and Answers */}
+                                  <div>
+                                    <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                      <HelpCircle className="h-5 w-5 mr-2 text-blue-600" />
+                                      Questions & Answers
+                                    </h5>
+                                    <div className="space-y-4">
+                                      {details.questions.map((question, index) => (
+                                        <div key={question.id} className="bg-white rounded-lg p-4 border border-gray-200">
+                                          <div className="flex items-start justify-between mb-2">
+                                            <h6 className="font-medium text-gray-900">
+                                              {index + 1}. {question.questionText}
+                                            </h6>
+                                            <div className="flex items-center space-x-2 ml-4">
+                                              {question.status === 'completed' ? (
+                                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                              ) : (
+                                                <Clock className="h-5 w-5 text-yellow-500" />
+                                              )}
+                                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                                question.status === 'completed' 
+                                                  ? 'bg-green-100 text-green-800'
+                                                  : 'bg-yellow-100 text-yellow-800'
+                                              }`}>
+                                                {question.status}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {question.aiAnswer && (
+                                            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                                              <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: formatAnswerText(question.aiAnswer) }}></p>
+                                              {question.confidenceScore && (
+                                                <div className="mt-2 flex items-center text-xs text-gray-500">
+                                                  <span>Confidence: {Math.round(question.confidenceScore * 100)}%</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                          {question.requiresDocument && question.documentDescription && (
+                                            <div className="mt-2 p-2 bg-amber-50 border-l-4 border-amber-400">
+                                              <p className="text-sm text-amber-800">
+                                                <Paperclip className="h-4 w-4 inline mr-1" />
+                                                Supporting document required: {question.documentDescription}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Supporting Documents for this checklist */}
+                                  {details.supportingDocuments && details.supportingDocuments.length > 0 && (
+                                    <div>
+                                      <h5 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                        <FileUp className="h-5 w-5 mr-2 text-green-600" />
+                                        Supporting Documents
+                                      </h5>
+                                      <div className="grid gap-3">
+                                        {details.supportingDocuments.map((doc) => (
+                                          <div key={doc.id} className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between">
+                                            <div className="flex items-center">
+                                              <FileText className="h-5 w-5 text-blue-600 mr-3" />
+                                              <div>
+                                                <p className="font-medium text-gray-900">{doc.filename}</p>
+                                                <p className="text-sm text-gray-500">
+                                                  {doc.fileType?.toUpperCase()} • {doc.fileSize ? Math.round(doc.fileSize / 1024) : 0} KB
+                                                  • {new Date(doc.uploadedAt).toLocaleDateString()}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              <button
+                                                onClick={() => viewSupportingDocument(doc)}
+                                                className="flex items-center text-primary hover:text-primary/80 text-sm font-medium"
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" />
+                                                View
+                                              </button>
+                                              <button
+                                                onClick={() => downloadSupportingDocument(doc)}
+                                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                              >
+                                                <Download className="h-4 w-4 mr-1" />
+                                                Download
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
