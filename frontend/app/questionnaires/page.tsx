@@ -259,19 +259,59 @@ const QuestionnairesContent = () => {
         try {
           const questions = await ChecklistService.getChecklistQuestions(checklist.id, vendorId);
           
-          // Convert to our format
-          const convertedQuestions: ExtractedQuestion[] = questions.map(q => ({
-            id: q.id,
-            text: q.questionText,
-            status: q.aiAnswer ? 'completed' : 'pending',
-            answer: q.aiAnswer || '',
-            confidence: q.confidenceScore,
-            requiresDoc: q.requiresDocument,
-            docDescription: q.documentDescription,
-            checklistId: q.checklistId,
-            checklistName: checklist.name,
-            isDone: false, // Always start as not done, user needs to mark as done after reviewing
-            isEditing: false
+          // Convert to our format and check for saved "done" status from vendor_questionnaire_answers
+          const convertedQuestions: ExtractedQuestion[] = await Promise.all(questions.map(async (q) => {
+            // Check if this question has a saved answer in vendor_questionnaire_answers
+            let savedAnswer = null;
+            let isDone = false;
+            let answerStatus: 'pending' | 'in-progress' | 'completed' | 'needs-support' | 'done' | 'edit' = q.aiAnswer ? 'completed' : 'pending';
+            
+            try {
+              const vendorIdInteger = await getVendorIdFromUuid(selectedVendorId);
+              if (vendorIdInteger) {
+                const baseUrl = getApiBaseUrl();
+                const response = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}/answers/${q.id}`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  savedAnswer = data.answer;
+                  isDone = savedAnswer.status === 'done';
+                  // Map database status to frontend status types
+                  if (savedAnswer.status === 'done') {
+                    answerStatus = 'done';
+                  } else if (savedAnswer.status === 'completed') {
+                    answerStatus = 'completed';
+                  } else if (savedAnswer.status === 'pending') {
+                    answerStatus = 'pending';
+                  } else if (savedAnswer.status === 'in-progress') {
+                    answerStatus = 'in-progress';
+                  } else if (savedAnswer.status === 'needs-support') {
+                    answerStatus = 'needs-support';
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('No saved answer found for question:', q.id);
+            }
+            
+            return {
+              id: q.id,
+              text: q.questionText,
+              status: answerStatus,
+              answer: q.aiAnswer || '',
+              confidence: q.confidenceScore,
+              requiresDoc: q.requiresDocument,
+              docDescription: q.documentDescription,
+              checklistId: q.checklistId,
+              checklistName: checklist.name,
+              isDone: isDone,
+              isEditing: false
+            };
           }));
           
           allQuestions.push(...convertedQuestions);
@@ -448,6 +488,56 @@ const QuestionnairesContent = () => {
         console.error('Could not convert vendor UUID to ID');
         return;
       }
+      
+      console.log('💾 SAVING: Question answer to database', {
+        questionId: question.id,
+        vendorId: vendorIdInteger,
+        status: question.status,
+        isDone: question.isDone
+      });
+      
+      // Save or update the answer in vendor_questionnaire_answers table
+      const answerData = {
+        vendor_id: vendorIdInteger,
+        question_id: question.id,
+        question: question.text,
+        answer: question.answer,
+        status: question.isDone ? 'done' : question.status,
+        question_title: question.checklistName || 'Questionnaire'
+      };
+      
+      // Check if answer already exists
+      const checkResponse = await fetch(`${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}/answers/${question.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      let method = 'POST';
+      let endpoint = `${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}/answers`;
+      
+      if (checkResponse.ok) {
+        // Answer exists, update it
+        method = 'PUT';
+        endpoint = `${baseUrl}/api/questionnaires/vendor/${vendorIdInteger}/answers/${question.id}`;
+      }
+      
+      const saveResponse = await fetch(endpoint, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(answerData),
+      });
+      
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to save answer');
+      }
+      
+      console.log('✅ Successfully saved question answer to database');
       
       // First, check if a questionnaire exists for this vendor
       let questionnaire: any = null;
@@ -2343,14 +2433,41 @@ const QuestionnairesContent = () => {
       setTrustPortalProgress({ current: 1, total: 5, item: 'Validating checklist completion...' });
       const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
 
-      // Additional frontend validation to include 'done' status questions
-      const frontendCompletedQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => 
-        q.isDone || q.status === 'done'
-      );
-      const frontendIsComplete = frontendCompletedQuestions.length === checklistGroup.questions.length && 
-        checklistGroup.questions.length > 0;
-
-      if (!isReady && !frontendIsComplete) {
+      // Database validation to check actual completion status  
+      const vendorIdInteger = await getVendorIdFromUuid(selectedVendorId);
+      let dbQuestionsDone = 0;
+      let totalQuestions = checklistGroup.questions.length;
+      const incompleteQuestions = [];
+      
+      if (vendorIdInteger) {
+        for (const question of checklistGroup.questions) {
+          try {
+            const response = await fetch(`${getApiBaseUrl()}/api/questionnaires/vendor/${vendorIdInteger}/answers/${question.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.answer.status === 'done') {
+                dbQuestionsDone++;
+              } else {
+                incompleteQuestions.push(question.text.substring(0, 40) + '...');
+              }
+            } else {
+              incompleteQuestions.push(question.text.substring(0, 40) + '...');
+            }
+          } catch (error) {
+            incompleteQuestions.push(question.text.substring(0, 40) + '...');
+          }
+        }
+      }
+      
+      const dbIsComplete = dbQuestionsDone === totalQuestions && totalQuestions > 0;
+      
+      if (!isReady && !dbIsComplete) {
         const incomplete = completionStatus?.incompleteQuestions?.length || 0;
         const needingDocs = Math.max(0, (completionStatus?.questionsNeedingDocs || 0) - (completionStatus?.questionsWithDocs || 0));
         
@@ -2361,12 +2478,19 @@ const QuestionnairesContent = () => {
         if (needingDocs > 0) {
           message += `• ${needingDocs} questions need supporting documents\n`;
         }
+        if (incompleteQuestions.length > 0) {
+          message += `• ${incompleteQuestions.length} questions not marked as "Done"\n`;
+          message += `  - ${incompleteQuestions.slice(0, 3).join('\n  - ')}\n`;
+          if (incompleteQuestions.length > 3) {
+            message += `  - ... and ${incompleteQuestions.length - 3} more\n`;
+          }
+        }
         message += `\n📋 Current Status:\n`;
-        message += `• Total Questions: ${completionStatus?.totalQuestions || 0}\n`;
-        message += `• Completed: ${completionStatus?.completedQuestions || 0}\n`;
+        message += `• Total Questions: ${totalQuestions}\n`;
+        message += `• Questions Marked as Done: ${dbQuestionsDone}\n`;
         message += `• Documents Required: ${completionStatus?.questionsNeedingDocs || 0}\n`;
         message += `• Documents Uploaded: ${completionStatus?.questionsWithDocs || 0}\n\n`;
-        message += `✅ Please complete all requirements before sending to Trust Portal.`;
+        message += `✅ Please complete all requirements and mark all questions as "Done" before sending to Trust Portal.`;
         
                  // Show detailed error notification
          if (typeof window !== 'undefined') {
