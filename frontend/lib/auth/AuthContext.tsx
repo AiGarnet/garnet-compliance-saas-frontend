@@ -199,13 +199,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [router]);
 
   // Function to fetch user subscription
-  const refreshSubscription = useCallback(async () => {
+  const refreshSubscription = useCallback(async (retryCount = 0) => {
     if (!token || !user) {
       setSubscription(null);
       return;
     }
 
     try {
+      console.log('🔄 Refreshing subscription status...', { retryCount });
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/subscription`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -215,12 +217,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Subscription data received:', {
+          hasData: !!data.data,
+          status: data.data?.status,
+          planId: data.data?.planId
+        });
         setSubscription(data.data);
       } else {
+        console.warn('⚠️ Subscription fetch failed:', response.status, response.statusText);
+        
+        // If this is a post-payment scenario and we get a 404 or similar,
+        // retry a few times as the webhook might be processing
+        if (retryCount < 3 && (response.status === 404 || response.status === 500)) {
+          console.log(`🔄 Retrying subscription fetch in ${(retryCount + 1) * 2} seconds...`);
+          setTimeout(() => {
+            refreshSubscription(retryCount + 1);
+          }, (retryCount + 1) * 2000); // Exponential backoff: 2s, 4s, 6s
+          return;
+        }
+        
         setSubscription(null);
       }
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('❌ Error fetching subscription:', error);
+      
+      // Retry on network errors for post-payment scenarios
+      if (retryCount < 3 && error instanceof TypeError && error.message.includes('fetch')) {
+        console.log(`🔄 Retrying subscription fetch due to network error in ${(retryCount + 1) * 2} seconds...`);
+        setTimeout(() => {
+          refreshSubscription(retryCount + 1);
+        }, (retryCount + 1) * 2000);
+        return;
+      }
+      
       setSubscription(null);
     }
   }, [token, user]);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { AlertTriangle, CreditCard, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CreditCard, ArrowRight, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SubscriptionGuardProps {
@@ -16,7 +16,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   fallbackMessage = "A paid subscription is required to access this feature.",
   showPricingButton = true
 }) => {
-  const { user, hasActiveSubscription, isLoading, subscription } = useAuth();
+  const { user, hasActiveSubscription, isLoading, subscription, refreshSubscription } = useAuth();
   const router = useRouter();
 
   // Show loading while checking subscription
@@ -33,6 +33,16 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 
   // Show subscription required message if user doesn't have active subscription
   if (!hasActiveSubscription) {
+    const handleRefreshSubscription = async () => {
+      try {
+        console.log('🔄 Refreshing subscription status...');
+        await refreshSubscription();
+        console.log('✅ Subscription status refreshed');
+      } catch (error) {
+        console.error('❌ Failed to refresh subscription:', error);
+      }
+    };
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
@@ -61,6 +71,15 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
             )}
 
             <div className="space-y-3">
+              {/* Refresh Subscription Button - Check if payment just completed */}
+              <button
+                onClick={handleRefreshSubscription}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Subscription Status
+              </button>
+
               {showPricingButton && (
                 <button
                   onClick={() => router.push('/pricing')}
@@ -81,11 +100,12 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                 </button>
               )}
               
+              {/* Contact Support Button instead of Dashboard redirect */}
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/contact')}
                 className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
               >
-                Back to Dashboard
+                Contact Support
               </button>
             </div>
           </div>

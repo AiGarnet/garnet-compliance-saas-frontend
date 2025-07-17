@@ -2239,11 +2239,27 @@ const QuestionnairesContent = () => {
       }
 
       const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/trust-portal`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(trustPortalData),
-      });
+      
+      // Check if this is a checklist submission vs individual question
+      let response;
+      if (submissionData.checklistId) {
+        // For checklist submissions, use the specialized checklist endpoint
+        response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/vendor/${vendorIdNumber}/send-to-trust-portal`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title: submissionData.title,
+            message: submissionData.message
+          }),
+        });
+      } else {
+        // For individual questions, use the general trust portal endpoint
+        response = await fetch(`${baseUrl}/api/trust-portal/items`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(trustPortalData),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -2315,7 +2331,14 @@ const QuestionnairesContent = () => {
       setTrustPortalProgress({ current: 1, total: 5, item: 'Validating checklist completion...' });
       const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
 
-      if (!isReady) {
+      // Additional frontend validation to include 'done' status questions
+      const frontendCompletedQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => 
+        q.status === 'completed' || q.status === 'done'
+      );
+      const frontendIsComplete = frontendCompletedQuestions.length === checklistGroup.questions.length && 
+        checklistGroup.questions.length > 0;
+
+      if (!isReady && !frontendIsComplete) {
         const incomplete = completionStatus?.incompleteQuestions?.length || 0;
         const needingDocs = Math.max(0, (completionStatus?.questionsNeedingDocs || 0) - (completionStatus?.questionsWithDocs || 0));
         
@@ -2375,54 +2398,6 @@ const QuestionnairesContent = () => {
       setShowFollowUpModal(true);
       setSendingToTrustPortal(false); // Reset loading state while modal is open
       return; // Exit function, modal will handle the actual submission
-
-      setTrustPortalProgress({ current: 4, total: 5, item: 'Finalizing submission...' });
-      
-      // Step 4: Success
-      setTrustPortalProgress({ current: 5, total: 5, item: 'Successfully sent!' });
-      
-      console.log('✅ Successfully sent checklist to trust portal:', result);
-      
-      // Mark checklist as sent to trust portal
-      setChecklists(prev => prev.map(c => 
-        c.checklistId === checklistGroup.id 
-          ? { 
-              ...c, 
-              sentToTrustPortal: true, 
-              trustPortalSubmissionDate: new Date() 
-            } 
-          : c
-      ));
-      
-      // Show detailed success message
-      const successMessage = `✅ Checklist "${checklistGroup.name}" successfully sent to Trust Portal!\n\n` +
-            `📊 Submission Summary:\n` +
-            `• ${completionStatus.totalQuestions} questions completed\n` +
-            `• ${completionStatus.questionsWithDocs} supporting documents uploaded\n` +
-            `• Ready for enterprise review\n\n` +
-            `🔗 Trust Portal ID: ${result.trustPortalId}\n` +
-            `📧 Enterprise clients can now review your submission`;
-
-             // Show success notification
-       if (typeof window !== 'undefined') {
-         const notification = window.document.createElement('div');
-         notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
-         notification.innerHTML = `
-           <div class="flex items-start">
-             <svg class="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-             </svg>
-             <div>
-               <div class="font-semibold">Sent to Trust Portal!</div>
-               <div class="text-sm mt-1">
-                 ${checklistGroup.name} with ${completionStatus.totalQuestions} questions sent successfully.
-               </div>
-             </div>
-           </div>
-         `;
-         window.document.body.appendChild(notification);
-         setTimeout(() => notification.remove(), 5000);
-       }
 
     } catch (error) {
       console.error('❌ Error sending checklist to trust portal:', error);
@@ -3303,13 +3278,13 @@ const QuestionnairesContent = () => {
                               </div>
                               <div className="flex items-center space-x-2">
                                 <span className="text-xs text-gray-500">
-                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length / checklistGroup.questions.length) * 100)}% complete
+                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed' || q.status === 'done').length / checklistGroup.questions.length) * 100)}% complete
                                 </span>
                                 <div className="w-20 bg-gray-200 rounded-full h-2">
                                   <div 
                                     className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed').length / checklistGroup.questions.length) * 100}%` 
+                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.status === 'completed' || q.status === 'done').length / checklistGroup.questions.length) * 100}%` 
                                     }}
                                   ></div>
                                 </div>
