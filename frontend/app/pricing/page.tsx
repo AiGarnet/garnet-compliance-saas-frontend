@@ -190,7 +190,7 @@ const PRICING_TIERS: PricingTier[] = [
 const PricingPage = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedCards, setExpandedCards] = useState<string[]>([]);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -202,8 +202,8 @@ const PricingPage = () => {
     }
 
     if (!isAuthenticated) {
-      // Redirect to login with redirect back to pricing
-      router.push(`/auth/login?redirect=${encodeURIComponent('/pricing')}`);
+      // Redirect to signup for unauthenticated users
+      router.push(`/auth/signup?plan=${tier.id}&billing=${billingCycle}`);
       return;
     }
 
@@ -250,236 +250,325 @@ const PricingPage = () => {
     }
   };
 
+  const toggleCardExpansion = (tierId: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tierId)) {
+        newSet.delete(tierId);
+      } else {
+        newSet.add(tierId);
+      }
+      return newSet;
+    });
+  };
+
   const formatPrice = (price: number) => {
     if (price === 0) return 'Free';
     return `$${price.toLocaleString()}`;
   };
 
   const calculateAnnualSavings = (monthlyPrice: number) => {
-    const annualEquivalent = monthlyPrice * 12;
-    const actualAnnual = PRICING_TIERS.find(t => t.price.monthly === monthlyPrice)?.price.annual || 0;
-    return annualEquivalent - actualAnnual;
+    const annualPrice = monthlyPrice * 10; // Based on your pricing structure
+    const monthlyTotal = monthlyPrice * 12;
+    return monthlyTotal - annualPrice;
   };
 
-  const toggleCardExpansion = (cardId: string) => {
-    setExpandedCards(prev => 
-      prev.includes(cardId) 
-        ? prev.filter(id => id !== cardId)
-        : [...prev, cardId]
-    );
-  };
-
-  const isCardExpanded = (cardId: string) => expandedCards.includes(cardId);
-
-  const getVisibleFeatures = (features: string[], isExpanded: boolean) => {
-    return isExpanded ? features : features.slice(0, 4);
+  const getPlanIcon = (planId: string) => {
+    switch (planId) {
+      case 'starter':
+        return <Rocket className="h-6 w-6 text-blue-600" />;
+      case 'growth':
+        return <Zap className="h-6 w-6 text-purple-600" />;
+      case 'scale':
+        return <BarChart3 className="h-6 w-6 text-green-600" />;
+      case 'enterprise':
+        return <Crown className="h-6 w-6 text-amber-600" />;
+      default:
+        return <Shield className="h-6 w-6 text-gray-600" />;
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-20">
-      <div className="container mx-auto px-4">
-        {/* Header Section */}
-        <div className="text-center mb-16">
-          <motion.div
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <motion.div
+                className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                Garnet AI
+              </motion.div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => router.push('/')}
+                className="text-gray-600 hover:text-purple-600 transition-colors"
+              >
+                Back to Home
+              </button>
+              {!isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => router.push('/auth/login')}
+                    className="text-gray-600 hover:text-purple-600 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    onClick={() => router.push('/auth/signup')}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Dashboard
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Pricing Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Choose Your <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Plan</span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Simple, Transparent <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Pricing</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Scale your compliance automation with plans designed for every stage of your business journey
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Start free and scale as you grow. No hidden fees, no long-term contracts.
             </p>
-
-        {/* Billing Toggle */}
-            <div className="inline-flex items-center bg-white rounded-full p-1 shadow-lg border">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
-                  billingCycle === 'monthly'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-purple-600'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-200 relative ${
-                  billingCycle === 'annual'
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-gray-600 hover:text-purple-600'
-                }`}
-              >
-                Annual
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                  Save 17%
-                </span>
-              </button>
-            </div>
           </motion.div>
-        </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {PRICING_TIERS.map((tier, index) => (
-            <motion.div
-              key={tier.id}
-              className={`relative bg-white rounded-2xl shadow-xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-                tier.popular || tier.recommended
-                  ? 'border-purple-500 ring-4 ring-purple-500/20' 
-                  : 'border-gray-200 hover:border-purple-300'
-              }`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 * index }}
+          {/* Billing Toggle */}
+          <div className="flex justify-center mb-12">
+            <motion.div 
+              className="bg-white rounded-full p-1 shadow-lg border border-gray-200"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              {/* Popular/Recommended Badge */}
-              {(tier.popular || tier.recommended) && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className={`bg-gradient-to-r ${tier.color} text-white px-4 py-2 rounded-full text-sm font-bold flex items-center shadow-lg`}>
-                    <Star className="h-4 w-4 mr-1" />
-                    {tier.popular ? 'Most Popular' : 'Recommended'}
-                  </div>
-                </div>
-              )}
-
-              <div className="p-6">
-                {/* Plan Header */}
-                <div className="text-center mb-6">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r ${tier.color} flex items-center justify-center text-white shadow-lg`}>
-                    {tier.icon}
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{tier.name}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{tier.description}</p>
-                </div>
-
-                {/* Price */}
-                <div className="text-center mb-6">
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {formatPrice(tier.price[billingCycle])}
-                    </span>
-                    {tier.price[billingCycle] > 0 && (
-                      <span className="text-gray-500 ml-2">
-                        /{billingCycle === 'monthly' ? 'mo' : 'yr'}
-                      </span>
-                    )}
-                  </div>
-                  {billingCycle === 'annual' && tier.price.monthly > 0 && (
-                    <p className="text-sm text-green-600 mt-2 font-medium">
-                      Save ${calculateAnnualSavings(tier.price.monthly)} per year
-                    </p>
-                  )}
-                </div>
-
-                {/* Features */}
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-3">What's included:</h4>
-                  <ul className="space-y-2">
-                    <AnimatePresence>
-                      {getVisibleFeatures(tier.features, isCardExpanded(tier.id)).map((feature, featureIndex) => (
-                        <motion.li 
-                          key={featureIndex} 
-                          className="flex items-start"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ delay: featureIndex * 0.05 }}
-                        >
-                          <Check className="h-4 w-4 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700 text-sm">{feature}</span>
-                        </motion.li>
-                  ))}
-                    </AnimatePresence>
-                </ul>
-
-                  {/* Show More/Less Button */}
-                  {tier.features.length > 4 && (
-                    <button
-                      onClick={() => toggleCardExpansion(tier.id)}
-                      className="mt-3 text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center transition-colors"
-                    >
-                      {isCardExpanded(tier.id) ? (
-                        <>
-                          Show less <ChevronUp className="h-4 w-4 ml-1" />
-                        </>
-                      ) : (
-                        <>
-                          Show {tier.features.length - 4} more features <ChevronDown className="h-4 w-4 ml-1" />
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {/* Plan Limits - Compact */}
-                <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                    <div><span className="font-medium">Users:</span> {tier.limits.users}</div>
-                    <div><span className="font-medium">Storage:</span> {tier.limits.storage}</div>
-                    <div><span className="font-medium">Support:</span> {tier.limits.support.split('(')[0]}</div>
-                    <div><span className="font-medium">Retention:</span> {tier.limits.dataRetention}</div>
-                  </div>
-                </div>
-
-                {/* CTA Button */}
+              <div className="flex">
                 <button
-                  onClick={() => handleSelectPlan(tier)}
-                  disabled={isLoading}
-                  className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center group ${
-                    tier.popular || tier.recommended
-                      ? `bg-gradient-to-r ${tier.color} text-white hover:shadow-lg hover:scale-105 shadow-md`
-                      : tier.id === 'starter'
-                      ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300'
-                      : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
-                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    billingCycle === 'monthly'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
                 >
-                  {isLoading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
-                  ) : (
-                    <>
-                      {tier.id === 'starter' && 'Get Started'}
-                      {tier.id === 'growth' && 'Start Growth Plan'}
-                      {tier.id === 'scale' && 'Start Scale Plan'}
-                      {tier.id === 'enterprise' && 'Contact Sales'}
-                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 relative ${
+                    billingCycle === 'annual'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
+                >
+                  Annual
+                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                    Save 17%
+                  </span>
                 </button>
               </div>
             </motion.div>
-          ))}
-        </div>
-
-        {/* Contact Section for Questions */}
-        <motion.div 
-          className="mt-20 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-        >
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <MessageCircle className="h-6 w-6 text-white" />
-            </div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Have Questions?</h2>
-            <p className="text-gray-600 mb-6">
-              Our team is here to help you choose the right plan for your business needs.
-            </p>
-            <button
-              onClick={() => router.push('/contact')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 hover:shadow-lg hover:scale-105 flex items-center mx-auto"
-            >
-              Contact Us
-              <ArrowRight className="h-5 w-5 ml-2" />
-            </button>
           </div>
-        </motion.div>
-      </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch">
+            {PRICING_TIERS.map((tier, index) => (
+              <motion.div
+                key={tier.id}
+                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl h-full flex flex-col ${
+                  tier.popular 
+                    ? 'border-purple-500 ring-4 ring-purple-500/20 scale-105' 
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 * index }}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
+                      <Star className="h-4 w-4 mr-1" />
+                      Most Popular
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 sm:p-6 flex flex-col h-full">
+                  {/* Plan Icon & Name */}
+                  <div className="flex items-center mb-3">
+                    {getPlanIcon(tier.id)}
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 ml-3">{tier.name}</h3>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{tier.description}</p>
+
+                  {/* Price */}
+                  <div className="mb-4">
+                    <div className="flex items-baseline">
+                      <span className="text-2xl sm:text-3xl font-bold text-gray-900">
+                        {formatPrice(tier.price[billingCycle])}
+                      </span>
+                      {tier.price[billingCycle] > 0 && (
+                        <span className="text-gray-500 ml-2 text-sm">
+                          /{billingCycle === 'monthly' ? 'month' : 'year'}
+                        </span>
+                      )}
+                    </div>
+                    {billingCycle === 'annual' && tier.price.monthly > 0 && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Save ${calculateAnnualSavings(tier.price.monthly)} per year
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Features */}
+                  <div className="flex-grow mb-4">
+                    <ul className="space-y-2 text-sm">
+                      {tier.features.slice(0, 3).map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                      
+                      {/* Expandable Features */}
+                      <AnimatePresence>
+                        {expandedCards.has(tier.id) && tier.features.length > 3 && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            {tier.features.slice(3).map((feature, featureIndex) => (
+                              <li key={featureIndex + 3} className="flex items-start mb-2">
+                                <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <span className="text-gray-700">{feature}</span>
+                              </li>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Show More/Less Button */}
+                      {tier.features.length > 3 && (
+                        <li className="mt-2">
+                          <button
+                            onClick={() => toggleCardExpansion(tier.id)}
+                            className="text-purple-600 hover:text-purple-700 text-xs font-medium flex items-center transition-colors"
+                          >
+                            {expandedCards.has(tier.id) ? (
+                              <>
+                                Show less <ChevronDown className="h-3 w-3 ml-1 rotate-180 transition-transform" />
+                              </>
+                            ) : (
+                              <>
+                                Show more ({tier.features.length - 3} more) <ChevronDown className="h-3 w-3 ml-1 transition-transform" />
+                              </>
+                            )}
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => handleSelectPlan(tier)}
+                    disabled={isLoading}
+                    className={`w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center mt-auto ${
+                      tier.popular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl'
+                        : tier.id === 'starter'
+                        ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300'
+                        : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
+                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {tier.id === 'starter' && 'Get Started Free'}
+                    {tier.id === 'growth' && 'Start Growth Plan'}
+                    {tier.id === 'scale' && 'Start Scale Plan'}
+                    {tier.id === 'enterprise' && 'Contact Sales'}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Additional Information */}
+          <div className="text-center mt-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+              className="bg-white rounded-xl p-6 shadow-lg max-w-4xl mx-auto"
+            >
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Can I change plans anytime?</h4>
+                  <p className="text-sm text-gray-600">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Is there a free trial?</h4>
+                  <p className="text-sm text-gray-600">The Starter plan is free forever. You can also try paid plans with our 14-day money-back guarantee.</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">What payment methods do you accept?</h4>
+                  <p className="text-sm text-gray-600">We accept all major credit cards, PayPal, and bank transfers for enterprise customers.</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Do you offer discounts for nonprofits?</h4>
+                  <p className="text-sm text-gray-600">Yes, we offer special pricing for nonprofit organizations. Contact our sales team for details.</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Contact Section */}
+          <div className="text-center mt-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1 }}
+            >
+              <p className="text-gray-600 mb-4">
+                Need a custom plan or have questions?
+              </p>
+              <button 
+                onClick={() => router.push('/contact')}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200 inline-flex items-center"
+              >
+                Contact Sales
+                <MessageCircle className="h-4 w-4 ml-2" />
+              </button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
