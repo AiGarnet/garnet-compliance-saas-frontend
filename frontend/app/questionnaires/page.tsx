@@ -280,7 +280,7 @@ const QuestionnairesContent = () => {
                 if (response.ok) {
                   const data = await response.json();
                   savedAnswer = data.answer;
-                  isDone = savedAnswer.status === 'done';
+                  isDone = savedAnswer.status === 'done' || savedAnswer.status === 'completed';
                   // Map database status to frontend status types
                   if (savedAnswer.status === 'done') {
                     answerStatus = 'done';
@@ -998,7 +998,8 @@ const QuestionnairesContent = () => {
         requiresDoc: q.requiresDocument,
         docDescription: q.documentDescription,
         checklistId: q.checklistId,
-        checklistName: checklist.name
+        checklistName: checklist.name,
+        isDone: q.status === 'completed' || (q.status as string) === 'done' // Ensure isDone is set properly
       }));
 
       // Set questions for AI section
@@ -1085,7 +1086,8 @@ const QuestionnairesContent = () => {
             requiresDoc: q.requiresDocument,
             docDescription: q.documentDescription,
             checklistId: q.checklistId,
-            checklistName: 'Current Checklist' // We'll improve this with proper mapping later
+            checklistName: 'Current Checklist', // We'll improve this with proper mapping later
+            isDone: q.status === 'completed' || (q.status as string) === 'done' // Ensure isDone is set properly
           }));
 
           setExtractedQuestions(questionsWithAnswers);
@@ -2424,10 +2426,14 @@ const QuestionnairesContent = () => {
       setTrustPortalProgress({ current: 1, total: 5, item: 'Validating checklist completion...' });
       const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
 
-      // Simplified validation - check if questions have AI answers
-      const questionsWithAnswers = checklistGroup.questions.filter((q: ExtractedQuestion) => q.answer && q.answer.trim() !== '');
+      // Simplified validation - check if questions have AI answers or are completed
+      const questionsWithAnswers = checklistGroup.questions.filter((q: ExtractedQuestion) => 
+        (q.answer && q.answer.trim() !== '') || q.status === 'completed'
+      );
       const totalQuestions = checklistGroup.questions.length;
-      const incompleteQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => !q.answer || q.answer.trim() === '');
+      const incompleteQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => 
+        (!q.answer || q.answer.trim() === '') && q.status !== 'completed'
+      );
       
       const dbIsComplete = questionsWithAnswers.length === totalQuestions && totalQuestions > 0;
       
@@ -3368,30 +3374,30 @@ const QuestionnairesContent = () => {
                                   <p className="text-sm text-gray-600">
                                     {checklistGroup.questions.length} questions • 
                                     <span className="ml-1 text-green-600 font-medium">
-                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length} completed
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done' || q.status === 'completed').length} completed
                                     </span> • 
                                     <span className="ml-1 text-yellow-600 font-medium">
-                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => !q.isDone && q.status !== 'done').length} pending
+                                      {checklistGroup.questions.filter((q: ExtractedQuestion) => !q.isDone && q.status !== 'done' && q.status !== 'completed').length} pending
                                     </span>
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <span className="text-xs text-gray-500">
-                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length / checklistGroup.questions.length) * 100)}% complete
+                                  {Math.round((checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done' || q.status === 'completed').length / checklistGroup.questions.length) * 100)}% complete
                                 </span>
                                 <div className="w-20 bg-gray-200 rounded-full h-2">
                                   <div 
                                     className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length / checklistGroup.questions.length) * 100}%` 
+                                      width: `${(checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done' || q.status === 'completed').length / checklistGroup.questions.length) * 100}%` 
                                     }}
                                   ></div>
                                 </div>
                                 
                                 {/* Send Checklist to Trust Portal Button - Enhanced */}
                                 {checklistGroup.id !== 'manual' && 
-                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.answer && q.answer.trim() !== '').length === checklistGroup.questions.length &&
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => (q.answer && q.answer.trim() !== '') || q.status === 'completed').length === checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
@@ -3421,10 +3427,10 @@ const QuestionnairesContent = () => {
                                 
                                 {/* Progress indicator for incomplete checklists */}
                                 {checklistGroup.id !== 'manual' && 
-                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length < checklistGroup.questions.length &&
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done' || q.status === 'completed').length < checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
                                   <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                                    {checklistGroup.questions.length - checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length} questions pending
+                                                                          {checklistGroup.questions.length - checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done' || q.status === 'completed').length} questions pending
                                   </div>
                                 )}
                               </div>
@@ -3480,7 +3486,7 @@ const QuestionnairesContent = () => {
                                   Needs Support
                                 </span>
                               )}
-                              {(question.isDone || question.status === 'done') && (
+                              {(question.isDone || question.status === 'done' || question.status === 'completed') && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Done
