@@ -401,7 +401,27 @@ class ActivityApiService {
   }
 
   async getVendors(): Promise<ApiResponse<any[]>> {
-    return this.request('/api/vendors');
+    // Get organization_id from user data for filtering
+    let organizationId: string | undefined;
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          organizationId = user.organization_id;
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+    }
+    
+    const params = new URLSearchParams();
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+    
+    const url = `/api/vendors${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.request(url);
   }
 
   async getVendor(id: string): Promise<ApiResponse<any>> {

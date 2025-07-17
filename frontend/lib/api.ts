@@ -227,34 +227,118 @@ export const auth = {
 
 // Vendor API functions
 export const vendors = {
-  // Get all vendors
-  getAll: () => apiCall('/api/vendors'),
+  // Get all vendors (organization-filtered)
+  getAll: (organizationId?: string) => {
+    // Get organization_id from user data if not provided
+    if (!organizationId && typeof window !== 'undefined') {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          organizationId = user.organization_id;
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+    }
+    
+    const params = new URLSearchParams();
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+    
+    const url = `/api/vendors${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiCall(url);
+  },
   
-  // Get vendor by ID
-  getById: (id: string) => apiCall(`/api/vendors/${id}`),
+  // Get vendor by ID (organization-filtered)
+  getById: (id: string, organizationId?: string) => {
+    // Get organization_id from user data if not provided
+    if (!organizationId && typeof window !== 'undefined') {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          organizationId = user.organization_id;
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+    }
+    
+    const params = new URLSearchParams();
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+    
+    const url = `/api/vendors/${id}${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiCall(url);
+  },
   
-  // Create new vendor
+  // Create new vendor (requires authentication)
   create: (data: any) => apiCall('/api/vendors', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   
-  // Update vendor
+  // Update vendor (requires authentication)
   update: (id: string, data: any) => apiCall(`/api/vendors/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
   
-  // Delete vendor
+  // Delete vendor (requires authentication)
   delete: (id: string) => apiCall(`/api/vendors/${id}`, {
     method: 'DELETE',
   }),
   
-  // Get vendors by status
-  getByStatus: (status: string) => apiCall(`/api/vendors/status/${status}`),
+  // Get vendors by status (organization-filtered)
+  getByStatus: (status: string, organizationId?: string) => {
+    // Get organization_id from user data if not provided
+    if (!organizationId && typeof window !== 'undefined') {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          organizationId = user.organization_id;
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+    }
+    
+    const params = new URLSearchParams();
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+    
+    const url = `/api/vendors/status/${status}${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiCall(url);
+  },
   
-  // Get vendor statistics
-  getStats: () => apiCall('/api/vendors/stats'),
+  // Get vendor statistics (organization-filtered)
+  getStats: (organizationId?: string) => {
+    // Get organization_id from user data if not provided
+    if (!organizationId && typeof window !== 'undefined') {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          organizationId = user.organization_id;
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+        }
+      }
+    }
+    
+    const params = new URLSearchParams();
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+    
+    const url = `/api/vendors/stats${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiCall(url);
+  },
 
   // Vendor Work Management
   works: {
