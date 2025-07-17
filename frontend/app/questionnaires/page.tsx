@@ -2254,11 +2254,19 @@ const QuestionnairesContent = () => {
         })
       };
 
-      // Show follow-up modal
-      setPendingSubmissionData(submissionData);
-      setShowFollowUpModal(true);
-      setSendingToTrustPortal(false); // Reset loading state while modal is open
-      return; // Exit function, modal will handle the actual submission
+      // For now, automatically use initial submission to simplify the flow
+      // TODO: Add follow-up modal support later if needed
+      const enhancedSubmissionData = {
+        ...submissionData,
+        isFollowUp: false,
+        followUpType: 'initial', 
+        followUpReason: '',
+        parentSubmissionId: null
+      };
+      
+      // Directly process the submission with initial submission data
+      await processQuestionSubmission(enhancedSubmissionData);
+      return;
 
       // Show success notification
       if (typeof window !== 'undefined') {
@@ -2541,11 +2549,19 @@ const QuestionnairesContent = () => {
         message: `Completed compliance questionnaire with ${checklistGroup.questions.length} answered questions. All requirements verified and ready for enterprise review.`
       };
 
-      // Show follow-up modal
-      setPendingSubmissionData(submitData);
-      setShowFollowUpModal(true);
-      setSendingToTrustPortal(false); // Reset loading state while modal is open
-      return; // Exit function, modal will handle the actual submission
+      // For now, automatically use initial submission to simplify the flow
+      // TODO: Add follow-up modal support later if needed
+      const enhancedSubmitData = {
+        ...submitData,
+        isFollowUp: false,
+        followUpType: 'initial',
+        followUpReason: '',
+        parentSubmissionId: null
+      };
+      
+      // Directly process the submission with initial submission data
+      await processTrustPortalSubmission(enhancedSubmitData);
+      return;
 
     } catch (error) {
       console.error('❌ Error sending checklist to trust portal:', error);
