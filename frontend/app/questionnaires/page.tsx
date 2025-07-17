@@ -302,14 +302,14 @@ const QuestionnairesContent = () => {
             return {
               id: q.id,
               text: q.questionText,
-              status: answerStatus,
+              status: q.aiAnswer ? 'done' : 'pending', // Auto-mark as done if AI answer exists
               answer: q.aiAnswer || '',
               confidence: q.confidenceScore,
               requiresDoc: q.requiresDocument,
               docDescription: q.documentDescription,
               checklistId: q.checklistId,
               checklistName: checklist.name,
-              isDone: isDone,
+              isDone: !!q.aiAnswer, // Auto-done if AI answer exists
               isEditing: false
             };
           }));
@@ -465,8 +465,16 @@ const QuestionnairesContent = () => {
         
         if (Array.isArray(vendors)) {
           const vendor = vendors.find((v: any) => v.uuid === vendorUuid);
-          if (vendor && vendor.id) {
-            return vendor.id;
+          if (vendor) {
+            // Try different possible field names for the numeric vendor ID
+            const vendorId = vendor.vendorId || vendor.vendor_id || vendor.id;
+            console.log('🔍 UUID->ID conversion:', {
+              uuid: vendorUuid,
+              found: vendor,
+              vendorId: vendorId,
+              fields: Object.keys(vendor)
+            });
+            return vendorId ? parseInt(vendorId.toString()) : null;
           }
         }
       }
@@ -606,24 +614,7 @@ const QuestionnairesContent = () => {
     }
   };
 
-  // New function to mark question as done
-  const markQuestionAsDone = async (questionId: string) => {
-    const question = extractedQuestions.find(q => q.id === questionId);
-    if (!question || !question.answer) return;
-    
-    setExtractedQuestions(prev => prev.map(q => 
-      q.id === questionId 
-        ? { ...q, isDone: true, status: 'done', isEditing: false }
-        : q
-    ));
-    
-    // Save to database
-    await saveQuestionnaireAnswer({
-      ...question,
-      isDone: true,
-      status: 'done'
-    });
-  };
+
 
   // New function to toggle edit mode
   const toggleEditMode = (questionId: string) => {
@@ -2433,39 +2424,12 @@ const QuestionnairesContent = () => {
       setTrustPortalProgress({ current: 1, total: 5, item: 'Validating checklist completion...' });
       const { isReady, completionStatus } = await checkChecklistReadyForTrustPortal(checklistGroup.id);
 
-      // Database validation to check actual completion status  
-      const vendorIdInteger = await getVendorIdFromUuid(selectedVendorId);
-      let dbQuestionsDone = 0;
-      let totalQuestions = checklistGroup.questions.length;
-      const incompleteQuestions = [];
+      // Simplified validation - check if questions have AI answers
+      const questionsWithAnswers = checklistGroup.questions.filter((q: ExtractedQuestion) => q.answer && q.answer.trim() !== '');
+      const totalQuestions = checklistGroup.questions.length;
+      const incompleteQuestions = checklistGroup.questions.filter((q: ExtractedQuestion) => !q.answer || q.answer.trim() === '');
       
-      if (vendorIdInteger) {
-        for (const question of checklistGroup.questions) {
-          try {
-            const response = await fetch(`${getApiBaseUrl()}/api/questionnaires/vendor/${vendorIdInteger}/answers/${question.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              if (data.answer.status === 'done') {
-                dbQuestionsDone++;
-              } else {
-                incompleteQuestions.push(question.text.substring(0, 40) + '...');
-              }
-            } else {
-              incompleteQuestions.push(question.text.substring(0, 40) + '...');
-            }
-          } catch (error) {
-            incompleteQuestions.push(question.text.substring(0, 40) + '...');
-          }
-        }
-      }
-      
-      const dbIsComplete = dbQuestionsDone === totalQuestions && totalQuestions > 0;
+      const dbIsComplete = questionsWithAnswers.length === totalQuestions && totalQuestions > 0;
       
       if (!isReady && !dbIsComplete) {
         const incomplete = completionStatus?.incompleteQuestions?.length || 0;
@@ -2479,18 +2443,18 @@ const QuestionnairesContent = () => {
           message += `• ${needingDocs} questions need supporting documents\n`;
         }
         if (incompleteQuestions.length > 0) {
-          message += `• ${incompleteQuestions.length} questions not marked as "Done"\n`;
-          message += `  - ${incompleteQuestions.slice(0, 3).join('\n  - ')}\n`;
+          message += `• ${incompleteQuestions.length} questions without answers\n`;
+          message += `  - ${incompleteQuestions.slice(0, 3).map((q: ExtractedQuestion) => q.text.substring(0, 40) + '...').join('\n  - ')}\n`;
           if (incompleteQuestions.length > 3) {
             message += `  - ... and ${incompleteQuestions.length - 3} more\n`;
           }
         }
         message += `\n📋 Current Status:\n`;
         message += `• Total Questions: ${totalQuestions}\n`;
-        message += `• Questions Marked as Done: ${dbQuestionsDone}\n`;
+        message += `• Questions with Answers: ${questionsWithAnswers.length}\n`;
         message += `• Documents Required: ${completionStatus?.questionsNeedingDocs || 0}\n`;
         message += `• Documents Uploaded: ${completionStatus?.questionsWithDocs || 0}\n\n`;
-        message += `✅ Please complete all requirements and mark all questions as "Done" before sending to Trust Portal.`;
+        message += `✅ Please ensure all questions have answers and upload required documents before sending to Trust Portal.`;
         
                  // Show detailed error notification
          if (typeof window !== 'undefined') {
@@ -3427,7 +3391,7 @@ const QuestionnairesContent = () => {
                                 
                                 {/* Send Checklist to Trust Portal Button - Enhanced */}
                                 {checklistGroup.id !== 'manual' && 
-                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.isDone || q.status === 'done').length === checklistGroup.questions.length &&
+                                 checklistGroup.questions.filter((q: ExtractedQuestion) => q.answer && q.answer.trim() !== '').length === checklistGroup.questions.length &&
                                  checklistGroup.questions.length > 0 && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
@@ -3545,10 +3509,17 @@ const QuestionnairesContent = () => {
                                       Cancel
                                     </button>
                                     <button
-                                      onClick={() => markQuestionAsDone(question.id)}
+                                      onClick={() => {
+                                        // Auto-save and set as done
+                                        setExtractedQuestions(prev => prev.map(q => 
+                                          q.id === question.id 
+                                            ? { ...q, isEditing: false, status: 'done', isDone: true }
+                                            : q
+                                        ));
+                                      }}
                                       className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
                                     >
-                                      Save & Mark Done
+                                      Save Answer
                                     </button>
                                   </div>
                                 </div>
@@ -3611,33 +3582,21 @@ const QuestionnairesContent = () => {
 
                                                         {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
-                              {!question.isDone && question.status === 'completed' && (
-                                <>
-                                  <button
-                                    onClick={() => markQuestionAsDone(question.id)}
-                                    disabled={!question.answer}
-                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center text-sm"
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Mark as Done
-                                  </button>
-                                  <button
-                                    onClick={() => toggleEditMode(question.id)}
-                                    disabled={!question.answer}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
-                                  >
-                                    <MessageSquare className="h-3 w-3 mr-1" />
-                                    Edit Answer
-                                  </button>
-                                </>
-                              )}
                               <button
                                 onClick={() => generateSingleAIAnswer(question)}
                                 disabled={isGeneratingAnswers}
-                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
                               >
                                 <RefreshCw className="h-3 w-3 mr-1" />
                                 Regenerate
+                              </button>
+                              <button
+                                onClick={() => toggleEditMode(question.id)}
+                                disabled={!question.answer}
+                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center text-sm"
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Edit Answer
                               </button>
 
                               {/* Send to Trust Portal - for Manual Questions - Enhanced */}
