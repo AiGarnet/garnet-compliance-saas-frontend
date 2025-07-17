@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
+import { getApiEndpoint } from "@/lib/api";
 import { 
   ClipboardList, 
   X, 
@@ -366,12 +367,9 @@ const QuestionnairesContent = () => {
 
   // Helper function to get the correct API base URL
   const getApiBaseUrl = () => {
-    // Check if we're in static export mode (Netlify deployment)
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
-      return process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
-    }
-    // For local/development, use relative URLs
-    return '';
+    // Use the getApiEndpoint function but just return the base URL part
+    const fullEndpoint = getApiEndpoint('/api/checklists');
+    return fullEndpoint.replace('/api/checklists', '');
   };
 
   // New function to sync checklist questions to questionnaire system
