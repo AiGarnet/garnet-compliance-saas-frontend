@@ -455,30 +455,98 @@ const QuestionnairesContent = () => {
     }
     
     try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/api/vendors`);
-      if (response.ok) {
-        const data = await response.json();
-        const vendors = data.vendors || data.data || data;
+      console.log('🔍 UUID->ID: Converting vendor UUID to ID:', vendorUuid);
+      
+      // Get auth token and user data
+      const authToken = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('userData');
+      
+      if (!authToken || !userData) {
+        console.error('❌ UUID->ID: No authentication data found');
+        return null;
+      }
+      
+      // Parse user data to get organization ID
+      let organizationId: string;
+      try {
+        const user = JSON.parse(userData);
+        organizationId = user.organization_id;
         
-        if (Array.isArray(vendors)) {
-          const vendor = vendors.find((v: any) => v.uuid === vendorUuid);
-          if (vendor) {
-            // Try different possible field names for the numeric vendor ID
-            const vendorId = vendor.vendorId || vendor.vendor_id || vendor.id;
-            console.log('🔍 UUID->ID conversion:', {
-              uuid: vendorUuid,
-              found: vendor,
-              vendorId: vendorId,
-              fields: Object.keys(vendor)
-            });
-            return vendorId ? parseInt(vendorId.toString()) : null;
-          }
+        if (!organizationId) {
+          console.error('❌ UUID->ID: No organization ID found in user data');
+          return null;
+        }
+        
+        console.log('✅ UUID->ID: Using organization ID:', organizationId);
+      } catch (parseError) {
+        console.error('❌ UUID->ID: Failed to parse user data:', parseError);
+        return null;
+      }
+      
+      // Prepare headers with authentication
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      // Build URL with organization filtering
+      const baseUrl = getApiBaseUrl();
+      const params = new URLSearchParams();
+      params.append('organization_id', organizationId);
+      const url = `${baseUrl}/api/vendors?${params.toString()}`;
+      
+      console.log('🔍 UUID->ID: Making authenticated API call to:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers
+      });
+      
+      if (!response.ok) {
+        console.error('❌ UUID->ID: API call failed:', response.status, response.statusText);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('📊 UUID->ID: API response:', data);
+      
+      // Handle different response formats
+      let vendors: any[] = [];
+      if (data.success && data.data) {
+        vendors = data.data;
+      } else if (Array.isArray(data)) {
+        vendors = data;
+      } else if (data.vendors) {
+        vendors = data.vendors;
+      } else {
+        console.error('❌ UUID->ID: Unexpected response format:', data);
+        return null;
+      }
+      
+      if (Array.isArray(vendors)) {
+        const vendor = vendors.find((v: any) => v.uuid === vendorUuid);
+        if (vendor) {
+          // Try different possible field names for the numeric vendor ID
+          const vendorId = vendor.vendorId || vendor.vendor_id || vendor.id;
+          console.log('✅ UUID->ID conversion successful:', {
+            uuid: vendorUuid,
+            found: vendor.companyName || vendor.company_name || vendor.name,
+            vendorId: vendorId,
+            allFields: Object.keys(vendor)
+          });
+          return vendorId ? parseInt(vendorId.toString()) : null;
+        } else {
+          console.warn('⚠️ UUID->ID: Vendor not found with UUID:', vendorUuid);
+          console.log('Available vendors:', vendors.map(v => ({ uuid: v.uuid, name: v.companyName || v.company_name || v.name })));
         }
       }
+      
       return null;
     } catch (error) {
-      console.error('Error converting vendor UUID to ID:', error);
+      console.error('❌ UUID->ID: Error converting vendor UUID to ID:', error);
       return null;
     }
   };
@@ -692,13 +760,38 @@ const QuestionnairesContent = () => {
       }
 
       console.log('🔍 VENDORS: Making API call to load vendors...');
+      
+      // Parse user data to get organization ID
+      let organizationId: string;
+      try {
+        const user = JSON.parse(userData!);
+        const userOrgId = user.organization_id;
+        
+        if (!userOrgId) {
+          console.error('❌ VENDORS: No organization ID found in user data');
+          setUploadError('User account is not associated with an organization. Please contact support.');
+          setVendors([]);
+          return;
+        }
+        
+        organizationId = userOrgId;
+        
+        console.log('✅ VENDORS: Using organization ID:', organizationId);
+      } catch (parseError) {
+        console.error('❌ VENDORS: Failed to parse user data:', parseError);
+        setUploadError('Invalid user data. Please log in again.');
+        setVendors([]);
+        return;
+      }
+      
       const response = await vendorAPI.getAll();
       
       console.log('📊 VENDORS: API Response:', {
         success: response?.success,
         dataLength: response?.data?.length,
         hasData: !!response?.data,
-        responseType: typeof response
+        responseType: typeof response,
+        organizationId: organizationId
       });
 
       if (response?.success && response?.data) {
@@ -2339,7 +2432,20 @@ const QuestionnairesContent = () => {
       console.log('🔍 TRUST PORTAL DEBUG: Starting submission process');
       console.log('🔍 TRUST PORTAL DEBUG: Selected vendor ID:', selectedVendorId);
       console.log('🔍 TRUST PORTAL DEBUG: Auth token exists:', !!token);
+      console.log('🔍 TRUST PORTAL DEBUG: Token preview:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
       console.log('🔍 TRUST PORTAL DEBUG: Submission data:', submissionData);
+      
+      // Validate authentication before proceeding
+      if (!token) {
+        console.error('❌ TRUST PORTAL DEBUG: No authentication token available');
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Validate vendor selection
+      if (!selectedVendorId || selectedVendorId.trim() === '') {
+        console.error('❌ TRUST PORTAL DEBUG: No vendor selected');
+        throw new Error('Please select a vendor before sending to trust portal.');
+      }
       
       // Use the follow-up data from submissionData (which includes our defaults)
       const enhancedSubmissionData = {
