@@ -1270,6 +1270,95 @@ const GarnetLandingPage = () => {
         </div>
       </section>
 
+      {/* Video Demo Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Watch Garnet
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"> Demo</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              See our AI-powered platform in action as it transforms vendor compliance from a weeks-long process into hours.
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="relative max-w-5xl mx-auto"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            {/* Video Container with Modern Styling */}
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900">
+              {/* Gradient border effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl" 
+                   style={{ padding: '2px' }}>
+                <div className="bg-gray-900 rounded-2xl h-full w-full">
+                                     <video 
+                     className="w-full h-auto rounded-2xl"
+                     controls
+                     preload="metadata"
+                   >
+                    <source src="/garnet-demo-video.mp4" type="video/mp4" />
+                    <p className="text-white p-8 text-center">
+                      Your browser doesn't support HTML5 video. 
+                      <a href="/garnet-demo-video.mp4" className="text-purple-400 underline ml-1">
+                        Download the video instead.
+                      </a>
+                    </p>
+                  </video>
+                </div>
+              </div>
+
+                             {/* Decorative elements for visual appeal */}
+               <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-70 animate-pulse"></div>
+               <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full opacity-60 animate-bounce"></div>
+            </div>
+
+            {/* Video Stats/Features below */}
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Save 90% Time</h3>
+                <p className="text-gray-600">Transform weeks of manual work into automated hours</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-pink-50 to-pink-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-pink-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">95% Accuracy</h3>
+                <p className="text-gray-600">AI-powered responses that pass enterprise audits</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">50% Faster Deals</h3>
+                <p className="text-gray-600">Accelerate sales cycles with instant compliance responses</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* <CountdownTimer /> */}
 
       {/* Features Section */}
