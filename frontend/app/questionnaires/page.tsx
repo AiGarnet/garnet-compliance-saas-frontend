@@ -2141,31 +2141,18 @@ const QuestionnairesContent = () => {
       const result = await response.json();
       console.log('✅ Successfully sent document to trust portal:', result);
 
-      // Show enhanced success notification for documents
+      // Show success notification for documents
       if (typeof window !== 'undefined') {
         const notification = window.document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
         notification.innerHTML = `
-          <div class="flex items-start">
-            <svg class="h-6 w-6 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <div>
-              <div class="font-semibold">✅ Document Sent to Trust Portal!</div>
-              <div class="text-sm mt-1 opacity-90">
-                "${document.originalName}" uploaded successfully.
-              </div>
-              <button 
-                onclick="window.open('/trust-portal/vendor/${vendorIdNumber}', '_blank')" 
-                class="mt-2 text-xs bg-green-700 hover:bg-green-800 px-3 py-1 rounded-md transition-colors"
-              >
-                🔗 View in Trust Portal
-              </button>
-            </div>
-          </div>
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Document sent to Trust Portal successfully!
         `;
         window.document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 8000);
+        setTimeout(() => notification.remove(), 4000);
       }
 
     } catch (error) {
@@ -2245,31 +2232,18 @@ const QuestionnairesContent = () => {
       
       console.log('✅ Successfully sent question to trust portal:', result);
       
-      // Show enhanced success notification for questions
+      // Show success notification for questions
       if (typeof window !== 'undefined') {
         const notification = window.document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
         notification.innerHTML = `
-          <div class="flex items-start">
-            <svg class="h-6 w-6 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <div>
-              <div class="font-semibold">✅ Question Sent to Trust Portal!</div>
-              <div class="text-sm mt-1 opacity-90">
-                ${followUpData.isFollowUp ? 'Follow-up' : 'Individual'} question submission successful.
-              </div>
-              <button 
-                onclick="window.open('/trust-portal/vendor/${vendorIdNumber}', '_blank')" 
-                class="mt-2 text-xs bg-green-700 hover:bg-green-800 px-3 py-1 rounded-md transition-colors"
-              >
-                🔗 View in Trust Portal
-              </button>
-            </div>
-          </div>
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Question sent to Trust Portal successfully!
         `;
         window.document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 8000);
+        setTimeout(() => notification.remove(), 4000);
       }
       
       // Reset follow-up data
@@ -2537,32 +2511,18 @@ const QuestionnairesContent = () => {
       
       console.log('✅ Successfully sent to trust portal:', result);
       
-      // Show enhanced success notification with navigation
+      // Show success notification
       if (typeof window !== 'undefined') {
         const notification = window.document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
         notification.innerHTML = `
-          <div class="flex items-start">
-            <svg class="h-6 w-6 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <div>
-              <div class="font-semibold">✅ Checklist Sent to Trust Portal!</div>
-              <div class="text-sm mt-1 opacity-90">
-                ${followUpData.isFollowUp ? 'Follow-up' : 'Initial'} submission successful. 
-                Trust Portal ID: ${result.trustPortalId}
-              </div>
-              <button 
-                onclick="window.open('/trust-portal/vendor/${vendorIdNumber}', '_blank')" 
-                class="mt-2 text-xs bg-green-700 hover:bg-green-800 px-3 py-1 rounded-md transition-colors"
-              >
-                🔗 View in Trust Portal
-              </button>
-            </div>
-          </div>
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Checklist sent to Trust Portal successfully!
         `;
         window.document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 10000); // Show longer for important info
+        setTimeout(() => notification.remove(), 4000);
       }
       
       // Reset follow-up data
