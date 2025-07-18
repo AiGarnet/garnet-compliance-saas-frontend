@@ -2335,6 +2335,12 @@ const QuestionnairesContent = () => {
     setSendingToTrustPortal(true);
     
     try {
+      // Enhanced logging for debugging
+      console.log('🔍 TRUST PORTAL DEBUG: Starting submission process');
+      console.log('🔍 TRUST PORTAL DEBUG: Selected vendor ID:', selectedVendorId);
+      console.log('🔍 TRUST PORTAL DEBUG: Auth token exists:', !!token);
+      console.log('🔍 TRUST PORTAL DEBUG: Submission data:', submissionData);
+      
       // Use the follow-up data from submissionData (which includes our defaults)
       const enhancedSubmissionData = {
         ...submissionData,
@@ -2350,6 +2356,8 @@ const QuestionnairesContent = () => {
       
       // Continue with the original submission logic
       const vendorIdNumber = await getVendorIdFromUuid(selectedVendorId);
+      console.log('🔍 TRUST PORTAL DEBUG: Vendor ID number:', vendorIdNumber);
+      
       if (!vendorIdNumber) {
         throw new Error('Invalid vendor selected. Please select a valid vendor.');
       }
@@ -2365,27 +2373,44 @@ const QuestionnairesContent = () => {
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔍 TRUST PORTAL DEBUG: Added authorization header');
+      } else {
+        console.log('⚠️ TRUST PORTAL DEBUG: No auth token available');
       }
 
       const baseUrl = getApiBaseUrl();
+      console.log('🔍 TRUST PORTAL DEBUG: Base URL:', baseUrl);
       
       // Check if this is a checklist submission vs individual question
       let response;
       if (submissionData.checklistId) {
+        console.log('🔍 TRUST PORTAL DEBUG: Using checklist endpoint');
+        console.log('🔍 TRUST PORTAL DEBUG: Checklist ID:', submissionData.checklistId);
+        
+        const endpoint = `${baseUrl}/api/checklists/${submissionData.checklistId}/vendor/${selectedVendorId}/send-to-trust-portal`;
+        console.log('🔍 TRUST PORTAL DEBUG: Full endpoint:', endpoint);
+        
+        const requestBody = {
+          title: submissionData.title,
+          message: submissionData.message,
+          isFollowUp: enhancedSubmissionData.isFollowUp,
+          followUpType: enhancedSubmissionData.followUpType,
+          followUpReason: enhancedSubmissionData.followUpReason,
+          parentSubmissionId: enhancedSubmissionData.parentSubmissionId
+        };
+        
+        console.log('🔍 TRUST PORTAL DEBUG: Request body:', requestBody);
+        
         // For checklist submissions, use the specialized checklist endpoint
-        response = await fetch(`${baseUrl}/api/checklists/${submissionData.checklistId}/vendor/${selectedVendorId}/send-to-trust-portal`, {
+        response = await fetch(endpoint, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            title: submissionData.title,
-            message: submissionData.message,
-            isFollowUp: enhancedSubmissionData.isFollowUp,
-            followUpType: enhancedSubmissionData.followUpType,
-            followUpReason: enhancedSubmissionData.followUpReason,
-            parentSubmissionId: enhancedSubmissionData.parentSubmissionId
-          }),
+          body: JSON.stringify(requestBody),
         });
       } else {
+        console.log('🔍 TRUST PORTAL DEBUG: Using general trust portal endpoint');
+        console.log('🔍 TRUST PORTAL DEBUG: Trust portal data:', trustPortalData);
+        
         // For individual questions, use the general trust portal endpoint
         response = await fetch(`${baseUrl}/api/trust-portal/items`, {
           method: 'POST',
@@ -2394,8 +2419,11 @@ const QuestionnairesContent = () => {
         });
       }
 
+      console.log('🔍 TRUST PORTAL DEBUG: Response status:', response.status, response.statusText);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
+        console.log('🔍 TRUST PORTAL DEBUG: Error response:', errorData);
         throw new Error(errorData?.message || 'Failed to send checklist to trust portal');
       }
 
@@ -2439,8 +2467,15 @@ const QuestionnairesContent = () => {
         parentSubmissionId: null
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error sending to trust portal:', error);
+      console.error('🔍 TRUST PORTAL DEBUG: Full error details:', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || 'No stack trace',
+        selectedVendorId,
+        submissionData,
+        hasToken: !!token
+      });
       setUploadError('Failed to send to trust portal. Please try again.');
     } finally {
       setSendingToTrustPortal(false);
@@ -3326,9 +3361,9 @@ const QuestionnairesContent = () => {
                           {generationProgress.currentQuestion && (
                             <p className="text-xs text-purple-600 mt-2 truncate">
                               Processing: {generationProgress.currentQuestion}
-                          </p>
-                        )}
-                    </div>
+                            </p>
+                          )}
+                        </div>
                   )}
 
                       <div className="flex items-center space-x-6 mb-4">
