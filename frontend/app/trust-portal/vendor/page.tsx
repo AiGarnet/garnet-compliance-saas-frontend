@@ -214,20 +214,38 @@ function VendorTrustPortalContent() {
     if (!vendorId) return;
 
     try {
+      console.log('🔍 TRUST PORTAL: Fetching trust portal items for vendor:', vendorId);
       const response = await fetch(`/api/trust-portal/vendor/${vendorId}`);
+      console.log('🔍 TRUST PORTAL: Response status:', response.status, response.statusText);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 TRUST PORTAL: Full response data:', data);
+        console.log('🔍 TRUST PORTAL: trustPortalItems field:', data.trustPortalItems);
+        console.log('🔍 TRUST PORTAL: trustPortalItems length:', data.trustPortalItems?.length || 'undefined');
         
         // Filter for questionnaire items only (sent via "Send to Trust Portal")
-        const questionnaireItems = (data.trustPortalItems || []).filter((item: any) => 
-          item.isQuestionnaireAnswer === true || 
-          item.category === 'Compliance Questionnaire'
-        );
+        const questionnaireItems = (data.trustPortalItems || []).filter((item: any) => {
+          console.log('🔍 TRUST PORTAL: Checking item:', {
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            isQuestionnaireAnswer: item.isQuestionnaireAnswer
+          });
+          return item.isQuestionnaireAnswer === true || 
+                 item.category === 'Compliance Questionnaire';
+        });
         
+        console.log('🔍 TRUST PORTAL: Filtered questionnaire items:', questionnaireItems);
+        console.log('🔍 TRUST PORTAL: Setting trustPortalItems count:', questionnaireItems.length);
         setTrustPortalItems(questionnaireItems);
+      } else {
+        console.error('🔍 TRUST PORTAL: Response not ok:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('🔍 TRUST PORTAL: Error response body:', errorText);
       }
     } catch (error) {
-      console.error('Error fetching trust portal items:', error);
+      console.error('🔍 TRUST PORTAL: Error fetching trust portal items:', error);
     }
   };
 
