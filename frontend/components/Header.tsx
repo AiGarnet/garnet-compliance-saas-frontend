@@ -23,6 +23,7 @@ import { injectCriticalCSS } from './critical-css';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { hasPermission } from '@/lib/auth/roles';
+import TrialStatusNavbar from './TrialStatusNavbar';
 
 // Remove the hardcoded CSS variables since we're using the ones from critical-css
 // const cssVariables = {
@@ -205,6 +206,9 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                     />
                   </div>
                 </div>
+                
+                {/* Trial Status - Only for authenticated users */}
+                <TrialStatusNavbar />
                 
                 {/* Notifications Bell - Only for authenticated users */}
                 <button

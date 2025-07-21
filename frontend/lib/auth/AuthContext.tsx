@@ -281,9 +281,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     }
     
+    // Check if user is on active trial
+    if (user?.is_on_trial && user?.trial_end_date) {
+      const now = new Date();
+      const trialEndDate = new Date(user.trial_end_date);
+      const isTrialActive = now <= trialEndDate;
+      
+      if (isTrialActive) {
+        console.log(`🆓 Free trial access granted for user: ${user.email} (expires: ${trialEndDate})`);
+        return true;
+      } else {
+        console.log(`⏰ Free trial expired for user: ${user.email} (expired: ${trialEndDate})`);
+      }
+    }
+    
     // Normal subscription check
     return !!subscription && (subscription.status === 'active' || subscription.status === 'past_due');
-  }, [subscription, user?.email]);
+  }, [subscription, user?.email, user?.is_on_trial, user?.trial_end_date]);
 
   // Fetch subscription when user logs in
   useEffect(() => {

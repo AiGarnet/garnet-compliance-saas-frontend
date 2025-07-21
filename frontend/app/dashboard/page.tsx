@@ -15,7 +15,6 @@ import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import TrialNotification from '@/components/TrialNotification';
-import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { ROLES } from "@/lib/auth/roles";
 import { VendorStatus, Vendor } from "@/types/vendor";
 import { vendors as vendorAPI } from "@/lib/api";
@@ -525,10 +524,12 @@ export default function DashboardPage() {
   // Protect this page - redirect to login if not authenticated
   const { isLoading: authLoading } = useAuthGuard();
 
-  // Handle successful payment redirects
+  // Handle successful payment redirects and trial welcome
   useEffect(() => {
     const success = searchParams?.get('success');
     const plan = searchParams?.get('plan');
+    const trial = searchParams?.get('trial');
+    const message = searchParams?.get('message');
     
     if (success === 'true') {
       console.log('🎉 Payment successful! Refreshing subscription status...');
@@ -567,6 +568,37 @@ export default function DashboardPage() {
         console.error('❌ Failed to refresh subscription status:', error);
       });
     }
+
+    // Handle trial welcome message
+    if (trial === 'true' && message) {
+      console.log('🆓 Showing trial welcome message');
+      
+      if (typeof window !== 'undefined') {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center max-w-md';
+        notification.innerHTML = `
+          <svg class="h-6 w-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <p class="font-semibold">Free Trial Started!</p>
+            <p class="text-sm opacity-90">${decodeURIComponent(message)}</p>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 6 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 6000);
+      }
+      
+      // Clean up URL parameters
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }, [searchParams, refreshSubscription]);
 
   // Show loading while checking authentication
@@ -581,11 +613,5 @@ export default function DashboardPage() {
     );
   }
 
-  return (
-    <SubscriptionGuard 
-      fallbackMessage="You need an active subscription to access the dashboard and manage your compliance data."
-    >
-    <DashboardContent />
-    </SubscriptionGuard>
-  );
+  return <DashboardContent />;
 }
