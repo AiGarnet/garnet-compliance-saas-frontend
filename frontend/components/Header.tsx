@@ -24,6 +24,7 @@ import { ThemeToggle } from './ui/ThemeToggle';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { hasPermission } from '@/lib/auth/roles';
 import TrialStatusNavbar from './TrialStatusNavbar';
+import SubscriptionTierDisplay from './SubscriptionTierDisplay';
 
 // Remove the hardcoded CSS variables since we're using the ones from critical-css
 // const cssVariables = {
@@ -209,6 +210,9 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                 
                 {/* Trial Status - Only for authenticated users */}
                 <TrialStatusNavbar />
+                
+                {/* Subscription Tier Display - Only for authenticated users */}
+                <SubscriptionTierDisplay compact={true} showUpgradeButton={false} />
                 
                 {/* Notifications Bell - Only for authenticated users */}
                 <button

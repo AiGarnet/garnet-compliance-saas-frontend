@@ -30,7 +30,9 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  Trash2
+  Trash2,
+  Eye,
+  Send
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -3173,7 +3175,7 @@ const QuestionnairesContent = () => {
                                   className="text-blue-600 hover:text-blue-700 p-1 flex-shrink-0"
                                   title={file.fileType === 'text/plain' ? 'View with enhanced text viewer' : 'View file'}
                                 >
-                                  <Download className="h-3 w-3" />
+                                  <Eye className="h-3 w-3" />
                                 </button>
                                 <button
                                   onClick={() => deleteEvidenceFile(file.id)}
@@ -3385,12 +3387,20 @@ const QuestionnairesContent = () => {
           {/* Section 2: AI Questionnaire */}
           {activeSection === 'ai' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <div className="max-w-6xl mx-auto">
+                            <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8">
                   <Bot className="h-16 w-16 text-purple-600 mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Questionnaire Processing</h2>
                   <p className="text-lg text-gray-600">Let our AI generate compliance answers for your questions</p>
-                            </div>
+                  
+                  {/* Supporting Document Note */}
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+                    <p className="text-sm text-amber-800 flex items-center justify-center">
+                      <FileText className="h-4 w-4 mr-2" />
+                      <strong>Note:</strong> To submit the checklist to the Trust Portal, please upload the relevant supporting documents for the required questions.
+                    </p>
+                  </div>
+                </div>
 
                 {extractedQuestions.length === 0 ? (
                   <div className="text-center py-16">
@@ -4062,7 +4072,7 @@ const QuestionnairesContent = () => {
                                     className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
                                     title="View document"
                                   >
-                                    <Download className="h-3 w-3 mr-1" />
+                                    <Eye className="h-3 w-3 mr-1" />
                                     View
                                   </a>
                                   <button
@@ -4078,7 +4088,7 @@ const QuestionnairesContent = () => {
                                       </>
                                     ) : (
                                       <>
-                                        <Upload className="h-3 w-3 mr-1" />
+                                        <Send className="h-3 w-3 mr-1" />
                                         Send to Portal
                                       </>
                                     )}

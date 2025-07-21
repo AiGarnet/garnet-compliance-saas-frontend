@@ -43,6 +43,7 @@ import {
   VendorTrustPortalData
 } from '@/types/trustPortal';
 import { safeMap } from '@/lib/utils/arrayUtils';
+import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { ChecklistService } from '@/lib/services/checklistService';
 import type { Checklist, ChecklistQuestion, SupportingDocument } from '@/lib/services/checklistService';
 
@@ -87,6 +88,15 @@ function VendorTrustPortalContent() {
   const [inviteToken, setInviteToken] = useState<string>('');
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    itemToDelete: null as TrustPortalItem | null,
+    isLoading: false
+  });
 
   // Generate invite token for enterprise access
   const generateInviteToken = async () => {
@@ -440,14 +450,23 @@ function VendorTrustPortalContent() {
 
   // Delete checklist from trust portal
   const deleteChecklistFromTrustPortal = async (trustPortalItem: TrustPortalItem) => {
-    if (!window.confirm(`Are you sure you want to remove "${trustPortalItem.title}" from the trust portal? This action cannot be undone.`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove from Trust Portal',
+      message: `Are you sure you want to remove "${trustPortalItem.title}" from the trust portal? This action cannot be undone.`,
+      itemToDelete: trustPortalItem,
+      isLoading: false
+    });
+  };
 
-    setDeletingItems(prev => new Set(prev).add(trustPortalItem.id));
+  const confirmDeleteFromTrustPortal = async () => {
+    if (!confirmModal.itemToDelete) return;
+
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
+    setDeletingItems(prev => new Set(prev).add(confirmModal.itemToDelete!.id));
 
     try {
-      const response = await fetch(`/api/trust-portal/items/${trustPortalItem.id}`, {
+      const response = await fetch(`/api/trust-portal/items/${confirmModal.itemToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -456,30 +475,36 @@ function VendorTrustPortalContent() {
       }
 
       // Remove from local state
-      setTrustPortalItems(prev => prev.filter(item => item.id !== trustPortalItem.id));
+      setTrustPortalItems(prev => prev.filter(item => item.id !== confirmModal.itemToDelete!.id));
       
       // Remove from checklist details if expanded
-      if (trustPortalItem.questionnaireId) {
+      if (confirmModal.itemToDelete.questionnaireId) {
         setChecklistDetails(prev => {
           const updated = { ...prev };
-          delete updated[trustPortalItem.questionnaireId!];
+          delete updated[confirmModal.itemToDelete!.questionnaireId!];
           return updated;
         });
         setExpandedChecklists(prev => {
           const updated = new Set(prev);
-          updated.delete(trustPortalItem.questionnaireId!);
+          updated.delete(confirmModal.itemToDelete!.questionnaireId!);
           return updated;
         });
       }
 
-      alert('Checklist successfully removed from trust portal!');
+      // Close modal and show success
+      setConfirmModal({ isOpen: false, title: '', message: '', itemToDelete: null, isLoading: false });
+      
+      // You could add a success toast here instead of alert
+      console.log('Checklist successfully removed from trust portal!');
     } catch (error) {
       console.error('Error deleting trust portal item:', error);
-      alert('Failed to remove checklist from trust portal. Please try again.');
+      // You could add an error toast here instead of alert
+      console.error('Failed to remove checklist from trust portal. Please try again.');
+      setConfirmModal(prev => ({ ...prev, isLoading: false }));
     } finally {
       setDeletingItems(prev => {
         const updated = new Set(prev);
-        updated.delete(trustPortalItem.id);
+        updated.delete(confirmModal.itemToDelete!.id);
         return updated;
       });
     }
@@ -498,7 +523,7 @@ function VendorTrustPortalContent() {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Error downloading document:', error);
-      alert('Failed to download document. Please try again.');
+      // Could add error toast here instead of alert
     }
   };
 
@@ -509,7 +534,7 @@ function VendorTrustPortalContent() {
       window.open(`/api/checklists/documents/${doc.id}/download`, '_blank');
     } catch (error) {
       console.error('Error viewing document:', error);
-      alert('Failed to view document. Please try again.');
+      // Could add error toast here instead of alert
     }
   };
 
@@ -1298,6 +1323,19 @@ function VendorTrustPortalContent() {
           </div>
         </div>
       )}
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, title: '', message: '', itemToDelete: null, isLoading: false })}
+        onConfirm={confirmDeleteFromTrustPortal}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="Remove"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={confirmModal.isLoading}
+      />
     </>
   );
 }
