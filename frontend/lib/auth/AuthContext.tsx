@@ -13,6 +13,9 @@ interface User {
   organization?: string;
   organization_id?: string; // New field for organization linking
   created_at: string;
+  trial_start_date?: string;
+  trial_end_date?: string;
+  is_on_trial?: boolean;
 }
 
 interface Subscription {

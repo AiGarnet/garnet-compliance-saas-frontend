@@ -255,8 +255,8 @@ export default function SignupPage() {
         // For enterprise plans, redirect to contact page
         router.push('/contact?plan=enterprise');
       } else {
-        // If no plan is selected, redirect to pricing page to select a plan
-        router.push('/pricing?signup=true&message=Please select a subscription plan to continue');
+        // No plan selected - redirect to dashboard with 7-day free trial
+        router.push('/dashboard?trial=true&message=Welcome! You have a 7-day free trial with starter plan features.');
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during signup");

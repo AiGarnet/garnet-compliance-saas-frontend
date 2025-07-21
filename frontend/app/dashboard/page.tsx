@@ -14,6 +14,7 @@ import { DevModeToggle } from "@/components/DevModeToggle";
 import { isDevModeEnabled } from "@/lib/env-config";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
+import TrialNotification from '@/components/TrialNotification';
 import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { ROLES } from "@/lib/auth/roles";
 import { VendorStatus, Vendor } from "@/types/vendor";
@@ -397,6 +398,8 @@ function DashboardContent() {
       <Header />
       
       <main id="main-content" className="flex flex-col gap-8 px-4 md:px-8 py-8 bg-body-bg dark:bg-body-bg">
+        {/* Trial Notification */}
+        {user?.id && <TrialNotification userId={user.id} />}
         {/* Top bar with conditional dev mode toggle */}
         <div className="flex justify-between items-center">
           <section className="flex flex-col gap-2">

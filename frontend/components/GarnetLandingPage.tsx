@@ -1302,11 +1302,12 @@ const GarnetLandingPage = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl" 
                    style={{ padding: '2px' }}>
                 <div className="bg-gray-900 rounded-2xl h-full w-full">
-                                     <video 
-                     className="w-full h-auto rounded-2xl"
-                     controls
-                     preload="metadata"
-                   >
+                  <video 
+                    className="w-full h-auto rounded-2xl"
+                    controls
+                    preload="metadata"
+                    playsInline
+                  >
                     <source src="/garnet-demo-video.mp4" type="video/mp4" />
                     <p className="text-white p-8 text-center">
                       Your browser doesn't support HTML5 video. 
@@ -2272,7 +2273,7 @@ const GarnetLandingPage = () => {
                         : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
                     }`}
                   >
-                    {tier.id === 'starter' && 'Get Started Free'}
+                    {tier.id === 'starter' && 'Get Started'}
                     {tier.id === 'growth' && 'Start Growth Plan'}
                     {tier.id === 'scale' && 'Start Scale Plan'}
                     {tier.id === 'enterprise' && 'Contact Sales'}

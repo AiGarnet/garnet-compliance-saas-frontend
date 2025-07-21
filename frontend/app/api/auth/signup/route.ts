@@ -72,11 +72,20 @@ export async function POST(request: NextRequest) {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Insert new user
+      // Set up 7-day free trial
+      const trialStartDate = new Date();
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialStartDate.getDate() + 7); // 7 days from now
+
+      // Insert new user with trial information
       const insertUserQuery = `
-        INSERT INTO users (email, password_hash, full_name, role, organization, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        RETURNING id, email, full_name, role, organization, created_at
+        INSERT INTO users (
+          email, password_hash, full_name, role, organization, 
+          trial_start_date, trial_end_date, is_on_trial, subscription_plan, subscription_status,
+          created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id, email, full_name, role, organization, trial_start_date, trial_end_date, is_on_trial, created_at
       `;
 
       const insertResult = await client.query(insertUserQuery, [
@@ -84,7 +93,12 @@ export async function POST(request: NextRequest) {
         hashedPassword,
         full_name,
         role,
-        organization || null
+        organization || null,
+        trialStartDate, // trial_start_date
+        trialEndDate,   // trial_end_date
+        true,           // is_on_trial
+        'starter',      // subscription_plan
+        'trial'         // subscription_status
       ]);
 
       const user = insertResult.rows[0];
@@ -102,7 +116,7 @@ export async function POST(request: NextRequest) {
 
       // Return success response
       return NextResponse.json({
-        message: 'Successfully signed up!',
+        message: 'Successfully signed up with 7-day free trial!',
         token,
         user: {
           id: user.id,
@@ -110,6 +124,9 @@ export async function POST(request: NextRequest) {
           full_name: user.full_name,
           role: user.role,
           organization: user.organization,
+          trial_start_date: user.trial_start_date,
+          trial_end_date: user.trial_end_date,
+          is_on_trial: user.is_on_trial,
           created_at: user.created_at
         }
       }, { status: 201 });
