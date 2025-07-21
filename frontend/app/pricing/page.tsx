@@ -507,7 +507,7 @@ const PricingPage = () => {
                         : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
                     } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {tier.id === 'starter' && 'Get Started Free'}
+                    {tier.id === 'starter' && 'Get Started'}
                     {tier.id === 'growth' && 'Start Growth Plan'}
                     {tier.id === 'scale' && 'Start Scale Plan'}
                     {tier.id === 'enterprise' && 'Contact Sales'}
