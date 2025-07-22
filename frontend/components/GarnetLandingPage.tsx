@@ -1270,6 +1270,61 @@ const GarnetLandingPage = () => {
         </div>
       </section>
 
+      {/* How We Help Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Save Time. Close Deals. Stay in Control.
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <motion.div
+              className="bg-white p-8 rounded-xl shadow-lg border border-gray-100"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg flex items-center justify-center mr-4">
+                  <Building2 className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Founders</h3>
+              </div>
+              <p className="text-gray-600 leading-relaxed">
+                Spend less time buried in compliance paperwork and more time building and scaling your business. Garnet automates the questions, tracks your evidence, and keeps you audit-ready.
+              </p>
+            </motion.div>
+
+            <motion.div
+              className="bg-white p-8 rounded-xl shadow-lg border border-gray-100"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-pink-600 to-pink-700 rounded-lg flex items-center justify-center mr-4">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Sales Managers</h3>
+              </div>
+              <p className="text-gray-600 leading-relaxed">
+                Cut through red tape and focus on selling. Garnet helps your team answer every compliance question in seconds, so you close deals faster—no back-and-forth required.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Video Demo Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2345,7 +2400,7 @@ const GarnetLandingPage = () => {
               Ready to Transform Your Compliance Process?
             </h2>
             <p className="text-lg text-purple-200 max-w-3xl mx-auto mb-10 leading-relaxed">
-              Founders, sales teams, and legal leads across industries are gearing up to launch with Garnet. Join them and get early access to the platform.
+              Founders and sales teams across industries are gearing up to launch with Garnet. Join them and get early access to the platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <motion.button 
