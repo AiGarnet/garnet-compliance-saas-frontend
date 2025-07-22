@@ -26,7 +26,7 @@ import { FeedbackCard } from "@/components/dashboard/FeedbackCard";
 import { PendingTasks } from "@/components/dashboard/PendingTasks";
 import SubmissionHistory from "@/components/trust-portal/SubmissionHistory";
 import { useActivity } from "@/hooks/useActivity";
-import { useToast } from "@/components/ui/Toast";
+import { showToast } from "@/components/ui/Toast";
 import activityApiService from "@/lib/services/activityApiService";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";

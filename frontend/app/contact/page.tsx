@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import Link from 'next/link';
-import { useToast, ToastProvider } from '@/components/ui/Toast';
+import { showToast } from '@/components/ui/Toast';
 import ContactIllustration from '@/components/ContactIllustration';
 
 const ContactPage = () => {
@@ -30,7 +30,7 @@ const ContactPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const { showToast } = useToast();
+  // Using global showToast function instead of hook
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -101,23 +101,13 @@ const ContactPage = () => {
 
       if (response.ok) {
         setIsSubmitted(true);
-        showToast({
-          type: 'success',
-          title: 'Message Sent!',
-          message: 'Thank you for contacting us. We\'ll get back to you within 1 business day.',
-          duration: 5000
-        });
+        showToast('Thank you for contacting us. We\'ll get back to you within 1 business day.', 'success', 5000);
       } else {
         throw new Error('Failed to send message');
       }
     } catch (err) {
       console.error('Form submission error:', err);
-      showToast({
-        type: 'error',
-        title: 'Failed to Send Message',
-        message: 'Please try again or contact us directly at rusha@garnetai.net',
-        duration: 7000
-      });
+      showToast('Failed to send message. Please try again or contact us directly at rusha@garnetai.net', 'error', 7000);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,7 +146,6 @@ const ContactPage = () => {
   };
 
   return (
-    <ToastProvider>
       <div className="min-h-screen relative overflow-hidden">
         {/* Main Animated Background Gradient */}
         <motion.div 
@@ -678,7 +667,6 @@ const ContactPage = () => {
           )}
         </main>
       </div>
-    </ToastProvider>
   );
 };
 

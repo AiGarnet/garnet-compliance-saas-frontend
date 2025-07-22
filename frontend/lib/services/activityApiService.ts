@@ -1,4 +1,4 @@
-import { createToast, Toast, ToastType } from '../../components/ui/Toast';
+import { showToast } from '../../components/ui/Toast';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -29,7 +29,7 @@ export interface BackendActivity {
   toastConfig?: {
     title: string;
     message: string;
-    type: ToastType;
+    type: 'success' | 'error' | 'warning' | 'info';
     duration?: number;
     showProgress?: boolean;
     actions?: Array<{ label: string; action: string; }>;
@@ -52,130 +52,69 @@ export interface ActivityFilters {
 
 class ActivityApiService {
   private baseUrl: string;
-  private toastCallbacks: Array<(toast: Omit<Toast, 'id' | 'timestamp'>) => void> = [];
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app';
   }
 
   /**
-   * Register a callback to be called when toasts should be shown
-   */
-  onToast(callback: (toast: Omit<Toast, 'id' | 'timestamp'>) => void) {
-    this.toastCallbacks.push(callback);
-  }
-
-  /**
-   * Remove a toast callback
-   */
-  offToast(callback: (toast: Omit<Toast, 'id' | 'timestamp'>) => void) {
-    this.toastCallbacks = this.toastCallbacks.filter(cb => cb !== callback);
-  }
-
-  /**
    * Trigger toast notifications
    */
-  private triggerToast(toast: Omit<Toast, 'id' | 'timestamp'>) {
-    this.toastCallbacks.forEach(callback => callback(toast));
+  private triggerToast(toastConfig: any): void {
+    // Show toast notification
+    showToast(toastConfig.message, toastConfig.type, toastConfig.duration);
   }
 
   /**
-   * Handle API response and automatically show toasts if configured
+   * Update an existing activity
    */
-  private handleApiResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
-    // Check if response contains activity data with toast config
-    if (response.data && typeof response.data === 'object') {
-      const data = response.data as any;
-      
-      // If this is an activity or contains toast config, show toast
-      if (data.toastConfig || (response.meta && response.meta.operation)) {
-        let toastConfig;
-        
-        if (data.toastConfig) {
-          // Direct toast config from activity
-          toastConfig = data.toastConfig;
-        } else if (response.meta?.operation) {
-          // Generate toast from operation metadata
-          const operation = response.meta.operation;
-          const entityType = response.meta.entityType || 'item';
-          const entityName = data.name || response.meta.entityName || 'item';
-          
-          if (response.success) {
-            switch (operation) {
-              case 'create':
-                toastConfig = createToast.success(
-                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Created`,
-                  `${entityName} has been created successfully`,
-                  {
-                    actions: data.id ? [{ 
-                      label: 'View', 
-                      action: `view_${entityType}_${data.id}`,
-                      onClick: () => {
-                        // Handle view action - this could navigate to the entity
-                        console.log(`View ${entityType}:`, data.id);
-                      }
-                    }] : undefined
-                  }
-                );
-                break;
-              case 'update':
-                toastConfig = createToast.success(
-                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Updated`,
-                  `${entityName} has been updated successfully`,
-                  {
-                    actions: data.id ? [{ 
-                      label: 'View', 
-                      action: `view_${entityType}_${data.id}`,
-                      onClick: () => {
-                        console.log(`View ${entityType}:`, data.id);
-                      }
-                    }] : undefined
-                  }
-                );
-                break;
-              case 'delete':
-                toastConfig = createToast.success(
-                  `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Deleted`,
-                  `${entityName} has been deleted successfully`
-                );
-                break;
-              default:
-                toastConfig = createToast.success(
-                  'Success',
-                  `${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`
-                );
-            }
-          } else {
-            // Error toast for failed operations
-            const errorMessage = response.error?.message || 'Operation failed';
-            toastConfig = createToast.error(
-              'Error',
-              errorMessage,
-              {
-                duration: 7000,
-                metadata: {
-                  errorCode: response.error?.code,
-                  details: response.error?.details
-                }
-              }
-            );
-          }
-        }
-        
-        if (toastConfig) {
-          this.triggerToast({
-            ...toastConfig,
-            activityId: data.id,
-            metadata: {
-              ...toastConfig.metadata,
-              apiResponse: response.meta,
-              timestamp: response.meta?.timestamp
-            }
-          });
-        }
-      }
-    }
+  async updateActivity(activityId: string, updates: Partial<BackendActivity>): Promise<ApiResponse<BackendActivity>> {
+    return this.request<BackendActivity>(`/api/activities/${activityId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  }
 
+  /**
+   * Update activity status with automatic toasts
+   */
+  async updateActivityStatus(
+    activityId: string, 
+    status: 'success' | 'pending' | 'failed' | 'in_progress'
+  ): Promise<ApiResponse<BackendActivity>> {
+    const response = await this.updateActivity(activityId, { status });
+    
+    if (response.success && response.data) {
+      const activity = response.data;
+      const statusMessage = status === 'success' ? 'completed successfully' : 
+                           status === 'failed' ? 'failed' : 
+                           status === 'in_progress' ? 'is in progress' : 'is pending';
+      
+      showToast(`${activity.description} ${statusMessage}`, status === 'success' ? 'success' : 'info');
+    }
+    
+    return response;
+  }
+
+  /**
+   * Handle API response with automatic toast notifications
+   */
+  handleApiResponse<T>(
+    response: ApiResponse<T>, 
+    operation: string = 'operation',
+    options: { showSuccessToast?: boolean; showErrorToast?: boolean } = {}
+  ): ApiResponse<T> {
+    const { showSuccessToast = true, showErrorToast = true } = options;
+    
+    if (response.success) {
+      if (showSuccessToast) {
+        showToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success');
+      }
+    } else if (showErrorToast) {
+      const errorMessage = response.error?.message || `${operation} failed`;
+      showToast(errorMessage, 'error', 7000);
+    }
+    
     return response;
   }
 
@@ -310,11 +249,12 @@ class ActivityApiService {
       };
 
       // Show error toast
-      this.triggerToast(createToast.error(
-        'Network Error',
-        'Failed to connect to server. Please check your connection.',
-        { duration: 7000 }
-      ));
+      this.triggerToast({
+        title: 'Network Error',
+        message: 'Failed to connect to server. Please check your connection.',
+        type: 'error',
+        duration: 7000
+      });
 
       return errorResponse;
     }
@@ -514,6 +454,80 @@ class ActivityApiService {
    */
   stopActivityPolling(intervalId: NodeJS.Timeout) {
     clearInterval(intervalId);
+  }
+
+  /**
+   * Create activity with automatic toast notification
+   */
+  async createActivityWithToast(
+    operation: string,
+    entityType: string,
+    data: any,
+    options: {
+      showToast?: boolean;
+      toastDuration?: number;
+      metadata?: Record<string, any>;
+    } = {}
+  ): Promise<ApiResponse<BackendActivity>> {
+    const { showToast: shouldShowToast = true, toastDuration = 4000 } = options;
+
+    try {
+      const activity = {
+        type: `${entityType}_${operation}`,
+        entityType,
+        entityId: data.id?.toString(),
+        entityName: data.name || data.title || `${entityType} ${data.id}`,
+        description: `${operation.charAt(0).toUpperCase() + operation.slice(1)} ${entityType}: ${data.name || data.id}`,
+        metadata: {
+          operation,
+          ...options.metadata,
+          ...(data.metadata || {})
+        }
+      };
+
+      const response = await this.request<BackendActivity>('/api/activities', {
+        method: 'POST',
+        body: JSON.stringify(activity)
+      });
+      
+      if (shouldShowToast && response.success && response.data) {
+        const { data: activityData } = response;
+        const entityName = data.name || data.title || `${entityType} ${data.id}`;
+        
+        // Show appropriate toast based on operation
+        switch (operation) {
+          case 'create':
+            showToast(`${entityName} has been created successfully`, 'success', toastDuration);
+            break;
+          case 'update':
+            showToast(`${entityName} has been updated successfully`, 'success', toastDuration);
+            break;
+          case 'delete':
+            showToast(`${entityName} has been deleted successfully`, 'success', toastDuration);
+            break;
+          default:
+            showToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success', toastDuration);
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Failed to create activity for ${operation} ${entityType}:`, error);
+      
+      if (shouldShowToast) {
+        const errorMessage = error instanceof Error ? error.message : 'Operation failed';
+        showToast(errorMessage, 'error', 7000);
+      }
+      
+      return {
+        success: false,
+        error: {
+          code: 'ACTIVITY_CREATION_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to create activity',
+          details: error
+        }
+      };
+    }
   }
 }
 
