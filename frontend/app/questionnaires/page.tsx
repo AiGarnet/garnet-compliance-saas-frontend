@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
+
 import { getApiEndpoint } from "@/lib/api";
 import { 
   ClipboardList, 
@@ -40,6 +40,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { vendors as vendorAPI } from '@/lib/api';
 import { safeMap } from '@/lib/utils/arrayUtils';
 import { ChecklistService } from '@/lib/services/checklistService';
+import { showToast } from '@/components/ui/Toast';
 import { AIService } from '@/lib/services/aiService';
 import ChatbotAssistance from '@/components/help/ChatbotAssistance';
 import { EvidenceFilePreview } from '@/components/questionnaire/EvidenceFilePreview';
@@ -1244,7 +1245,23 @@ const QuestionnairesContent = () => {
         enhancedContext += ` Source: ${question.checklistName}.`;
       }
 
-      // Generate answer using individual API call with enhanced context
+      // Use the backend API for generating individual answers with database persistence
+      if (question.checklistId && selectedVendorId) {
+        try {
+          // Try to update the question in the database using the checklist service
+          const updateResponse = await ChecklistService.updateQuestion(
+            question.id,
+            selectedVendorId,
+            { status: 'in-progress' }
+          );
+          
+          console.log('Updated question status to in-progress');
+        } catch (dbError) {
+          console.warn('Failed to update question status in database:', dbError);
+        }
+      }
+
+      // Fallback: Generate answer using individual API call with enhanced context
       const response = await fetch('/api/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4606,13 +4623,7 @@ const QuestionnairesContent = () => {
 };
 
 const QuestionnairesPage = () => {
-  return (
-    <SubscriptionGuard 
-      fallbackMessage="You need an active subscription to access and manage questionnaires."
-    >
-      <QuestionnairesContent />
-    </SubscriptionGuard>
-  );
+  return <QuestionnairesContent />;
 };
 
 export default QuestionnairesPage;

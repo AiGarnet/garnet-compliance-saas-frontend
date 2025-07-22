@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { showToast } from '@/components/ui/Toast';
 import { 
   CheckCircle, 
   Download, 
@@ -127,13 +128,15 @@ export default function TrustPortalClient({ token }: { token: string }) {
     checklists.forEach(checklist => {
       // Check if this checklist is a follow-up based on trust portal submission data
       // The follow-up info comes from the trust portal item, not individual questions
-      const isFollowUpChecklist = checklist.isFollowUp || 
-                                  checklist.followUpType !== 'initial' ||
+      // Default all checklists to initial unless explicitly marked as follow-up
+      const isFollowUpChecklist = checklist.isFollowUp === true || 
+                                  (checklist.followUpType && checklist.followUpType !== 'initial') ||
                                   checklist.parentSubmissionId;
       
       if (isFollowUpChecklist) {
         followUp.push(checklist);
       } else {
+        // All regular uploads should go to initial by default
         initial.push(checklist);
       }
     });
@@ -206,7 +209,7 @@ export default function TrustPortalClient({ token }: { token: string }) {
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      alert('Failed to submit feedback. Please try again.');
+      showToast('Failed to submit feedback. Please try again.', 'error');
     } finally {
       setIsSubmittingFeedback(false);
     }

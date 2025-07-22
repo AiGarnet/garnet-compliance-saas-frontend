@@ -43,6 +43,7 @@ import {
   VendorTrustPortalData
 } from '@/types/trustPortal';
 import { safeMap } from '@/lib/utils/arrayUtils';
+import { showToast } from '@/components/ui/Toast';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { ChecklistService } from '@/lib/services/checklistService';
 import type { Checklist, ChecklistQuestion, SupportingDocument } from '@/lib/services/checklistService';
@@ -124,7 +125,7 @@ function VendorTrustPortalContent() {
       }
     } catch (error) {
       console.error('Error generating invite token:', error);
-      alert('Failed to generate invite token. Please try again.');
+      showToast('Failed to generate invite token. Please try again.', 'error');
     } finally {
       setIsGeneratingToken(false);
     }
@@ -134,7 +135,7 @@ function VendorTrustPortalContent() {
   const copyInviteLink = () => {
     const inviteLink = `${window.location.origin}/trust-portal/invite?token=${inviteToken}`;
     navigator.clipboard.writeText(inviteLink);
-    alert('Invite link copied to clipboard!');
+    showToast('Invite link copied to clipboard!', 'success');
   };
 
   // Fetch vendor trust portal data

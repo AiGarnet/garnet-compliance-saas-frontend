@@ -1,394 +1,143 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, ExternalLink } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastAction {
-  label: string;
-  action: string;
-  variant?: 'primary' | 'secondary';
-  href?: string;
-  onClick?: () => void;
-}
-
-export interface Toast {
-  id: string;
-  type: ToastType;
-  title: string;
+interface ToastProps {
   message: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
   duration?: number;
-  showProgress?: boolean;
-  actions?: ToastAction[];
-  timestamp?: string;
-  activityId?: string;
-  metadata?: Record<string, any>;
+  onClose: () => void;
 }
 
-interface ToastState {
-  toasts: Toast[];
-}
-
-type ToastAction_Internal = 
-  | { type: 'ADD_TOAST'; payload: Toast }
-  | { type: 'REMOVE_TOAST'; payload: { id: string } }
-  | { type: 'UPDATE_TOAST'; payload: { id: string; updates: Partial<Toast> } }
-  | { type: 'CLEAR_ALL' };
-
-const toastReducer = (state: ToastState, action: ToastAction_Internal): ToastState => {
-  switch (action.type) {
-    case 'ADD_TOAST':
-      return {
-        ...state,
-        toasts: [...state.toasts, action.payload]
-      };
-    case 'REMOVE_TOAST':
-      return {
-        ...state,
-        toasts: state.toasts.filter(toast => toast.id !== action.payload.id)
-      };
-    case 'UPDATE_TOAST':
-      return {
-        ...state,
-        toasts: state.toasts.map(toast =>
-          toast.id === action.payload.id
-            ? { ...toast, ...action.payload.updates }
-            : toast
-        )
-      };
-    case 'CLEAR_ALL':
-      return {
-        ...state,
-        toasts: []
-      };
-    default:
-      return state;
-  }
-};
-
-interface ToastContextType {
-  toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id' | 'timestamp'>) => string;
-  removeToast: (id: string) => void;
-  updateToast: (id: string, updates: Partial<Toast>) => void;
-  clearAll: () => void;
-  showToast: (config: {
-    type: ToastType;
-    title: string;
-    message: string;
-    duration?: number;
-    showProgress?: boolean;
-    actions?: ToastAction[];
-    activityId?: string;
-    metadata?: Record<string, any>;
-  }) => string;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
-
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-};
-
-interface ToastProviderProps {
-  children: ReactNode;
-  maxToasts?: number;
-  defaultDuration?: number;
-}
-
-export const ToastProvider: React.FC<ToastProviderProps> = ({
-  children,
-  maxToasts = 5,
-  defaultDuration = 5000
-}) => {
-  const [state, dispatch] = useReducer(toastReducer, { toasts: [] });
-
-  const addToast = (toast: Omit<Toast, 'id' | 'timestamp'>): string => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newToast: Toast = {
-      ...toast,
-      id,
-      timestamp: new Date().toISOString(),
-      duration: toast.duration ?? defaultDuration
-    };
-
-    dispatch({ type: 'ADD_TOAST', payload: newToast });
-
-    // Auto remove after duration (if specified)
-    if (newToast.duration && newToast.duration > 0) {
-      setTimeout(() => {
-        dispatch({ type: 'REMOVE_TOAST', payload: { id } });
-      }, newToast.duration);
-    }
-
-    // Limit max toasts
-    if (state.toasts.length >= maxToasts) {
-      const oldestToast = state.toasts[0];
-      if (oldestToast) {
-        dispatch({ type: 'REMOVE_TOAST', payload: { id: oldestToast.id } });
-      }
-    }
-
-    return id;
-  };
-
-  const removeToast = (id: string) => {
-    dispatch({ type: 'REMOVE_TOAST', payload: { id } });
-  };
-
-  const updateToast = (id: string, updates: Partial<Toast>) => {
-    dispatch({ type: 'UPDATE_TOAST', payload: { id, updates } });
-  };
-
-  const clearAll = () => {
-    dispatch({ type: 'CLEAR_ALL' });
-  };
-
-  const showToast = (config: {
-    type: ToastType;
-    title: string;
-    message: string;
-    duration?: number;
-    showProgress?: boolean;
-    actions?: ToastAction[];
-    activityId?: string;
-    metadata?: Record<string, any>;
-  }): string => {
-    return addToast(config);
-  };
-
-  const value: ToastContextType = {
-    toasts: state.toasts,
-    addToast,
-    removeToast,
-    updateToast,
-    clearAll,
-    showToast
-  };
-
-  return (
-    <ToastContext.Provider value={value}>
-      {children}
-      <ToastContainer />
-    </ToastContext.Provider>
-  );
-};
-
-const ToastContainer: React.FC = () => {
-  const { toasts } = useToast();
-
-  return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
-      ))}
-    </div>
-  );
-};
-
-interface ToastItemProps {
-  toast: Toast;
-}
-
-const ToastItem: React.FC<ToastItemProps> = ({ toast }) => {
-  const { removeToast, updateToast } = useToast();
-  const [progress, setProgress] = React.useState(100);
+export function Toast({ message, type = 'info', duration = 4000, onClose }: ToastProps) {
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    if (toast.showProgress && toast.duration && toast.duration > 0) {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          const newProgress = prev - (100 / (toast.duration! / 100));
-          if (newProgress <= 0) {
-            clearInterval(interval);
-            return 0;
-          }
-          return newProgress;
-        });
-      }, 100);
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300); // Wait for fade out animation
+    }, duration);
 
-      return () => clearInterval(interval);
-    }
-  }, [toast.showProgress, toast.duration]);
-
-  const handleActionClick = (action: ToastAction) => {
-    if (action.onClick) {
-      action.onClick();
-    } else if (action.href) {
-      window.open(action.href, '_blank');
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [duration, onClose]);
 
   const getIcon = () => {
-    switch (toast.type) {
+    switch (type) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-      case 'info':
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       default:
-        return <Info className="w-5 h-5 text-gray-500" />;
+        return <Info className="h-5 w-5 text-blue-500" />;
     }
   };
 
-  const getColorClasses = () => {
-    switch (toast.type) {
+  const getBgColor = () => {
+    switch (type) {
       case 'success':
-        return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20';
+        return 'bg-green-50 border-green-200';
       case 'error':
-        return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20';
+        return 'bg-red-50 border-red-200';
       case 'warning':
-        return 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20';
-      case 'info':
-        return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20';
+        return 'bg-yellow-50 border-yellow-200';
       default:
-        return 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800';
+        return 'bg-blue-50 border-blue-200';
     }
   };
 
-  const getProgressColor = () => {
-    switch (toast.type) {
+  const getTextColor = () => {
+    switch (type) {
       case 'success':
-        return 'bg-green-500';
+        return 'text-green-800';
       case 'error':
-        return 'bg-red-500';
+        return 'text-red-800';
       case 'warning':
-        return 'bg-yellow-500';
-      case 'info':
-        return 'bg-blue-500';
+        return 'text-yellow-800';
       default:
-        return 'bg-gray-500';
+        return 'text-blue-800';
     }
   };
 
   return (
-    <div className={`
-      relative overflow-hidden rounded-lg border p-4 shadow-lg transition-all duration-300 
-      transform hover:scale-105 hover:shadow-xl
-      ${getColorClasses()}
-    `}>
-      {/* Progress bar */}
-      {toast.showProgress && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700">
-          <div 
-            className={`h-full transition-all duration-100 ease-linear ${getProgressColor()}`}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
-
-      <div className="flex items-start gap-3">
-        {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">
-          {getIcon()}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {toast.title}
-          </h4>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            {toast.message}
-          </p>
-          
-          {/* Timestamp */}
-          {toast.timestamp && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {new Date(toast.timestamp).toLocaleTimeString()}
+    <div
+      className={`fixed top-4 right-4 z-50 max-w-md w-full pointer-events-auto transform transition-all duration-300 ${
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+      }`}
+    >
+      <div className={`border rounded-lg shadow-lg p-4 ${getBgColor()}`}>
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            {getIcon()}
+          </div>
+          <div className="ml-3 w-0 flex-1">
+            <p className={`text-sm font-medium ${getTextColor()}`}>
+              {message}
             </p>
-          )}
-
-          {/* Actions */}
-          {toast.actions && toast.actions.length > 0 && (
-            <div className="mt-3 flex gap-2">
-              {toast.actions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleActionClick(action)}
-                  className={`
-                    inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md
-                    transition-colors duration-200
-                    ${action.variant === 'primary'
-                      ? 'bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
-                    }
-                  `}
-                >
-                  {action.label}
-                  {action.href && <ExternalLink className="w-3 h-3" />}
-                </button>
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="ml-4 flex-shrink-0 flex">
+            <button
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(onClose, 300);
+              }}
+              className={`rounded-md inline-flex ${getTextColor()} hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-offset-2`}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-
-        {/* Close button */}
-        <button
-          onClick={() => removeToast(toast.id)}
-          className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
-};
+}
 
-// Helper functions for common toast types
-export const createToast = {
-  success: (title: string, message: string, options?: Partial<Toast>) => ({
-    type: 'success' as const,
-    title,
-    message,
-    ...options
-  }),
+// Toast container for managing multiple toasts
+export function ToastContainer() {
+  const [toasts, setToasts] = useState<Array<{
+    id: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    duration?: number;
+  }>>([]);
 
-  error: (title: string, message: string, options?: Partial<Toast>) => ({
-    type: 'error' as const,
-    title,
-    message,
-    duration: 7000, // Longer duration for errors
-    ...options
-  }),
+  const addToast = (toast: Omit<typeof toasts[0], 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { ...toast, id }]);
+  };
 
-  warning: (title: string, message: string, options?: Partial<Toast>) => ({
-    type: 'warning' as const,
-    title,
-    message,
-    ...options
-  }),
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
-  info: (title: string, message: string, options?: Partial<Toast>) => ({
-    type: 'info' as const,
-    title,
-    message,
-    ...options
-  }),
-
-  // For backend activity integration
-  fromActivity: (activityData: {
-    toastConfig: {
-      title: string;
-      message: string;
-      type: ToastType;
-      duration?: number;
-      showProgress?: boolean;
-      actions?: ToastAction[];
+  // Make addToast available globally
+  useEffect(() => {
+    (window as any).showToast = addToast;
+    return () => {
+      delete (window as any).showToast;
     };
-    activityId?: string;
-    metadata?: Record<string, any>;
-  }) => ({
-    ...activityData.toastConfig,
-    activityId: activityData.activityId,
-    metadata: activityData.metadata
-  })
+  }, []);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Helper function to show toast from anywhere
+export const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration?: number) => {
+  if (typeof window !== 'undefined' && (window as any).showToast) {
+    (window as any).showToast({ message, type, duration });
+  }
 }; 

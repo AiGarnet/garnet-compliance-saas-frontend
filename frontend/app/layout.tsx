@@ -3,7 +3,7 @@ import './globals.css'
 import './styles.css'
 import { ThemeInitializer } from '@/components/ThemeInitializer'
 import { AuthProvider } from '@/lib/auth/AuthContext'
-import { ToastProvider } from '@/components/ui/Toast'
+import { ToastContainer } from '@/components/ui/Toast'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata: Metadata = {
@@ -54,9 +54,8 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeInitializer />
           <AuthProvider>
-            <ToastProvider maxToasts={5} defaultDuration={5000}>
-              {children}
-            </ToastProvider>
+            {children}
+            <ToastContainer />
           </AuthProvider>
         </ErrorBoundary>
       </body>
