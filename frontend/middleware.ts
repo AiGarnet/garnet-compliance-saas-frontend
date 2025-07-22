@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
                    request.headers.get('authorization')?.replace('Bearer ', '')
 
   const protectedPaths = ['/dashboard', '/questionnaires', '/vendors', '/compliance', '/billing']
-  const subscriptionRequiredPaths = ['/dashboard', '/questionnaires', '/vendors', '/compliance']
+  const subscriptionRequiredPaths = ['/dashboard', '/vendors', '/compliance']
   const isProtectedPath = protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))
   const isSubscriptionRequiredPath = subscriptionRequiredPaths.some(path => request.nextUrl.pathname.startsWith(path))
 
