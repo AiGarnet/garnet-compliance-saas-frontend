@@ -2981,13 +2981,26 @@ const QuestionnairesContent = () => {
               <div className="max-w-7xl mx-auto">
                 {/* Top Section: Parallel Upload Areas */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  {/* Visual separator indicator */}
+                  <div className="hidden lg:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-gray-300 to-transparent transform -translate-x-1/2 z-10"></div>
                   
                   {/* Left Side: Checklist Upload */}
-                  <div className="bg-blue-50 rounded-xl p-6">
+                  <div className="bg-blue-50 rounded-xl p-6 relative">
+                    <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      STEP 1
+                    </div>
                     <div className="text-center mb-6">
                       <Upload className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                       <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Compliance Checklist</h2>
-                      <p className="text-gray-600">Upload your compliance checklist and we'll extract the questions for you</p>
+                      <p className="text-gray-600">Upload your compliance checklist document and we'll extract the questions for AI processing</p>
+                      <div className="text-xs mt-2 space-y-1">
+                        <p className="text-blue-600 font-medium">
+                          📋 Checklist Processing - Questions extracted and stored for AI questionnaire
+                        </p>
+                        <p className="text-green-600">
+                          🚀 Fast Upload: Direct file processing with automatic question extraction
+                        </p>
+                      </div>
                     </div>
 
                     {/* Upload Area */}
@@ -3041,17 +3054,23 @@ const QuestionnairesContent = () => {
                   </div>
 
                   {/* Right Side: Evidence Files */}
-                  <div className="bg-orange-50 rounded-xl p-6">
+                  <div className="bg-orange-50 rounded-xl p-6 relative">
+                    <div className="absolute top-3 right-3 bg-orange-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      STEP 2
+                    </div>
                     <div className="text-center mb-6">
                       <Files className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Evidence</h2>
-                      <p className="text-gray-600">Upload internal evidence files to enhance AI responses</p>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Evidence Files</h2>
+                      <p className="text-gray-600">Upload internal evidence files to enhance AI responses and provide better compliance context</p>
                       <div className="text-xs mt-2 space-y-1">
-                        <p className="text-orange-600">
-                          📝 Internal only - not shown on Trust Portal
+                        <p className="text-orange-600 font-medium">
+                          📝 Internal Evidence - Stored securely in Digital Ocean
                         </p>
                         <p className="text-blue-600">
                           ✨ Enhanced workflow: Review files before saving • Better text file viewing
+                        </p>
+                        <p className="text-purple-600">
+                          🤖 AI Integration: Files are used to generate more accurate compliance responses
                         </p>
                       </div>
                     </div>
@@ -3378,11 +3397,101 @@ const QuestionnairesContent = () => {
                   </div>
                 )}
 
-                {/* Checklist & Evidence Files - Side by Side Layout */}
-
+                {/* Uploaded Evidence Files Section */}
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Files className="h-6 w-6 text-orange-600 mr-3" />
+                    Uploaded Evidence Files
+                    {evidenceFiles.length > 0 && (
+                      <span className="ml-2 text-sm text-gray-500">({evidenceFiles.length})</span>
+                    )}
+                  </h3>
+                  
+                  {evidenceFiles.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {evidenceFiles.map((file: any) => (
+                        <div key={file.id} className="bg-white border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start space-x-3">
+                            <div className="p-2 bg-orange-50 rounded-lg flex-shrink-0">
+                              <FileText className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 text-sm truncate" title={file.originalFilename}>
+                                {file.originalFilename}
+                              </h4>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <span className="text-xs text-gray-500">
+                                  {(file.fileSize / 1024).toFixed(1)} KB
+                                </span>
+                                {file.category && (
+                                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                                    {file.category}
+                                  </span>
+                                )}
+                                {file.fileType === 'text/plain' && (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                    📝 Text
+                                  </span>
+                                )}
+                              </div>
+                              {file.description && (
+                                <p className="text-xs text-gray-600 mt-2 line-clamp-2" title={file.description}>
+                                  {file.description}
+                                </p>
+                              )}
+                              <div className="flex items-center space-x-2 mt-3">
+                                <button
+                                  onClick={() => handleTextFileView(file)}
+                                  className="text-blue-600 hover:text-blue-700 text-xs font-medium flex items-center"
+                                  title={file.fileType === 'text/plain' ? 'View with enhanced text viewer' : 'View file'}
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => deleteEvidenceFile(file.id)}
+                                  className="text-red-600 hover:text-red-700 text-xs font-medium flex items-center"
+                                  title="Delete evidence file"
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-8 text-center">
+                      <Files className="h-12 w-12 text-orange-400 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">No Evidence Files Uploaded</h4>
+                      <p className="text-gray-600 mb-4">
+                        Upload evidence files above or generate them using AI to enhance your compliance documentation.
+                      </p>
+                      <div className="flex justify-center space-x-3">
+                        <button
+                          onClick={() => evidenceFileRef.current?.click()}
+                          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center text-sm"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Files
+                        </button>
+                        <button
+                          onClick={() => openGenerateEvidenceModal()}
+                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center text-sm"
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate with AI
+                        </button>
                       </div>
                     </div>
                   )}
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* Section 2: AI Questionnaire */}
           {activeSection === 'ai' && (
