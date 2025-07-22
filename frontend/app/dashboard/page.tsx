@@ -43,7 +43,7 @@ const mockVendors: Vendor[] = [
 
 function DashboardContent() {
   const { user } = useAuth();
-  const { addToast } = useToast();
+  // Using global showToast function instead of hook
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -84,22 +84,14 @@ function DashboardContent() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Setup toast notifications from API service
+  // Start polling for activity updates
   useEffect(() => {
-    const toastCallback = (toast: any) => {
-      addToast(toast);
-    };
-
-    activityApiService.onToast(toastCallback);
-    
-    // Start polling for activity updates
     const pollingInterval = activityApiService.startActivityPolling(30000, user?.id);
 
     return () => {
-      activityApiService.offToast(toastCallback);
       activityApiService.stopActivityPolling(pollingInterval);
     };
-  }, [user?.id, addToast]);
+  }, [user?.id]);
 
   // Fetch vendors from API using the new activity-enabled service
   const fetchVendors = async () => {
@@ -260,12 +252,7 @@ function DashboardContent() {
       }
     } catch (error) {
       console.error('Error updating vendor:', error);
-      addToast({
-        type: 'error',
-        title: 'Update Failed',
-        message: error instanceof Error ? error.message : 'Failed to update client',
-        duration: 7000
-      });
+      showToast(error instanceof Error ? error.message : 'Failed to update client', 'error', 7000);
     }
   };
 
@@ -298,12 +285,7 @@ function DashboardContent() {
       }
     } catch (error) {
       console.error('Error deleting vendor:', error);
-      addToast({
-        type: 'error',
-        title: 'Delete Failed',
-        message: error instanceof Error ? error.message : 'Failed to delete client',
-        duration: 7000
-      });
+      showToast(error instanceof Error ? error.message : 'Failed to delete client', 'error', 7000);
     }
   };
 
@@ -344,12 +326,7 @@ function DashboardContent() {
       console.log('📥 Vendor creation response:', result);
       
       if (result.success && result.data) {
-        addToast({
-          type: 'success',
-          title: 'Client Added',
-          message: `Client "${result.data.companyName || result.data.name}" has been added successfully!`,
-          duration: 5000
-        });
+        showToast(`Client "${result.data.companyName || result.data.name}" has been added successfully!`, 'success', 5000);
         
         // Refresh the vendor list
         await fetchVendors();
@@ -380,12 +357,7 @@ function DashboardContent() {
         errorMessage = error.message;
       }
       
-      addToast({
-        type: 'error',
-        title: errorTitle,
-        message: errorMessage,
-        duration: 7000
-      });
+      showToast(errorMessage, 'error', 7000);
       
       // Don't throw the error to prevent the modal from staying open unnecessarily
       // throw error;
