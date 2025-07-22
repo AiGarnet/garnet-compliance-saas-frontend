@@ -1302,20 +1302,14 @@ const GarnetLandingPage = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl" 
                    style={{ padding: '2px' }}>
                 <div className="bg-gray-900 rounded-2xl h-full w-full">
-                  <video 
+                  <iframe 
                     className="w-full h-auto rounded-2xl"
-                    controls
-                    preload="metadata"
-                    playsInline
+                    src="https://drive.google.com/file/d/13prerhPUPVkM8_XEYe1ktoaFIO62yB_e/preview"
+                    style={{ aspectRatio: '16/9', minHeight: '400px' }}
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
                   >
-                    <source src="/garnet-demo-video.mp4" type="video/mp4" />
-                    <p className="text-white p-8 text-center">
-                      Your browser doesn't support HTML5 video. 
-                      <a href="/garnet-demo-video.mp4" className="text-purple-400 underline ml-1">
-                        Download the video instead.
-                      </a>
-                    </p>
-                  </video>
+                  </iframe>
                 </div>
               </div>
 
@@ -1324,38 +1318,7 @@ const GarnetLandingPage = () => {
                <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full opacity-60 animate-bounce"></div>
             </div>
 
-            {/* Video Stats/Features below */}
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <div className="text-center">
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Save 90% Time</h3>
-                <p className="text-gray-600">Transform weeks of manual work into automated hours</p>
-              </div>
-              
-              <div className="text-center">
-                <div className="bg-gradient-to-br from-pink-50 to-pink-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-pink-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">95% Accuracy</h3>
-                <p className="text-gray-600">AI-powered responses that pass enterprise audits</p>
-              </div>
-              
-              <div className="text-center">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">50% Faster Deals</h3>
-                <p className="text-gray-600">Accelerate sales cycles with instant compliance responses</p>
-              </div>
-            </motion.div>
+
           </motion.div>
         </div>
       </section>
