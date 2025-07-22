@@ -1701,8 +1701,8 @@ const QuestionnairesContent = () => {
   const handleTextFileView = async (file: any) => {
     try {
       if (file.fileType === 'text/plain' || file.originalFilename.toLowerCase().endsWith('.txt')) {
-        // Get signed URL for text files
-        const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${file.id}/download`, {
+        // For text files, get the content directly through the backend
+        const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${file.id}/content`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -1710,16 +1710,23 @@ const QuestionnairesContent = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to generate download URL');
+          throw new Error('Failed to get file content');
         }
 
         const data = await response.json();
         
+        // Create a blob URL for the content
+        const blob = new Blob([data.content], { type: 'text/plain' });
+        const blobUrl = URL.createObjectURL(blob);
+        
         setTextViewerData({
-          url: data.downloadUrl,
+          url: blobUrl,
           filename: file.originalFilename
         });
         setShowTextViewer(true);
+        
+        // Clean up the blob URL when the viewer is closed
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000); // Clean up after 1 minute
       } else {
         // For non-text files, get signed URL and open in new tab
         const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${file.id}/download`, {
