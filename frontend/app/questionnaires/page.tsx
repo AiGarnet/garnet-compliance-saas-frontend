@@ -1698,16 +1698,47 @@ const QuestionnairesContent = () => {
     }
   };
 
-  const handleTextFileView = (file: any) => {
-    if (file.fileType === 'text/plain' || file.originalFilename.toLowerCase().endsWith('.txt')) {
-      setTextViewerData({
-        url: file.spacesUrl,
-        filename: file.originalFilename
-      });
-      setShowTextViewer(true);
-    } else {
-      // For non-text files, open in new tab
-      window.open(file.spacesUrl, '_blank');
+  const handleTextFileView = async (file: any) => {
+    try {
+      if (file.fileType === 'text/plain' || file.originalFilename.toLowerCase().endsWith('.txt')) {
+        // Get signed URL for text files
+        const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${file.id}/download`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate download URL');
+        }
+
+        const data = await response.json();
+        
+        setTextViewerData({
+          url: data.downloadUrl,
+          filename: file.originalFilename
+        });
+        setShowTextViewer(true);
+      } else {
+        // For non-text files, get signed URL and open in new tab
+        const response = await fetch(`${getApiBaseUrl()}/api/vendors/${selectedVendorId}/evidence/${file.id}/download`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate download URL');
+        }
+
+        const data = await response.json();
+        window.open(data.downloadUrl, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error viewing file:', error);
+      alert('Failed to open file. Please try again.');
     }
   };
 
@@ -3442,7 +3473,7 @@ const QuestionnairesContent = () => {
                                 <button
                                   onClick={() => handleTextFileView(file)}
                                   className="text-blue-600 hover:text-blue-700 text-xs font-medium flex items-center"
-                                  title={file.fileType === 'text/plain' ? 'View with enhanced text viewer' : 'View file'}
+                                  title={file.fileType === 'text/plain' ? 'View with enhanced text viewer' : 'View file (secure download)'}
                                 >
                                   <Eye className="h-3 w-3 mr-1" />
                                   View
