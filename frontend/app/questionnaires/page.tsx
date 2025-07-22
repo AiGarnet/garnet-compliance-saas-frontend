@@ -3211,9 +3211,8 @@ const QuestionnairesContent = () => {
                     )}
 
                     {evidenceFiles.length === 0 && !isUploadingEvidence && (
-                      <div className="mt-6 text-center py-6 text-gray-500">
-                        <Files className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm">No evidence files uploaded yet</p>
+                      <div className="mt-6 text-center py-4 text-gray-500">
+                        <Files className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                       </div>
                     )}
                   </div>
