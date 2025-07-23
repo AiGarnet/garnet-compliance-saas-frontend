@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Zap, Shield, BarChart3, Users, Star, ArrowRight, ChevronDown, ChevronUp, MessageCircle, Crown, Rocket, Building2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface PricingTier {
   id: string;
@@ -193,6 +193,22 @@ const PricingPage = () => {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Check for upgrade reason from URL
+  const upgradeReason = searchParams?.get('upgrade');
+  
+  // Show upgrade message based on reason
+  const getUpgradeMessage = () => {
+    switch (upgradeReason) {
+      case 'vendor_limit':
+        return '🚀 Upgrade to add more vendors to your organization!';
+      case 'questionnaire_limit':
+        return '📋 Upgrade to create more questionnaires per month!';
+      default:
+        return null;
+    }
+  };
 
   const handleSelectPlan = async (tier: PricingTier) => {
     if (tier.id === 'enterprise') {
@@ -342,6 +358,20 @@ const PricingPage = () => {
       {/* Main Pricing Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Upgrade Message */}
+          {getUpgradeMessage() && (
+            <motion.div
+              className="mb-8 p-4 bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-200 rounded-lg text-center"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <p className="text-purple-800 font-medium text-lg">
+                {getUpgradeMessage()}
+              </p>
+            </motion.div>
+          )}
+          
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}

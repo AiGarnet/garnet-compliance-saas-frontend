@@ -43,6 +43,7 @@ const mockVendors: Vendor[] = [
 
 function DashboardContent() {
   const { user } = useAuth();
+  const router = useRouter();
   // Using global showToast function instead of hook
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -335,32 +336,24 @@ function DashboardContent() {
         throw new Error(result.error?.message || 'Failed to create vendor');
       }
     } catch (error: any) {
-      console.error('❌ Error adding vendor:', error);
+      console.error('❌ Error creating vendor:', error);
       
-      let errorMessage = 'Failed to add client. Please try again.';
-      let errorTitle = 'Error';
-      
-      // Handle specific error types
-      if (error.name === 'AuthenticationError') {
-        errorTitle = 'Authentication Required';
-        errorMessage = 'Your session has expired. Please log in again.';
-      } else if (error.name === 'OrganizationError') {
-        errorTitle = 'Organization Access Required';
-        errorMessage = 'You need to be associated with an organization to create clients.';
-      } else if (error.message.includes('organization')) {
-        errorTitle = 'Organization Required';
-        errorMessage = 'Organization access is required to create clients.';
-      } else if (error.message.includes('authentication') || error.message.includes('login')) {
-        errorTitle = 'Authentication Required';
-        errorMessage = 'Please log in to continue.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      // Check if error is due to feature limits
+      if (error.response?.status === 403 || error.response?.data?.error?.code === 'VENDOR_LIMIT_REACHED') {
+        const errorData = error.response?.data?.error;
+        showToast(
+          `${errorData?.message || 'You\'ve reached your vendor limit'}. Please upgrade your plan to add more vendors.`, 
+          'error', 
+          8000
+        );
+        
+        // Redirect to pricing page after a short delay
+        setTimeout(() => {
+          router.push('/pricing?upgrade=vendor_limit');
+        }, 2000);
+      } else {
+        showToast(error.message || 'Failed to add vendor. Please try again.', 'error', 5000);
       }
-      
-      showToast(errorMessage, 'error', 7000);
-      
-      // Don't throw the error to prevent the modal from staying open unnecessarily
-      // throw error;
     }
   };
 

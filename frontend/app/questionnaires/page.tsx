@@ -1400,7 +1400,10 @@ const QuestionnairesContent = () => {
         // Fallback: create questionnaire directly
         const response = await fetch('/api/questionnaires', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
           body: JSON.stringify({
             title: checklistName,
             vendorId: selectedVendorId,
@@ -1410,7 +1413,20 @@ const QuestionnairesContent = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create questionnaire');
+          const errorData = await response.json().catch(() => null);
+          
+          // Check if error is due to feature limits
+          if (response.status === 403 && errorData?.error?.code === 'QUESTIONNAIRE_LIMIT_REACHED') {
+            setUploadError(`${errorData.error.message} Please upgrade your plan to create more questionnaires.`);
+            
+            // Redirect to pricing page after a short delay
+            setTimeout(() => {
+              router.push('/pricing?upgrade=questionnaire_limit');
+            }, 3000);
+            return;
+          }
+          
+          throw new Error(errorData?.message || 'Failed to create questionnaire');
         }
 
         const questionnaire = await response.json();
