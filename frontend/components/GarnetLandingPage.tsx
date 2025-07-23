@@ -1326,7 +1326,7 @@ const GarnetLandingPage = () => {
       </section>
 
       {/* Video Demo Section */}
-      <section className="py-20 bg-white">
+      <section id="demo" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             className="text-center mb-12"
@@ -1345,36 +1345,22 @@ const GarnetLandingPage = () => {
           </motion.div>
 
           <motion.div 
-            className="relative max-w-5xl mx-auto"
+            className="w-full max-w-4xl mx-auto p-4"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            {/* Video Container with Modern Styling */}
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900">
-              {/* Gradient border effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl" 
-                   style={{ padding: '2px' }}>
-                <div className="bg-gray-900 rounded-2xl h-full w-full">
-                  <iframe 
-                    className="w-full h-auto rounded-2xl"
-                    src="https://drive.google.com/file/d/1s-WmO_FiKwRejufWBOttf_28JAh_mgZ-/preview"
-                    style={{ aspectRatio: '16/9', minHeight: '400px' }}
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                    title="Product Demo Video"
-                  >
-                  </iframe>
-                </div>
-              </div>
-
-                             {/* Decorative elements for visual appeal */}
-               <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-70 animate-pulse"></div>
-               <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full opacity-60 animate-bounce"></div>
+            <div className="relative pb-[56.25%] h-0 overflow-hidden rounded-2xl shadow-lg">
+              <iframe
+                src="https://drive.google.com/file/d/1s-WmO_FiKwRejufWBOttf_28JAh_mgZ-/preview"
+                className="absolute top-0 left-0 w-full h-full"
+                allow="autoplay"
+                allowFullScreen
+                frameBorder="0"
+                title="Garnet AI Demo Video"
+              ></iframe>
             </div>
-
-
           </motion.div>
         </div>
       </section>
