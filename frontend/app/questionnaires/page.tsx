@@ -2899,7 +2899,7 @@ const QuestionnairesContent = () => {
                       ? 'Please Login to Access Vendors'
                       : isLoadingVendors 
                         ? 'Loading vendors...'
-                        : '🔽 Select Vendor to Get Started'
+                        : '🔽 Select Client to Get Started'
                     }
                   </option>
                   {!uploadError && !isLoadingVendors ? (
