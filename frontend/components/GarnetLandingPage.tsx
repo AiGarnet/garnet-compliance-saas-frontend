@@ -1359,10 +1359,11 @@ const GarnetLandingPage = () => {
                 <div className="bg-gray-900 rounded-2xl h-full w-full">
                   <iframe 
                     className="w-full h-auto rounded-2xl"
-                    src="https://drive.google.com/file/d/13prerhPUPVkM8_XEYe1ktoaFIO62yB_e/preview"
+                    src="https://drive.google.com/file/d/1s-WmO_FiKwRejufWBOttf_28JAh_mgZ-/preview"
                     style={{ aspectRatio: '16/9', minHeight: '400px' }}
                     allow="autoplay; encrypted-media"
                     allowFullScreen
+                    title="Product Demo Video"
                   >
                   </iframe>
                 </div>
