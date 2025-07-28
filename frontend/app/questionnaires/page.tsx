@@ -2037,7 +2037,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('❌ Error uploading supporting document:', error);
-      setSupportDocUploadError('Upload failed. This could be due to file size limits, network issues, or unsupported content in the document. Please check your file and try again. If the issue persists, try converting to PDF format.');
+      setSupportDocUploadError('Upload failed. This could be due to unsupported content in the document. Please check your file and try again.');
     } finally {
       setIsUploadingSupportDoc(false);
       setUploadingQuestionId(null);
