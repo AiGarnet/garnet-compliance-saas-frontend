@@ -2071,24 +2071,37 @@ const QuestionnairesContent = () => {
     }
   };
 
-  // Add manual question to checklist
+  // Add manual question to checklist or create standalone question
   const addManualQuestion = async () => {
-    if (!selectedChecklist?.checklistId || !selectedVendorId || !manualQuestionText.trim()) {
-      setUploadError('Please provide question text and select a checklist');
+    if (!selectedVendorId || !manualQuestionText.trim()) {
+      setUploadError('Please provide question text and select a vendor');
       return;
     }
 
     setIsAddingManualQuestion(true);
     try {
-      console.log(`📝 MANUAL QUESTION: Adding to checklist ${selectedChecklist.checklistId}`);
+      let newQuestion;
       
-      const newQuestion = await ChecklistService.addManualQuestion(
-        selectedChecklist.checklistId,
-        selectedVendorId,
-        manualQuestionText.trim(),
-        manualQuestionRequiresDoc,
-        manualQuestionDocDescription.trim() || undefined
-      );
+      if (selectedChecklist?.checklistId) {
+        // Add to existing checklist
+        console.log(`📝 MANUAL QUESTION: Adding to checklist ${selectedChecklist.checklistId}`);
+        newQuestion = await ChecklistService.addManualQuestion(
+          selectedChecklist.checklistId,
+          selectedVendorId,
+          manualQuestionText.trim(),
+          manualQuestionRequiresDoc,
+          manualQuestionDocDescription.trim() || undefined
+        );
+      } else {
+        // Create standalone question (will create default checklist if needed)
+        console.log(`📝 MANUAL QUESTION: Adding standalone question for vendor ${selectedVendorId}`);
+        newQuestion = await ChecklistService.addStandaloneManualQuestion(
+          selectedVendorId,
+          manualQuestionText.trim(),
+          manualQuestionRequiresDoc,
+          manualQuestionDocDescription.trim() || undefined
+        );
+      }
 
       console.log('📝 MANUAL QUESTION: Successfully added:', newQuestion);
 
@@ -2102,23 +2115,28 @@ const QuestionnairesContent = () => {
         requiresDoc: newQuestion.requiresDocument,
         docDescription: newQuestion.documentDescription,
         checklistId: newQuestion.checklistId,
-        checklistName: selectedChecklist.name,
+        checklistName: selectedChecklist?.name || 'Manual Questions',
         isDone: false,
         isEditing: false
       };
 
-      // Update the selected checklist with the new question
-      const updatedChecklist = {
-        ...selectedChecklist,
-        questions: [...(selectedChecklist.questions || []), localQuestion]
-      };
-      
-      setSelectedChecklist(updatedChecklist);
-      
-      // Update checklists list
-      setChecklists(prev => prev.map(c => 
-        c.id === selectedChecklist.id ? updatedChecklist : c
-      ));
+      if (selectedChecklist) {
+        // Update the selected checklist with the new question
+        const updatedChecklist = {
+          ...selectedChecklist,
+          questions: [...(selectedChecklist.questions || []), localQuestion]
+        };
+        
+        setSelectedChecklist(updatedChecklist);
+        
+        // Update checklists list
+        setChecklists(prev => prev.map(c => 
+          c.id === selectedChecklist.id ? updatedChecklist : c
+        ));
+             } else {
+         // Refresh checklists to show the newly created default checklist
+         await loadVendorChecklists(selectedVendorId);
+       }
 
       // Refresh the AI Questionnaire section with updated questions
       await loadAllVendorQuestionsForAI(selectedVendorId);
@@ -3198,7 +3216,7 @@ const QuestionnairesContent = () => {
                     </div>
                     
                     {/* Add Manual Question Button */}
-                    {selectedChecklist && (
+                    {selectedVendorId && (
                       <div className="text-center">
                         <button
                           onClick={() => setShowAddQuestionModal(true)}
@@ -3208,7 +3226,10 @@ const QuestionnairesContent = () => {
                           Add Manual Question
                         </button>
                         <p className="text-sm text-gray-500 mt-2">
-                          Add custom questions to: "{selectedChecklist.name}"
+                          {selectedChecklist 
+                            ? `Add custom questions to: "${selectedChecklist.name}"`
+                            : `Add custom questions for selected vendor`
+                          }
                         </p>
                       </div>
                     )}
@@ -3286,7 +3307,7 @@ const QuestionnairesContent = () => {
                           ) : (
                             <>
                               <Upload className="h-4 w-4 mr-2" />
-                              Select & Review Files
+                              Upload Evidence Files
                             </>
                           )}
                         </button>
