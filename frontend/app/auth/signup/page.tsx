@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info, CreditCard, Check } from "lucide-react";
+import { Eye, EyeOff, UserPlus, User, Lock, Mail, Building, Users, Info, CreditCard, Check, Tag } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { auth } from "../../../lib/api";
 import { ROLES, ROLE_DISPLAY_NAMES, isValidRole } from "@/lib/auth/roles";
@@ -127,11 +127,19 @@ export default function SignupPage() {
     full_name: "",
     role: "",
     organization: "",
+    couponCode: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [couponValidation, setCouponValidation] = useState<{
+    valid: boolean;
+    message: string;
+    coupon?: any;
+    permissions?: any;
+  } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   const redirectTo = searchParams?.get('redirect') || null;
   const selectedPlanId = searchParams?.get('plan') || null;
@@ -148,6 +156,47 @@ export default function SignupPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // Validate coupon when coupon code changes
+  const validateCoupon = async (code: string) => {
+    if (!code.trim()) {
+      setCouponValidation(null);
+      return;
+    }
+
+    setValidatingCoupon(true);
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: code.trim().toUpperCase() }),
+      });
+
+      const data = await response.json();
+      setCouponValidation(data);
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      setCouponValidation({
+        valid: false,
+        message: 'Failed to validate coupon code',
+      });
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  // Debounced coupon validation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.couponCode) {
+        validateCoupon(formData.couponCode);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.couponCode]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -156,6 +205,11 @@ export default function SignupPage() {
     }));
     // Clear error when user starts typing
     if (error) setError("");
+    
+    // Clear coupon validation when coupon code is cleared
+    if (name === 'couponCode' && !value.trim()) {
+      setCouponValidation(null);
+    }
   };
 
   const validateForm = () => {
@@ -207,10 +261,17 @@ export default function SignupPage() {
         full_name: formData.full_name,
         role: formData.role,
         organization: formData.organization || null,
+        couponCode: formData.couponCode || null,
       });
 
       // Login to get the auth token for payment processing
       await login(formData.email, formData.password);
+
+      // If coupon provides special permissions, redirect to dashboard with benefits applied
+      if (couponValidation?.valid && couponValidation.permissions) {
+        router.push('/dashboard?coupon=applied&message=Welcome! Your coupon has been applied successfully.');
+        return;
+      }
 
       // If any plan is selected (except enterprise), proceed to payment
       if (selectedPlan && selectedPlan.id !== 'enterprise') {
@@ -350,6 +411,45 @@ export default function SignupPage() {
           </div>
         )}
 
+        {/* Coupon Validation Display */}
+        {couponValidation && (
+          <div className={`border rounded-lg p-4 ${
+            couponValidation.valid 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-start">
+              <Tag className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${
+                couponValidation.valid ? 'text-green-600' : 'text-red-600'
+              }`} />
+              <div className="flex-1">
+                <h3 className={`text-sm font-medium ${
+                  couponValidation.valid ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  {couponValidation.valid ? '✓ Valid Coupon!' : '✗ Invalid Coupon'}
+                </h3>
+                <p className={`text-sm mt-1 ${
+                  couponValidation.valid ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  {couponValidation.message}
+                </p>
+                {couponValidation.valid && couponValidation.coupon && (
+                  <div className="mt-2">
+                    <p className="text-xs text-green-600 font-medium">
+                      {couponValidation.coupon.name}
+                    </p>
+                    {couponValidation.coupon.description && (
+                      <p className="text-xs text-green-600">
+                        {couponValidation.coupon.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Redirect Message */}
         {redirectTo && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -479,6 +579,35 @@ export default function SignupPage() {
               </div>
               <p className="mt-1 text-xs text-gray-500">
                 Team members with the same organization name will be automatically linked together
+              </p>
+            </div>
+
+            {/* Coupon Code Field */}
+            <div>
+              <label htmlFor="couponCode" className="block text-sm font-medium text-gray-700 mb-2">
+                Coupon Code (Optional)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Tag className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="couponCode"
+                  name="couponCode"
+                  type="text"
+                  value={formData.couponCode}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-white text-gray-900"
+                  placeholder="Enter coupon code"
+                />
+                {validatingCoupon && (
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Have a special coupon? Enter it here to unlock additional benefits or discounts
               </p>
             </div>
 
