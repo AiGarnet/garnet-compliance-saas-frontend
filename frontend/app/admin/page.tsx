@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { apiCall } from '../../lib/api';
+import { hasPermission } from '../../lib/auth/roles';
+import CouponManagement from '../../components/admin/CouponManagement';
 
 interface DashboardData {
   overview: {
@@ -47,19 +49,28 @@ export default function AdminDashboard() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [error, setError] = useState('');
 
-  // Check admin access
+  // Check admin access or coupon management permission
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.push('/auth/login');
       return;
     }
 
-    if (user.role !== 'admin') {
+    // Allow access for admin, sales_professional, and founder roles
+    const hasAccess = user.role === 'admin' || hasPermission(user.role, 'canManageCoupons');
+    if (!hasAccess) {
       router.push('/dashboard');
       return;
     }
 
-    loadDashboardData();
+    // Only load dashboard data for admin users
+    if (user.role === 'admin') {
+      loadDashboardData();
+    } else {
+      // Non-admin users go directly to coupons tab
+      setActiveTab('coupons');
+      setLoading(false);
+    }
   }, [isAuthenticated, user, router]);
 
   const loadDashboardData = async () => {
@@ -187,11 +198,14 @@ export default function AdminDashboard() {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'dashboard', name: 'Overview', icon: '📊' },
-              { id: 'users', name: 'Users', icon: '👥' },
-              { id: 'vendors', name: 'Vendors', icon: '🏢' },
-              { id: 'analytics', name: 'Analytics', icon: '📈' },
-              { id: 'system', name: 'System', icon: '⚙️' },
+              ...(user?.role === 'admin' ? [
+                { id: 'dashboard', name: 'Overview', icon: '📊' },
+                { id: 'users', name: 'Users', icon: '👥' },
+                { id: 'vendors', name: 'Vendors', icon: '🏢' },
+                { id: 'analytics', name: 'Analytics', icon: '📈' },
+                { id: 'system', name: 'System', icon: '⚙️' },
+              ] : []),
+              { id: 'coupons', name: 'Coupons', icon: '🎫' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -470,6 +484,10 @@ export default function AdminDashboard() {
               <p className="text-gray-600">System tools and maintenance options coming soon...</p>
             </div>
           </div>
+        )}
+
+        {activeTab === 'coupons' && (
+          <CouponManagement />
         )}
       </main>
     </div>

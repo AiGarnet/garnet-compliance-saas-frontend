@@ -1,13 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Alert } from '../ui/Alert';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { apiCall } from '../../lib/api';
+import { useAuth } from '../../lib/auth/AuthContext';
+import { hasPermission } from '../../lib/auth/roles';
+
+interface CouponPermissions {
+  full_access?: boolean;
+  features?: string[];
+  plan_override?: string;
+  unlimited_questionnaires?: boolean;
+  unlimited_vendors?: boolean;
+  unlimited_users?: boolean;
+  unlimited_storage?: boolean;
+  unlimited_frameworks?: boolean;
+  bypass_subscription?: boolean;
+  testing_access?: boolean;
+}
 
 interface Coupon {
   id: string;
   code: string;
   name: string;
   description: string;
-  permissions: any;
+  permissions: CouponPermissions;
   usage_limit?: number;
   usage_count: number;
   valid_from: string;
@@ -15,80 +31,84 @@ interface Coupon {
   is_active: boolean;
   created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
-export const CouponManagement: React.FC = () => {
+interface CreateCouponForm {
+  code: string;
+  name: string;
+  description: string;
+  permissions: CouponPermissions;
+  usage_limit?: number;
+  valid_until?: string;
+}
+
+export default function CouponManagement() {
+  const { user } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateCouponForm>({
+    code: '',
+    name: '',
+    description: '',
+    permissions: {},
+  });
+
+  // Check if user has coupon management permission
+  const canManageCoupons = user && hasPermission(user.role, 'canManageCoupons');
 
   useEffect(() => {
-    loadCoupons();
-  }, []);
+    if (canManageCoupons) {
+      loadCoupons();
+    }
+  }, [canManageCoupons]);
 
   const loadCoupons = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in as admin');
-      }
-
-      const response = await fetch('/api/coupons', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load coupons');
-      }
-
-      const data = await response.json();
-      setCoupons(data.coupons || []);
+      setLoading(true);
+      const response = await apiCall('/api/coupons');
+      setCoupons(response.coupons || []);
     } catch (error) {
       console.error('Error loading coupons:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load coupons');
+      setError('Failed to load coupons');
     } finally {
       setLoading(false);
     }
   };
 
-  const createTestCoupon = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
+  const createCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in as admin');
-      }
-
-      const response = await fetch('/api/coupons/create-test-coupon', {
+      await apiCall('/api/coupons', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify(createForm),
       });
+      
+      setShowCreateForm(false);
+      setCreateForm({
+        code: '',
+        name: '',
+        description: '',
+        permissions: {},
+      });
+      loadCoupons();
+    } catch (error) {
+      console.error('Error creating coupon:', error);
+      setError('Failed to create coupon');
+    }
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create test coupon');
-      }
-
-      const newCoupon = await response.json();
-      setSuccess(`Test coupon created successfully! Code: ${newCoupon.code}`);
-      loadCoupons(); // Reload the list
+  const createTestCoupon = async () => {
+    try {
+      await apiCall('/api/coupons/create-test-coupon', {
+        method: 'POST',
+      });
+      loadCoupons();
     } catch (error) {
       console.error('Error creating test coupon:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create test coupon');
-    } finally {
-      setLoading(false);
+      setError('Failed to create test coupon');
     }
   };
 
@@ -98,127 +118,301 @@ export const CouponManagement: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in as admin');
-      }
-
-      const response = await fetch(`/api/coupons/${couponId}/deactivate`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      await apiCall(`/api/coupons/${couponId}/deactivate`, {
+        method: 'POST',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to deactivate coupon');
-      }
-
-      setSuccess('Coupon deactivated successfully');
-      loadCoupons(); // Reload the list
+      loadCoupons();
     } catch (error) {
       console.error('Error deactivating coupon:', error);
-      setError(error instanceof Error ? error.message : 'Failed to deactivate coupon');
+      setError('Failed to deactivate coupon');
     }
   };
 
+  if (!canManageCoupons) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="text-center">
+          <div className="text-red-600 text-lg mb-2">🚫 Access Denied</div>
+          <p className="text-gray-600">You don't have permission to manage coupons.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading coupons...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Coupon Management</h2>
-        <div className="space-x-3">
-          <Button onClick={loadCoupons} variant="outline" disabled={loading}>
-            Refresh
-          </Button>
-          <Button onClick={createTestCoupon} disabled={loading}>
-            Create Test Coupon
-          </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Coupon Management</h3>
+            <p className="text-sm text-gray-600">Create and manage promotional coupons</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={createTestCoupon}
+              className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700"
+            >
+              🧪 Create Test Coupon
+            </button>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              ➕ Create Coupon
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="mb-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert variant="success" className="mb-4">
-          {success}
-        </Alert>
-      )}
-
-      {loading && (
-        <div className="text-center py-4">
-          <p className="text-gray-600">Loading coupons...</p>
+          <button 
+            onClick={() => setError('')}
+            className="float-right text-red-700 hover:text-red-900"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {!loading && coupons.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No coupons found</p>
-          <Button onClick={createTestCoupon} className="mt-4">
-            Create Your First Test Coupon
-          </Button>
+      {/* Create Coupon Form */}
+      {showCreateForm && (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h4 className="text-lg font-medium text-gray-900 mb-4">Create New Coupon</h4>
+          <form onSubmit={createCoupon} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Coupon Code</label>
+                <input
+                  type="text"
+                  value={createForm.code}
+                  onChange={(e) => setCreateForm({ ...createForm, code: e.target.value.toUpperCase() })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="PROMO2024"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Promotional Offer"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                rows={2}
+                placeholder="Description of the coupon offer"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Usage Limit (optional)</label>
+                <input
+                  type="number"
+                  value={createForm.usage_limit || ''}
+                  onChange={(e) => setCreateForm({ ...createForm, usage_limit: e.target.value ? parseInt(e.target.value) : undefined })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Leave empty for unlimited"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Valid Until (optional)</label>
+                <input
+                  type="date"
+                  value={createForm.valid_until || ''}
+                  onChange={(e) => setCreateForm({ ...createForm, valid_until: e.target.value })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+              </div>
+            </div>
+
+            {/* Permissions */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.full_access || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, full_access: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Full Access</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.bypass_subscription || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, bypass_subscription: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Bypass Subscription</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.testing_access || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, testing_access: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Testing Access</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.unlimited_questionnaires || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, unlimited_questionnaires: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Unlimited Questionnaires</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.unlimited_vendors || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, unlimited_vendors: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Unlimited Vendors</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={createForm.permissions.unlimited_users || false}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      permissions: { ...createForm.permissions, unlimited_users: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Unlimited Users</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Create Coupon
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {!loading && coupons.length > 0 && (
+      {/* Coupons List */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h4 className="text-lg font-medium text-gray-900">Active Coupons</h4>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usage
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Valid Until
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {coupons.map((coupon) => (
                 <tr key={coupon.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {coupon.code}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {coupon.description}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {coupon.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {coupon.usage_count} / {coupon.usage_limit || '∞'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {coupon.valid_until 
-                      ? new Date(coupon.valid_until).toLocaleDateString()
-                      : 'Never'
-                    }
+                    <div className="text-sm font-medium text-gray-900">{coupon.code}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      coupon.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{coupon.name}</div>
+                      <div className="text-sm text-gray-500">{coupon.description}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {coupon.usage_count} / {coupon.usage_limit || '∞'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-wrap gap-1">
+                      {coupon.permissions.full_access && (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          Full Access
+                        </span>
+                      )}
+                      {coupon.permissions.bypass_subscription && (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                          Bypass Sub
+                        </span>
+                      )}
+                      {coupon.permissions.testing_access && (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          Testing
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      coupon.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
                       {coupon.is_active ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(coupon.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {coupon.is_active && (
@@ -234,18 +428,19 @@ export const CouponManagement: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">Quick Testing Instructions:</h3>
-        <div className="text-sm text-blue-800 space-y-1">
-          <p>1. Click "Create Test Coupon" to generate a new backdoor coupon</p>
-          <p>2. Use the coupon code <code className="bg-blue-100 px-1 rounded">BACKDOOR-TEST-2024</code> (already created)</p>
-          <p>3. Apply it via the "Apply Coupon Code" button on the dashboard</p>
-          <p>4. This grants full access to all premium features for testing</p>
+          {coupons.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-gray-500">No coupons found</div>
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="mt-2 text-blue-600 hover:text-blue-800"
+              >
+                Create your first coupon
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-};
+}

@@ -33,7 +33,8 @@ export const ROLE_PERMISSIONS = {
     canAccessTrustPortal: true,
     canManageVendors: false,
     canCreateQuestionnaires: true,
-    canViewReports: true
+    canViewReports: true,
+    canManageCoupons: true
   },
   [ROLES.FOUNDER]: {
     canAccessDashboard: true,
@@ -44,7 +45,8 @@ export const ROLE_PERMISSIONS = {
     canAccessTrustPortal: true,
     canManageVendors: false,
     canCreateQuestionnaires: true,
-    canViewReports: true
+    canViewReports: true,
+    canManageCoupons: true
   },
   [ROLES.ADMIN]: {
     canAccessDashboard: true,
@@ -58,7 +60,8 @@ export const ROLE_PERMISSIONS = {
     canViewReports: true,
     canManageUsers: true,
     canManageOrganizations: true,
-    canAccessAdminPanel: true
+    canAccessAdminPanel: true,
+    canManageCoupons: true
   }
 } as const;
 
