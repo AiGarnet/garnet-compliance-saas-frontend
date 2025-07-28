@@ -996,7 +996,7 @@ const QuestionnairesContent = () => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
     if (!allowedTypes.includes(fileExtension)) {
-      setUploadError('Please upload a PDF, TXT, DOC, or DOCX file');
+      setUploadError(`File type "${fileExtension}" is not supported. Please upload a document in one of these formats: PDF (recommended), TXT, DOC, or DOCX. PDFs provide the best content extraction for compliance checking.`);
       return;
     }
 
@@ -1069,7 +1069,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('Error processing file:', error);
-      setUploadError('Failed to process file. Please try again.');
+      setUploadError('Failed to process the uploaded file. This could be due to file corruption, unsupported content, or network issues. Please ensure your file is valid and try again. For best results, use PDF format.');
       
       // Update status to error
       setChecklists(prev => prev.map(c => 
@@ -1596,7 +1596,7 @@ const QuestionnairesContent = () => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
     if (!allowedTypes.includes(fileExtension)) {
-      setSupportDocUploadError('Please upload a PDF, image, or document file');
+      setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload a file in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), or document files (DOC, DOCX, TXT). PDFs provide the most accurate content analysis.`);
       return;
     }
 
@@ -1652,7 +1652,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('❌ Error uploading standalone supporting document:', error);
-      setSupportDocUploadError('Failed to upload supporting document. Please try again.');
+      setSupportDocUploadError('Upload failed. This could be due to file size limits, network issues, or unsupported content in the document. Please check your file and try again. If the issue persists, try converting to PDF format.');
     } finally {
       setIsUploadingSupportDoc(false);
     }
@@ -1973,7 +1973,7 @@ const QuestionnairesContent = () => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     
     if (!allowedTypes.includes(fileExtension)) {
-      setSupportDocUploadError('Please upload a PDF, image, or document file');
+      setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload a file in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), or document files (DOC, DOCX, TXT). PDFs provide the most accurate content analysis for compliance validation.`);
       return;
     }
 
@@ -2037,7 +2037,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('❌ Error uploading supporting document:', error);
-      setSupportDocUploadError('Failed to upload supporting document. Please try again.');
+      setSupportDocUploadError('Upload failed. This could be due to file size limits, network issues, or unsupported content in the document. Please check your file and try again. If the issue persists, try converting to PDF format.');
     } finally {
       setIsUploadingSupportDoc(false);
       setUploadingQuestionId(null);
