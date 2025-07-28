@@ -55,6 +55,7 @@ export interface GenerateAnswersRequest {
   context?: string;
   vendorId: string;
   checklistId?: string;
+  selectedEvidenceFiles?: string[];
 }
 
 export interface GenerateAnswersResponse {
@@ -299,7 +300,12 @@ export class ChecklistService {
   /**
    * Batch generate AI answers for all pending questions of a vendor
    */
-  static async generateAllPendingAnswers(vendorId: string, context?: string, checklistId?: string): Promise<GenerateAnswersResponse> {
+  static async generateAllPendingAnswers(
+    vendorId: string, 
+    context?: string, 
+    checklistId?: string, 
+    selectedEvidenceFiles?: string[]
+  ): Promise<GenerateAnswersResponse> {
     try {
       const pendingQuestions = await this.getPendingQuestions(vendorId);
       
@@ -311,7 +317,8 @@ export class ChecklistService {
         questions: pendingQuestions.map(q => q.questionText),
         context: context || 'Security compliance questionnaire',
         vendorId,
-        checklistId
+        checklistId,
+        selectedEvidenceFiles
       };
 
       return await this.generateAnswers(request);

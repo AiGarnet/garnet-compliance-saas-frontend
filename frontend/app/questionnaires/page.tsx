@@ -45,6 +45,7 @@ import { AIService } from '@/lib/services/aiService';
 import ChatbotAssistance from '@/components/help/ChatbotAssistance';
 import { EvidenceFilePreview } from '@/components/questionnaire/EvidenceFilePreview';
 import { TextFileViewer } from '@/components/questionnaire/TextFileViewer';
+import { EvidenceSelectionModal } from '@/components/modals/EvidenceSelectionModal';
 
 interface ExtractedQuestion {
   id: string;
@@ -164,6 +165,14 @@ const QuestionnairesContent = () => {
   const [evidenceDescription, setEvidenceDescription] = useState('');
   const [evidenceCategory, setEvidenceCategory] = useState('');
   const evidenceFileRef = useRef<HTMLInputElement>(null);
+  
+  // Evidence selection modal state
+  const [showEvidenceSelectionModal, setShowEvidenceSelectionModal] = useState(false);
+  const [pendingGenerationRequest, setPendingGenerationRequest] = useState<{
+    checklistId: string;
+    vendorId: string;
+    question?: string;
+  } | null>(null);
   
   // AI processing states
   const [isGeneratingAnswers, setIsGeneratingAnswers] = useState(false);
@@ -1105,7 +1114,7 @@ const QuestionnairesContent = () => {
       // Auto-generate AI answers for pending questions
       const pendingQuestions = questionsForAI.filter(q => q.status === 'pending');
       if (pendingQuestions.length > 0) {
-        await generateAIResponsesFromDatabase(checklist.checklistId, selectedVendorId);
+        await showEvidenceSelectionIfNeeded(checklist.checklistId, selectedVendorId);
       }
       
     } catch (error) {
@@ -1116,8 +1125,84 @@ const QuestionnairesContent = () => {
     }
   };
 
+  // Show evidence selection modal if evidence files exist, otherwise proceed directly
+  const showEvidenceSelectionIfNeeded = async (checklistId: string, vendorId: string, question?: string) => {
+    try {
+      // Check if there are evidence files for this vendor
+      if (evidenceFiles.length > 0) {
+        // Show evidence selection modal
+        setPendingGenerationRequest({ checklistId, vendorId, question });
+        setShowEvidenceSelectionModal(true);
+      } else {
+        // No evidence files, proceed directly with generation
+        await generateAIResponsesFromDatabase(checklistId, vendorId);
+      }
+    } catch (error) {
+      console.error('Error checking evidence files:', error);
+      // On error, proceed without evidence files
+      await generateAIResponsesFromDatabase(checklistId, vendorId);
+    }
+  };
+
+  // Handle evidence file selection confirmation
+  const handleEvidenceSelectionConfirm = async (selectedFileIds: string[]) => {
+    setShowEvidenceSelectionModal(false);
+    
+    if (pendingGenerationRequest) {
+      const { checklistId, vendorId, question } = pendingGenerationRequest;
+      setPendingGenerationRequest(null);
+      
+      if (question) {
+        // This is for single question generation
+        const questionObj = extractedQuestions.find(q => q.text === question);
+        if (questionObj) {
+          await generateSingleAIAnswerWithEvidence(questionObj, selectedFileIds);
+        }
+      } else {
+        // This is for batch generation
+        await generateAIResponsesFromDatabase(checklistId, vendorId, selectedFileIds);
+      }
+    }
+  };
+
+  // Handle evidence selection modal cancel
+  const handleEvidenceSelectionCancel = () => {
+    setShowEvidenceSelectionModal(false);
+    setPendingGenerationRequest(null);
+  };
+
+  // Show evidence selection for single question generation
+  const showEvidenceSelectionForSingleQuestion = async (question: ExtractedQuestion) => {
+    try {
+      // Check if there are evidence files for this vendor
+      if (evidenceFiles.length > 0) {
+        // Show evidence selection modal for single question
+        setPendingGenerationRequest({ 
+          checklistId: question.checklistId || '', 
+          vendorId: selectedVendorId, 
+          question: question.text 
+        });
+        setShowEvidenceSelectionModal(true);
+      } else {
+        // No evidence files, proceed directly with generation
+        await generateSingleAIAnswer(question);
+      }
+    } catch (error) {
+      console.error('Error checking evidence files for single question:', error);
+      // On error, proceed without evidence files
+      await generateSingleAIAnswer(question);
+    }
+  };
+
+  // Generate single AI answer with selected evidence files
+  const generateSingleAIAnswerWithEvidence = async (question: ExtractedQuestion, selectedFileIds: string[]) => {
+    // For now, we'll modify the existing generateSingleAIAnswer to accept selected evidence files
+    // In the future, this could be enhanced to use the backend API with selected evidence files
+    await generateSingleAIAnswer(question, selectedFileIds);
+  };
+
   // Generate AI responses using database integration
-  const generateAIResponsesFromDatabase = async (checklistId: string, vendorId: string) => {
+  const generateAIResponsesFromDatabase = async (checklistId: string, vendorId: string, selectedEvidenceFiles?: string[]) => {
     setIsGeneratingAnswers(true);
     setGenerationProgress({ current: 0, total: 0, currentQuestion: 'Preparing...' });
 
@@ -1142,8 +1227,13 @@ const QuestionnairesContent = () => {
 
       console.log(`🤖 AI GENERATION: Calling generateAllPendingAnswers for ${pendingQuestions.length} questions`);
       
-      // Generate answers using the checklist service
-      const response = await ChecklistService.generateAllPendingAnswers(vendorId, 'Security compliance questionnaire', checklistId);
+      // Generate answers using the checklist service with selected evidence files
+      const response = await ChecklistService.generateAllPendingAnswers(
+        vendorId, 
+        'Security compliance questionnaire', 
+        checklistId, 
+        selectedEvidenceFiles
+      );
       console.log('🤖 AI GENERATION: Generate answers response:', response);
       
       // Poll for updates every 2 seconds to show progress
@@ -1218,7 +1308,7 @@ const QuestionnairesContent = () => {
   };
 
   // Generate AI answer for a single question with enhanced evidence context
-  const generateSingleAIAnswer = async (question: ExtractedQuestion) => {
+  const generateSingleAIAnswer = async (question: ExtractedQuestion, selectedEvidenceFiles?: string[]) => {
     setIsGeneratingAnswers(true);
     setGenerationProgress({ current: 0, total: 1, currentQuestion: question.text });
 
@@ -3919,7 +4009,7 @@ const QuestionnairesContent = () => {
                           
                           {question.status === 'pending' && (
                             <button
-                              onClick={() => generateSingleAIAnswer(question)}
+                              onClick={() => showEvidenceSelectionForSingleQuestion(question)}
                               disabled={isGeneratingAnswers}
                               className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center"
                             >
@@ -3940,7 +4030,7 @@ const QuestionnairesContent = () => {
                                                         {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => generateSingleAIAnswer(question)}
+                                onClick={() => showEvidenceSelectionForSingleQuestion(question)}
                                 disabled={isGeneratingAnswers}
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
                               >
@@ -4632,6 +4722,16 @@ const QuestionnairesContent = () => {
           }}
         />
         
+        {/* Evidence Selection Modal */}
+        <EvidenceSelectionModal
+          isOpen={showEvidenceSelectionModal}
+          onClose={handleEvidenceSelectionCancel}
+          onConfirm={handleEvidenceSelectionConfirm}
+          evidenceFiles={evidenceFiles}
+          question={pendingGenerationRequest?.question}
+          isLoading={isGeneratingAnswers}
+        />
+
         {/* Follow-up Modal */}
         {showFollowUpModal && <FollowUpModal />}
     </>
