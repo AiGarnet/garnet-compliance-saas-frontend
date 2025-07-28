@@ -32,7 +32,8 @@ import {
   ChevronRight,
   Trash2,
   Eye,
-  Send
+  Send,
+  BarChart3
 } from "lucide-react";
 import Header from '@/components/Header';
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
@@ -3676,18 +3677,28 @@ const QuestionnairesContent = () => {
 
           {/* Section 2: AI Questionnaire */}
           {activeSection === 'ai' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-lg border border-purple-200 p-8">
                             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-8">
-                  <Bot className="h-16 w-16 text-purple-600 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Questionnaire Processing</h2>
-                  <p className="text-lg text-gray-600">Let our AI generate compliance answers for your questions</p>
+                <div className="text-center mb-10">
+                  <div className="relative inline-block mb-6">
+                    <div className="absolute inset-0 bg-purple-600 rounded-full blur-xl opacity-20 animate-pulse"></div>
+                    <Bot className="h-20 w-20 text-purple-600 mx-auto relative z-10" />
+                  </div>
+                  <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
+                    AI Questionnaire Processing
+                  </h2>
+                  <p className="text-xl text-gray-700 mb-6">Let our AI generate compliance answers for your questions</p>
                   
                   {/* Supporting Document Note */}
-                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
-                    <p className="text-sm text-amber-800 flex items-center justify-center">
-                      <FileText className="h-4 w-4 mr-2" />
-                      <strong>Note:</strong> To submit the checklist to the Trust Portal, please upload the relevant supporting documents for the required questions.
+                  <div className="mt-6 p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-xl max-w-3xl mx-auto shadow-sm">
+                    <div className="flex items-center justify-center mb-2">
+                      <div className="bg-amber-100 rounded-full p-2 mr-3">
+                        <FileText className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <span className="font-semibold text-amber-800">Important Note</span>
+                    </div>
+                    <p className="text-sm text-amber-700 leading-relaxed">
+                      To submit the checklist to the Trust Portal, please upload the relevant supporting documents for the required questions.
                     </p>
                   </div>
                 </div>
@@ -3705,9 +3716,14 @@ const QuestionnairesContent = () => {
                           </button>
                         </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="bg-purple-50 p-6 rounded-lg">
-                      <h3 className="text-lg font-semibold text-purple-900 mb-4">Progress Overview</h3>
+                  <div className="space-y-8">
+                    <div className="bg-white/70 backdrop-blur-sm p-8 rounded-xl border border-white/50 shadow-lg">
+                      <div className="flex items-center mb-6">
+                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-2 mr-3">
+                          <BarChart3 className="h-6 w-6 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900">Progress Overview</h3>
+                      </div>
                       
                       {/* AI Generation Progress */}
                       {isGeneratingAnswers && (
@@ -3767,16 +3783,25 @@ const QuestionnairesContent = () => {
 
                       {/* Evidence Integration Status */}
                       {evidenceFiles.length > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <div className="flex items-center text-green-800">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            <span className="text-sm font-medium">
-                              Enhanced AI Context: {evidenceFiles.length} evidence file(s) available
-                            </span>
+                        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="bg-emerald-100 rounded-full p-2 mr-3">
+                                <Sparkles className="h-5 w-5 text-emerald-600" />
+                              </div>
+                              <div>
+                                <span className="text-sm font-semibold text-emerald-900">
+                                  Enhanced AI Context: {evidenceFiles.length} evidence file(s) available
+                                </span>
+                                <p className="text-xs text-emerald-700 mt-1">
+                                  AI responses will reference your uploaded evidence files for more accurate answers
+                                </p>
+                              </div>
+                            </div>
+                            <div className="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-medium">
+                              ⚡ Enhanced
+                            </div>
                           </div>
-                          <p className="text-xs text-green-600 mt-1">
-                            AI responses will reference your uploaded evidence files for more accurate answers
-                          </p>
                         </div>
                       )}
 

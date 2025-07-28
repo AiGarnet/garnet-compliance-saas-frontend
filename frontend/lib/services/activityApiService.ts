@@ -1,5 +1,25 @@
 import { showToast } from '../../components/ui/Toast';
 
+// Toast debounce mechanism to prevent duplicate toasts
+const toastCache = new Set<string>();
+const TOAST_DEBOUNCE_TIME = 2000; // 2 seconds
+
+function debouncedShowToast(message: string, type: 'success' | 'error' | 'info' = 'info', duration?: number) {
+  const toastKey = `${type}:${message}`;
+  
+  if (toastCache.has(toastKey)) {
+    return; // Toast already shown recently
+  }
+  
+  toastCache.add(toastKey);
+  showToast(message, type, duration);
+  
+  // Remove from cache after debounce time
+  setTimeout(() => {
+    toastCache.delete(toastKey);
+  }, TOAST_DEBOUNCE_TIME);
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -62,7 +82,7 @@ class ActivityApiService {
    */
   private triggerToast(toastConfig: any): void {
     // Show toast notification
-    showToast(toastConfig.message, toastConfig.type, toastConfig.duration);
+          debouncedShowToast(toastConfig.message, toastConfig.type, toastConfig.duration);
   }
 
   /**
@@ -90,7 +110,7 @@ class ActivityApiService {
                            status === 'failed' ? 'failed' : 
                            status === 'in_progress' ? 'is in progress' : 'is pending';
       
-      showToast(`${activity.description} ${statusMessage}`, status === 'success' ? 'success' : 'info');
+      debouncedShowToast(`${activity.description} ${statusMessage}`, status === 'success' ? 'success' : 'info');
     }
     
     return response;
@@ -108,11 +128,11 @@ class ActivityApiService {
     
     if (response.success) {
       if (showSuccessToast) {
-        showToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success');
+        debouncedShowToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success');
       }
     } else if (showErrorToast) {
       const errorMessage = response.error?.message || `${operation} failed`;
-      showToast(errorMessage, 'error', 7000);
+      debouncedShowToast(errorMessage, 'error', 7000);
     }
     
     return response;
@@ -497,16 +517,16 @@ class ActivityApiService {
         // Show appropriate toast based on operation
         switch (operation) {
           case 'create':
-            showToast(`${entityName} has been created successfully`, 'success', toastDuration);
+            debouncedShowToast(`${entityName} has been created successfully`, 'success', toastDuration);
             break;
           case 'update':
-            showToast(`${entityName} has been updated successfully`, 'success', toastDuration);
+            debouncedShowToast(`${entityName} has been updated successfully`, 'success', toastDuration);
             break;
           case 'delete':
-            showToast(`${entityName} has been deleted successfully`, 'success', toastDuration);
+            debouncedShowToast(`${entityName} has been deleted successfully`, 'success', toastDuration);
             break;
           default:
-            showToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success', toastDuration);
+            debouncedShowToast(`${operation.charAt(0).toUpperCase() + operation.slice(1)} completed successfully`, 'success', toastDuration);
         }
       }
 
@@ -516,7 +536,7 @@ class ActivityApiService {
       
       if (shouldShowToast) {
         const errorMessage = error instanceof Error ? error.message : 'Operation failed';
-        showToast(errorMessage, 'error', 7000);
+        debouncedShowToast(errorMessage, 'error', 7000);
       }
       
       return {

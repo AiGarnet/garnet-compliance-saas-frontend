@@ -24,7 +24,6 @@ import { AddVendorModal } from "@/components/vendors/AddVendorModal";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { FeedbackCard } from "@/components/dashboard/FeedbackCard";
 import { PendingTasks } from "@/components/dashboard/PendingTasks";
-import SubmissionHistory from "@/components/trust-portal/SubmissionHistory";
 import { useActivity } from "@/hooks/useActivity";
 import { showToast } from "@/components/ui/Toast";
 import activityApiService from "@/lib/services/activityApiService";
@@ -434,9 +433,6 @@ function DashboardContent() {
         <div className="space-y-6">
           {/* Pending Tasks - Visible for both Founder and Sales Professional */}
           {/* <PendingTasks limit={5} /> */}
-          
-          {/* Recent Trust Portal Submissions */}
-          <SubmissionHistory limit={5} showTitle={true} />
           
           {/* Enterprise Feedback - Visible for both Founder and Sales Professional */}
           <FeedbackCard limit={5} />
