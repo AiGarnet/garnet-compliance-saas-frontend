@@ -2330,7 +2330,6 @@ const GarnetLandingPage = () => {
                   <div className="text-xs">OFF</div>
                 </div>
               </div>
-              <div className="text-xs opacity-75 mt-2">Applied automatically at checkout</div>
             </div>
           </motion.div>
         </div>
