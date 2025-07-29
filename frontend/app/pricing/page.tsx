@@ -379,29 +379,6 @@ const PricingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {/* Early Bird Offer Banner */}
-            <motion.div
-              className="mb-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-2xl shadow-xl mx-auto max-w-4xl"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-            >
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="text-left">
-                  <h3 className="text-2xl font-bold mb-2">🎉 Early Bird Special - Limited Time!</h3>
-                  <p className="text-lg opacity-90 mb-3">Get 100% OFF any plan with our early bird access offer</p>
-                  <div className="bg-white bg-opacity-20 inline-block px-4 py-2 rounded-full">
-                    <span className="font-semibold text-lg">Use Code: EARLYBIRDOFF</span>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-6xl font-bold">100%</div>
-                  <div className="text-xl font-medium">OFF</div>
-                  <div className="text-sm opacity-80 mt-1">Applied automatically</div>
-                </div>
-              </div>
-            </motion.div>
-
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Simple, Transparent <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Pricing</span>
             </h1>
@@ -571,6 +548,29 @@ const PricingPage = () => {
               </motion.div>
             ))}
           </div>
+
+          {/* Early Bird Offer Banner - Smaller version at the end */}
+          <motion.div
+            className="mt-16 mb-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-lg mx-auto max-w-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            <div className="text-center">
+              <h3 className="text-lg font-bold mb-2">🎉 Early Bird Special - Limited Time!</h3>
+              <p className="text-sm opacity-90 mb-3">Get 100% OFF any plan with our early bird access offer</p>
+              <div className="flex items-center justify-center gap-4">
+                <div className="bg-white bg-opacity-20 inline-block px-3 py-1.5 rounded-full">
+                  <span className="font-semibold text-sm">Use Code: EARLYBIRDOFF</span>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">100%</div>
+                  <div className="text-xs">OFF</div>
+                </div>
+              </div>
+              <div className="text-xs opacity-75 mt-2">Applied automatically at checkout</div>
+            </div>
+          </motion.div>
 
           {/* Contact Section */}
           <div className="text-center mt-8">
