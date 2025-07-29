@@ -45,6 +45,14 @@ export interface SupportingDocument {
   spacesUrl?: string;
 }
 
+export interface DocumentValidationResponse {
+  relevanceScore: number;
+  isRelevant: boolean;
+  message: string;
+  extractedContent: string;
+  questionText: string;
+}
+
 export interface ChecklistUploadResponse {
   checklist: Checklist;
   questions: ChecklistQuestion[];
@@ -259,6 +267,23 @@ export class ChecklistService {
       return await uploadFile(`${this.BASE_URL}/questions/${questionId}/documents/vendor/${vendorId}`, file);
     } catch (error) {
       console.error('Error uploading supporting document:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate document relevance before uploading
+   */
+  static async validateDocumentRelevance(
+    questionId: string,
+    file: File
+  ): Promise<DocumentValidationResponse> {
+    try {
+      // Use the uploadFile helper but to documents validation endpoint
+      const { uploadFile } = await import('../api');
+      return await uploadFile('/api/documents/validate', file, { questionId });
+    } catch (error) {
+      console.error('Error validating document relevance:', error);
       throw error;
     }
   }

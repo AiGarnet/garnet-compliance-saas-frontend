@@ -1984,6 +1984,50 @@ const QuestionnairesContent = () => {
     setSupportDocUploadError(null);
 
     try {
+      // Step 1: Validate document relevance before uploading
+      console.log(`🔍 DOCUMENT VALIDATION: Checking relevance for file: ${file.name}`);
+      
+      let validationResult;
+      try {
+        validationResult = await ChecklistService.validateDocumentRelevance(questionId, file);
+        console.log('🔍 VALIDATION RESULT:', validationResult);
+      } catch (validationError) {
+        console.warn('⚠️ Document validation failed, proceeding with upload:', validationError);
+        // Continue with upload even if validation fails (graceful degradation)
+      }
+
+      // Step 2: Show validation result to user and get confirmation if not relevant
+      if (validationResult && !validationResult.isRelevant) {
+        const userConfirmed = window.confirm(
+          `Document Relevance Check:\n\n${validationResult.message}\n\nRelevance Score: ${Math.round(validationResult.relevanceScore * 100)}%\n\nDo you still want to upload this document?`
+        );
+        
+        if (!userConfirmed) {
+          console.log('❌ User cancelled upload after relevance check');
+          setSupportDocUploadError('Upload cancelled. Please select a more relevant document.');
+          return;
+        }
+        
+        console.log('✅ User confirmed upload despite low relevance score');
+      } else if (validationResult && validationResult.isRelevant) {
+        console.log(`✅ Document validation passed: ${Math.round(validationResult.relevanceScore * 100)}% relevance`);
+        
+        // Show brief success notification for relevant documents
+        if (typeof window !== 'undefined') {
+          const validationNotification = window.document.createElement('div');
+          validationNotification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
+          validationNotification.innerHTML = `
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Document relevance verified (${Math.round(validationResult.relevanceScore * 100)}%)
+          `;
+          window.document.body.appendChild(validationNotification);
+          setTimeout(() => validationNotification.remove(), 3000);
+        }
+      }
+
+      // Step 3: Proceed with upload
       console.log(`🔹 SUPPORTING DOCUMENT: Calling ChecklistService.uploadSupportingDocument()`);
       console.log(`🔹 API Call: POST /api/checklists/questions/${questionId}/documents/vendor/${selectedVendorId}`);
       
