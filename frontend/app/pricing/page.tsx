@@ -235,36 +235,89 @@ const PricingPage = () => {
         throw new Error('Price ID not found');
       }
 
-      // Create checkout session
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          priceId,
-          billingCycle,
-          successUrl: `${window.location.origin}/dashboard?success=true&plan=${tier.id}`,
-          cancelUrl: `${window.location.origin}/pricing?canceled=true`,
-          coupon: 'EARLYBIRDOFF', // Apply early bird coupon automatically
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create checkout session');
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.data.url;
+      // First, try with coupon
+      await attemptCheckout(tier, priceId, true);
+      
     } catch (err: any) {
       console.error('Error creating checkout session:', err);
-      alert(err.message || 'An error occurred. Please try again.');
+      
+      // If coupon failed, offer to try without coupon
+      if (err.message?.includes('coupon') || err.message?.includes('Coupon')) {
+        const shouldRetryWithoutCoupon = window.confirm(
+          'The discount code appears to be invalid or expired. Would you like to proceed with regular pricing?'
+        );
+        
+        if (shouldRetryWithoutCoupon) {
+          try {
+            const priceId = billingCycle === 'monthly' 
+              ? tier.stripePriceIds?.monthly 
+              : tier.stripePriceIds?.annual;
+            
+            if (!priceId) {
+              throw new Error('Price ID not found');
+            }
+            
+            await attemptCheckout(tier, priceId, false);
+          } catch (retryErr: any) {
+            alert(retryErr.message || 'An error occurred. Please try again.');
+          }
+        }
+      } else {
+        alert(err.message || 'An error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const attemptCheckout = async (tier: PricingTier, priceId: string, withCoupon: boolean = true) => {
+    const requestBody: any = {
+      priceId,
+      billingCycle,
+      successUrl: `${window.location.origin}/dashboard?success=true&plan=${tier.id}`,
+      cancelUrl: `${window.location.origin}/pricing?canceled=true`,
+    };
+    
+    if (withCoupon) {
+      requestBody.coupon = 'EARLYBIRDOFF';
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/billing/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const data = await response.json();
+    console.log('Checkout response status:', response.status);
+    console.log('Checkout response data:', data);
+
+    if (!response.ok) {
+      // Provide more specific error messages based on common issues
+      let errorMessage = data.message || 'Failed to create checkout session';
+      
+      if (response.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (response.status === 400) {
+        if (data.message?.includes('organization')) {
+          errorMessage = 'Account setup required. Please complete your organization setup in your dashboard first.';
+        } else if (data.message?.includes('subscription')) {
+          errorMessage = 'You already have an active subscription. Check your billing settings in the dashboard.';
+        } else if (data.message?.includes('coupon')) {
+          errorMessage = 'Coupon code expired or invalid. Please try without the coupon code.';
+        } else if (data.message?.includes('price')) {
+          errorMessage = 'Invalid pricing plan selected. Please try again.';
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Redirect to Stripe checkout
+    window.location.href = data.data.url;
   };
 
   const toggleCardExpansion = (tierId: string) => {
@@ -561,7 +614,7 @@ const PricingPage = () => {
               <p className="text-sm opacity-90 mb-3">Get 100% OFF any plan with our early bird access offer</p>
               <div className="flex items-center justify-center gap-4">
                 <div className="bg-white bg-opacity-20 inline-block px-3 py-1.5 rounded-full">
-                  <span className="font-semibold text-sm">Use Code: EARLYBIRDOFF</span>
+                  <span className="font-semibold text-sm text-white">Use Code: EARLYBIRDOFF</span>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">100%</div>
