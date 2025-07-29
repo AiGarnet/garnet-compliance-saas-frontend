@@ -301,6 +301,7 @@ export default function SignupPage() {
             billingCycle: selectedBilling,
             successUrl: `${window.location.origin}/dashboard?success=true&plan=${selectedPlan.id}`,
             cancelUrl: `${window.location.origin}/auth/signup?plan=${selectedPlan.id}&billing=${selectedBilling}&canceled=true`,
+            coupon: 'EARLYBIRDOFF', // Apply early bird coupon automatically
           }),
         });
 

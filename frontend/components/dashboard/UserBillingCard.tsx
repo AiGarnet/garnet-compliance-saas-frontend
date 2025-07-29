@@ -15,6 +15,25 @@ export const UserBillingCard: React.FC<UserBillingCardProps> = ({ className = ''
     <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Billing & Subscription</h3>
       
+      {/* Early Bird Offer Banner - only show for non-active subscribers */}
+      {(!user.subscription || user.subscription.status !== 'active') && (
+        <div className="mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-sm mb-1">🎉 Early Bird Special!</h4>
+              <p className="text-sm opacity-90">Get 100% off with early bird access offer</p>
+              <div className="mt-2 bg-white bg-opacity-20 inline-block px-3 py-1 rounded-full">
+                <span className="text-xs font-medium">Code: EARLYBIRDOFF</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold">100%</div>
+              <div className="text-xs">OFF</div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="space-y-4">
         <div>
           <p className="text-sm text-gray-600">Current Plan</p>

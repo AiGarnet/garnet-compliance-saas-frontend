@@ -247,6 +247,7 @@ const PricingPage = () => {
           billingCycle,
           successUrl: `${window.location.origin}/dashboard?success=true&plan=${tier.id}`,
           cancelUrl: `${window.location.origin}/pricing?canceled=true`,
+          coupon: 'EARLYBIRDOFF', // Apply early bird coupon automatically
         }),
       });
 
