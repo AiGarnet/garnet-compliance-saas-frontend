@@ -2102,6 +2102,8 @@ const QuestionnairesContent = () => {
   };
 
   const handleModalCancel = () => {
+    const questionId = pendingUpload?.questionId;
+    
     setShowRelevanceModal(false);
     setRelevanceResult(null);
     setPendingUpload(null);
@@ -2109,10 +2111,14 @@ const QuestionnairesContent = () => {
     setUploadingQuestionId(null);
     
     // Clear file input
-    if (pendingUpload) {
-      const fileInput = document.getElementById(`support-doc-${pendingUpload.questionId}`) as HTMLInputElement;
+    if (questionId) {
+      const fileInput = document.getElementById(`support-doc-${questionId}`) as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
+        // Automatically open file dialog to choose different document
+        setTimeout(() => {
+          fileInput.click();
+        }, 100); // Small delay to ensure modal is closed first
       }
     }
   };
