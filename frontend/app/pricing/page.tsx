@@ -306,8 +306,8 @@ const PricingPage = () => {
           errorMessage = 'Account setup required. Please complete your organization setup in your dashboard first.';
         } else if (data.message?.includes('subscription')) {
           errorMessage = 'You already have an active subscription. Check your billing settings in the dashboard.';
-        } else if (data.message?.includes('coupon')) {
-          errorMessage = 'Coupon code expired or invalid. Please try without the coupon code.';
+        } else if (data.message?.includes('coupon') || data.message?.includes('Coupon') || data.message?.includes('promo')) {
+          errorMessage = 'The discount code is temporarily unavailable. Please try again or proceed without the discount.';
         } else if (data.message?.includes('price')) {
           errorMessage = 'Invalid pricing plan selected. Please try again.';
         }
@@ -614,7 +614,7 @@ const PricingPage = () => {
               <p className="text-sm opacity-90 mb-3">Get 100% OFF any plan with our early bird access offer</p>
               <div className="flex items-center justify-center gap-4">
                 <div className="bg-white bg-opacity-20 inline-block px-3 py-1.5 rounded-full">
-                  <span className="font-semibold text-sm text-white">Use Code: EARLYBIRDOFF</span>
+                  <span className="font-semibold text-sm text-black">Use Code: EARLYBIRDOFF</span>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">100%</div>
