@@ -47,6 +47,7 @@ import ChatbotAssistance from '@/components/help/ChatbotAssistance';
 import { EvidenceFilePreview } from '@/components/questionnaire/EvidenceFilePreview';
 import { TextFileViewer } from '@/components/questionnaire/TextFileViewer';
 import { EvidenceSelectionModal } from '@/components/modals/EvidenceSelectionModal';
+import { DocumentRelevanceModal } from '@/components/modals/DocumentRelevanceModal';
 
 interface ExtractedQuestion {
   id: string;
@@ -235,6 +236,14 @@ const QuestionnairesContent = () => {
 
   const { isLoading: authLoading } = useAuthGuard();
   const { token } = useAuth();
+
+  // Document relevance modal state
+  const [showRelevanceModal, setShowRelevanceModal] = useState(false);
+  const [relevanceResult, setRelevanceResult] = useState<any>(null);
+  const [pendingUpload, setPendingUpload] = useState<{
+    questionId: string;
+    file: File;
+  } | null>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -1977,7 +1986,7 @@ const QuestionnairesContent = () => {
       return;
     }
 
-    console.log(`🔹 SUPPORTING DOCUMENT UPLOAD: Starting upload for question ${questionId}, file: ${file.name}`);
+    console.log(`🔹 SUPPORTING DOCUMENT UPLOAD: Starting relevance check for question ${questionId}, file: ${file.name}`);
     
     setIsUploadingSupportDoc(true);
     setUploadingQuestionId(questionId);
@@ -1994,45 +2003,38 @@ const QuestionnairesContent = () => {
       } catch (validationError) {
         console.warn('⚠️ Document validation failed, proceeding with upload:', validationError);
         // Continue with upload even if validation fails (graceful degradation)
+        await proceedWithUpload(questionId, file);
+        return;
       }
 
-      // Step 2: Show validation result to user and get confirmation if not relevant
-      if (validationResult && !validationResult.isRelevant) {
-        const userConfirmed = window.confirm(
-          `Document Relevance Check:\n\n${validationResult.message}\n\nRelevance Score: ${Math.round(validationResult.relevanceScore * 100)}%\n\nDo you still want to upload this document?`
-        );
-        
-        if (!userConfirmed) {
-          console.log('❌ User cancelled upload after relevance check');
-          setSupportDocUploadError('Upload cancelled. Please select a more relevant document.');
-          return;
-        }
-        
-        console.log('✅ User confirmed upload despite low relevance score');
-      } else if (validationResult && validationResult.isRelevant) {
-        console.log(`✅ Document validation passed: ${Math.round(validationResult.relevanceScore * 100)}% relevance`);
-        
-        // Show brief success notification for relevant documents
-        if (typeof window !== 'undefined') {
-          const validationNotification = window.document.createElement('div');
-          validationNotification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
-          validationNotification.innerHTML = `
-            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Document relevance verified (${Math.round(validationResult.relevanceScore * 100)}%)
-          `;
-          window.document.body.appendChild(validationNotification);
-          setTimeout(() => validationNotification.remove(), 3000);
-        }
+      // Step 2: Show modal for user decision
+      if (validationResult) {
+        setRelevanceResult(validationResult);
+        setPendingUpload({ questionId, file });
+        setShowRelevanceModal(true);
+      } else {
+        // Fallback to direct upload if no validation result
+        await proceedWithUpload(questionId, file);
       }
 
-      // Step 3: Proceed with upload
+    } catch (error) {
+      console.error('❌ Error during document validation:', error);
+      setSupportDocUploadError('Document validation failed. Please try again.');
+    } finally {
+      if (!pendingUpload) {
+        setIsUploadingSupportDoc(false);
+        setUploadingQuestionId(null);
+      }
+    }
+  };
+
+  // Separate function to handle the actual upload
+  const proceedWithUpload = async (questionId: string, file: File) => {
+    try {
       console.log(`🔹 SUPPORTING DOCUMENT: Calling ChecklistService.uploadSupportingDocument()`);
       console.log(`🔹 API Call: POST /api/checklists/questions/${questionId}/documents/vendor/${selectedVendorId}`);
       
       // Upload supporting document to DigitalOcean Spaces via backend (supporting-docs/ folder)
-      // Note: Additional linking to questionnaire will be handled in backend
       const uploadResult = await ChecklistService.uploadSupportingDocument(
         questionId,
         selectedVendorId,
@@ -2054,7 +2056,7 @@ const QuestionnairesContent = () => {
       ));
 
       // Force refresh supporting documents list with delay to allow backend processing
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for backend processing
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await loadVendorSupportingDocuments(selectedVendorId);
       
       // Clear the file input
@@ -2085,10 +2087,35 @@ const QuestionnairesContent = () => {
     } finally {
       setIsUploadingSupportDoc(false);
       setUploadingQuestionId(null);
+      setPendingUpload(null);
     }
   };
 
+  // Handle modal actions
+  const handleModalConfirm = async () => {
+    if (pendingUpload) {
+      await proceedWithUpload(pendingUpload.questionId, pendingUpload.file);
+    }
+    setShowRelevanceModal(false);
+    setRelevanceResult(null);
+    setPendingUpload(null);
+  };
 
+  const handleModalCancel = () => {
+    setShowRelevanceModal(false);
+    setRelevanceResult(null);
+    setPendingUpload(null);
+    setIsUploadingSupportDoc(false);
+    setUploadingQuestionId(null);
+    
+    // Clear file input
+    if (pendingUpload) {
+      const fileInput = document.getElementById(`support-doc-${pendingUpload.questionId}`) as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
 
   // Drag and drop handlers for CHECKLIST UPLOAD ONLY
   const handleDrag = (e: React.DragEvent) => {
@@ -4824,6 +4851,18 @@ const QuestionnairesContent = () => {
 
         {/* Follow-up Modal */}
         {showFollowUpModal && <FollowUpModal />}
+
+        {/* Document Relevance Modal */}
+        {showRelevanceModal && relevanceResult && pendingUpload && (
+          <DocumentRelevanceModal
+            isOpen={showRelevanceModal}
+            onClose={handleModalCancel}
+            onConfirm={handleModalConfirm}
+            onCancel={handleModalCancel}
+            relevanceResult={relevanceResult}
+            fileName={pendingUpload.file.name}
+          />
+        )}
     </>
   );
 };
