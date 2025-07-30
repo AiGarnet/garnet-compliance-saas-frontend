@@ -2309,7 +2309,7 @@ const GarnetLandingPage = () => {
       </section>
 
       {/* Early Bird Offer Banner - Smaller version at the end of pricing */}
-      <section className="py-8 bg-gradient-to-br from-slate-50 to-blue-50">
+      <section className="py-4 bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-lg mx-auto max-w-2xl"
