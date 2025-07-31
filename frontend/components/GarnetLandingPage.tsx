@@ -2297,12 +2297,13 @@ const GarnetLandingPage = () => {
               transition={{ duration: 0.6, delay: 0.4 }}
             >
               <p className="text-gray-600 mb-4">Save 17% with annual billing</p>
-              <button 
+              {/* Hidden for now - "Scroll to top of pricing" button */}
+              {/* <button 
                 onClick={scrollToPricing}
                 className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
               >
                 Scroll to top of pricing <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
+              </button> */}
             </motion.div>
           </div>
         </div>
