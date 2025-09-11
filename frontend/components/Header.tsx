@@ -8,8 +8,6 @@ import {
   X, 
   User, 
   LogOut, 
-  Bell, 
-  Search,
   Moon,
   Sun,
   Globe,
@@ -47,7 +45,6 @@ export default function Header({ locale = 'en' }: HeaderProps) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout, hasAccess } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentLocale, setCurrentLocale] = useState(locale);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
@@ -88,7 +85,6 @@ export default function Header({ locale = 'en' }: HeaderProps) {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsProfileOpen(false);
-        setIsSearchOpen(false);
       }
     };
     
@@ -187,31 +183,6 @@ export default function Header({ locale = 'en' }: HeaderProps) {
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
-                {/* Search Bar - Only for authenticated users */}
-                <div className="relative hidden md:block">
-                  <div className={cn(
-                    "transition-all duration-200",
-                    isSearchOpen ? "w-64" : "w-10"
-                  )}>
-                    <button
-                      onClick={() => setIsSearchOpen(!isSearchOpen)}
-                      className="absolute inset-y-0 left-0 flex items-center pl-3"
-                      aria-label={t.search}
-                      aria-expanded={isSearchOpen}
-                    >
-                      <Search className="h-5 w-5 text-gray-500" />
-                    </button>
-                    <input
-                      type="text"
-                      placeholder={isSearchOpen ? t.searchPlaceholder : ""}
-                      className={cn(
-                        "pl-10 py-2 pr-4 rounded-full text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200",
-                        isSearchOpen ? "w-full opacity-100" : "w-10 opacity-0 cursor-pointer"
-                      )}
-                      aria-hidden={!isSearchOpen}
-                    />
-                  </div>
-                </div>
                 
                 {/* Trial Status - Only for authenticated users */}
                 <TrialStatusNavbar />
@@ -219,13 +190,6 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                 {/* Subscription Tier Display - Only for authenticated users */}
                 <SubscriptionTierDisplay compact={true} showUpgradeButton={false} />
                 
-                {/* Notifications Bell - Only for authenticated users */}
-                <button
-                  className="min-h-[44px] min-w-[44px] p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  aria-label={t.notifications}
-                >
-                  <Bell className="h-5 w-5 text-gray-500" />
-                </button>
                 
                 {/* Profile Dropdown - Only for authenticated users */}
                 <div className="relative" ref={profileDropdownRef}>
