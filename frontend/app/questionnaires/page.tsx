@@ -1000,15 +1000,26 @@ const QuestionnairesContent = () => {
   const handleFileUpload = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     
-    const file = files[0];
-    const allowedTypes = ['.pdf', '.txt', '.doc', '.docx'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const allowedTypes = ['.pdf', '.txt', '.doc', '.docx', '.xls', '.xlsx', '.csv'];
     
-    if (!allowedTypes.includes(fileExtension)) {
-      setUploadError(`File type "${fileExtension}" is not supported. Please upload a document in one of these formats: PDF (recommended), TXT, DOC, or DOCX. PDFs provide the best content extraction for compliance checking.`);
-      return;
+    // Check all files first
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedTypes.includes(fileExtension)) {
+        setUploadError(`File type "${fileExtension}" is not supported. Please upload documents in one of these formats: PDF (recommended), TXT, DOC, DOCX, XLS, XLSX, or CSV. PDFs provide the best content extraction for compliance checking.`);
+        return;
+      }
     }
+    
+    // Process each file
+    for (const file of fileArray) {
+      await handleSingleFileUpload(file);
+    }
+  };
 
+  // Helper function to handle individual file upload
+  const handleSingleFileUpload = async (file: File) => {
     if (!selectedVendorId || selectedVendorId.trim() === '') {
       setUploadError('Please select a vendor first');
       return;
@@ -1600,15 +1611,35 @@ const QuestionnairesContent = () => {
       return;
     }
 
-    const file = files[0];
-    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.csv'];
     
-    if (!allowedTypes.includes(fileExtension)) {
-      setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload a file in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), or document files (DOC, DOCX, TXT). PDFs provide the most accurate content analysis.`);
-      return;
+    // Check all files first
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedTypes.includes(fileExtension)) {
+        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX, CSV). PDFs provide the most accurate content analysis.`);
+        return;
+      }
     }
 
+    // Process each file
+    for (const file of fileArray) {
+      await handleSingleStandaloneSupportDocUpload(file);
+    }
+
+    // Clear form after all files are processed
+    setSupportDocDescription('');
+    setSupportDocCategory('');
+    
+    // Clear file input
+    if (standaloneSupportDocRef.current) {
+      standaloneSupportDocRef.current.value = '';
+    }
+  };
+
+  // Helper function to handle individual standalone supporting document upload
+  const handleSingleStandaloneSupportDocUpload = async (file: File) => {
     console.log(`📁 STANDALONE SUPPORTING DOC: Starting upload for file: ${file.name}`);
     
     setIsUploadingSupportDoc(true);
@@ -1633,15 +1664,6 @@ const QuestionnairesContent = () => {
       // Force refresh the documents list from the database instead of just adding locally
       await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for backend processing
       await loadVendorSupportingDocuments(selectedVendorId);
-      
-      // Clear form
-      setSupportDocDescription('');
-      setSupportDocCategory('');
-      
-      // Clear file input
-      if (standaloneSupportDocRef.current) {
-        standaloneSupportDocRef.current.value = '';
-      }
 
       console.log('✅ Standalone supporting document uploaded successfully!');
       
@@ -1977,14 +1999,26 @@ const QuestionnairesContent = () => {
       return;
     }
 
-    const file = files[0];
-    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.csv'];
     
-    if (!allowedTypes.includes(fileExtension)) {
-      setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload a file in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), or document files (DOC, DOCX, TXT). PDFs provide the most accurate content analysis for compliance validation.`);
-      return;
+    // Check all files first
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedTypes.includes(fileExtension)) {
+        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX, CSV). PDFs provide the most accurate content analysis for compliance validation.`);
+        return;
+      }
     }
+
+    // Process each file
+    for (const file of fileArray) {
+      await handleSingleSupportDocUpload(questionId, file);
+    }
+  };
+
+  // Helper function to handle individual supporting document upload
+  const handleSingleSupportDocUpload = async (questionId: string, file: File) => {
 
     console.log(`🔹 SUPPORTING DOCUMENT UPLOAD: Starting relevance check for question ${questionId}, file: ${file.name}`);
     
@@ -3276,19 +3310,20 @@ const QuestionnairesContent = () => {
                     >
                       <Upload className="h-10 w-10 text-blue-400 mx-auto mb-3" />
                       <p className="text-lg text-gray-600 mb-2">
-                        {dragActive ? 'Drop file here' : 'Upload compliance checklist'}
+                        {dragActive ? 'Drop files here' : 'Upload compliance checklists'}
                       </p>
                       <p className="text-gray-500 mb-4">
-                        PDF, TXT, DOC, DOCX supported
+                        PDF, TXT, DOC, DOCX, XLS, XLSX, CSV supported
                       </p>
                       <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        Choose File
+                        Choose Files
                       </button>
                       <input
                         ref={checklistFileRef}
                         type="file"
                         className="hidden"
-                        accept=".pdf,.txt,.doc,.docx"
+                        multiple
+                        accept=".pdf,.txt,.doc,.docx,.xls,.xlsx,.csv"
                         onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
                       />
                     </div>
@@ -4262,8 +4297,9 @@ const QuestionnairesContent = () => {
                                       <input
                                         type="file"
                                         className="hidden"
+                                        multiple
                                         id={`support-doc-${question.id}`}
-                                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt,.xls,.xlsx,.csv"
                                         onChange={(e) => e.target.files && handleSupportDocUpload(question.id, e.target.files)}
                                         disabled={isUploadingSupportDoc && uploadingQuestionId === question.id}
                                       />
@@ -4382,8 +4418,9 @@ const QuestionnairesContent = () => {
                         ref={standaloneSupportDocRef}
                         type="file"
                         className="hidden"
+                        multiple
                         id="standalone-support-doc"
-                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt,.xls,.xlsx,.csv"
                         onChange={(e) => e.target.files && handleStandaloneSupportDocUpload(e.target.files)}
                         disabled={isUploadingSupportDoc}
                       />
