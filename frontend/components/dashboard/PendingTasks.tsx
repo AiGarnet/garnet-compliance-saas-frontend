@@ -8,7 +8,6 @@ import {
   FileText, 
   Upload, 
   Share2,
-  RefreshCw,
   Zap,
   Users
 } from 'lucide-react';
@@ -138,12 +137,6 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
             <Clock className="h-5 w-5 mr-2 text-orange-500" />
             Pending Tasks
           </h2>
-          <button
-            onClick={fetchPendingTasks}
-            className="text-primary hover:text-primary/80 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
         </div>
         <div className="text-center py-8">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -171,15 +164,6 @@ export function PendingTasks({ className, limit = 5 }: PendingTasksProps) {
             </span>
           )}
         </h2>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={fetchPendingTasks}
-            className="text-primary hover:text-primary/80 transition-colors"
-            title="Refresh tasks"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       {tasks.length === 0 ? (

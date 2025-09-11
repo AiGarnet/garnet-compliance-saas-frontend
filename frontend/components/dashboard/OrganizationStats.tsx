@@ -11,7 +11,6 @@ import {
   Eye,
   FileText,
   Shield,
-  Activity,
   Upload,
   List
 } from 'lucide-react';
@@ -255,15 +254,6 @@ export const OrganizationStats: React.FC = () => {
               </p>
             </div>
           </div>
-          {!isLoading && (
-            <button
-              onClick={fetchOrganizationStats}
-              className="flex items-center space-x-2 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <Activity className="w-4 h-4" />
-              <span>Refresh</span>
-            </button>
-          )}
         </div>
       </div>
 

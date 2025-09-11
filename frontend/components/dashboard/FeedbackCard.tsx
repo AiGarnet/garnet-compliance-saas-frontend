@@ -13,8 +13,7 @@ import {
   Eye,
   MessageCircle,
   Calendar,
-  ArrowUpRight,
-  RefreshCw
+  ArrowUpRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -175,12 +174,6 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
             <MessageSquare className="h-5 w-5 mr-2 text-primary" />
             Enterprise Feedback
           </h2>
-          <button
-            onClick={fetchFeedback}
-            className="text-primary hover:text-primary/80 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
         </div>
         <div className="text-center py-8">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -209,13 +202,6 @@ export function FeedbackCard({ className, limit = 5 }: FeedbackCardProps) {
           )}
         </h2>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={fetchFeedback}
-            className="text-primary hover:text-primary/80 transition-colors"
-            title="Refresh feedback"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
           <a
             href="/trust-portal"
             className="text-sm text-primary font-medium hover:text-primary/80 transition-colors flex items-center"
