@@ -151,11 +151,16 @@ export default function Header({ locale = 'en' }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center" aria-label={t.homePage}>
+            <button 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex items-center focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md p-1" 
+              aria-label="Scroll to top"
+              type="button"
+            >
               <span className="text-2xl font-extrabold tracking-wide bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Garnet
               </span>
-            </Link>
+            </button>
           </div>
           
           {/* Main Navigation */}

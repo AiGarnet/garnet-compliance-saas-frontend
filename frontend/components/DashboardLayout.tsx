@@ -26,14 +26,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <div className="px-4 py-3 w-full">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Link href="/dashboard" className="flex items-center">
+              <button 
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="flex items-center focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md p-1"
+                aria-label="Scroll to top"
+                type="button"
+              >
                 <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center mr-3">
                   <span className="text-white text-lg font-bold">G</span>
                 </div>
                 <span className="text-xl font-semibold text-gray-900 dark:text-white">
                   Garnet AI
                 </span>
-              </Link>
+              </button>
             </div>
             <div className="flex items-center">
               <button 
