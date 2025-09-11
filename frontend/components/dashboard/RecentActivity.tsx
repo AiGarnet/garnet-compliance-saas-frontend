@@ -73,19 +73,13 @@ function LoadingState() {
   );
 }
 
-function EmptyState({ onAddSample }: { onAddSample: () => void }) {
+function EmptyState() {
   return (
     <div className="text-center py-8">
       <ActivityIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-      <p className="text-gray-500 dark:text-gray-400 mb-4">
+      <p className="text-gray-500 dark:text-gray-400">
         No recent activity found
       </p>
-      <button
-        onClick={onAddSample}
-        className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-      >
-        Add sample activities
-      </button>
     </div>
   );
 }
@@ -117,8 +111,7 @@ export function RecentActivity({
     recentActivities, 
     isLoading, 
     error, 
-    refreshActivities, 
-    addSampleActivities 
+    refreshActivities 
   } = useActivity();
 
   // Limit the activities displayed
@@ -136,10 +129,6 @@ export function RecentActivity({
         detail: { showAll: true } 
       }));
     }
-  };
-
-  const handleAddSample = () => {
-    addSampleActivities();
   };
 
   const handleRetry = () => {
@@ -173,7 +162,7 @@ export function RecentActivity({
       ) : error ? (
         <ErrorState error={error} onRetry={handleRetry} />
       ) : displayedActivities.length === 0 ? (
-        <EmptyState onAddSample={handleAddSample} />
+        <EmptyState />
       ) : (
         <ul className="space-y-4" role="list">
           {displayedActivities.map((activity, index) => (
