@@ -1607,7 +1607,7 @@ const QuestionnairesContent = () => {
   const handleStandaloneSupportDocUpload = async (files: FileList) => {
     if (!files || files.length === 0) return;
     if (!selectedVendorId) {
-      setSupportDocUploadError('Please select a vendor first');
+      setSupportDocUploadError('Please select a client first');
       return;
     }
 
@@ -3132,9 +3132,9 @@ const QuestionnairesContent = () => {
                 >
                   <option value="">
                     {uploadError && uploadError.includes('Authentication') 
-                      ? 'Please Login to Access Vendors'
+                      ? 'Please Login to Access Clients'
                       : isLoadingVendors 
-                        ? 'Loading vendors...'
+                        ? 'Loading clients...'
                         : '🔽 Select Client to Get Started'
                     }
                   </option>
@@ -3148,11 +3148,11 @@ const QuestionnairesContent = () => {
                 </select>
               </div>
               
-              {selectedVendorId && (
+                  {selectedVendorId && (
                 <div className="mt-2 text-center">
                   <div className="inline-flex items-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Vendor Selected!
+                    Client Selected!
                   </div>
                 </div>
               )}
@@ -3246,18 +3246,18 @@ const QuestionnairesContent = () => {
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-2 flex items-center">
               <AlertTriangle className="h-4 w-4 mr-1" />
-              Vendor Selection Requires Authentication
+              Client Selection Requires Authentication
             </h3>
             <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Vendor Selection:</strong> Requires login to maintain organization security</p>
-              <p><strong>Services Available:</strong> AI responses, document generation, and assistance features work without vendor selection</p>
+              <p><strong>Client Selection:</strong> Requires login to maintain organization security</p>
+              <p><strong>Services Available:</strong> AI responses, document generation, and assistance features work without client selection</p>
             </div>
             <div className="mt-3">
               <button 
                 onClick={() => window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)}
                 className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
               >
-                Login to Access Vendors
+                Login to Access Clients
               </button>
             </div>
           </div>
@@ -3341,7 +3341,7 @@ const QuestionnairesContent = () => {
                         <p className="text-sm text-gray-500 mt-2">
                           {selectedChecklist 
                             ? `Add custom questions to: "${selectedChecklist.name}"`
-                            : `Add custom questions for selected vendor`
+                            : `Add custom questions for selected client`
                           }
                         </p>
                       </div>
@@ -4367,7 +4367,7 @@ const QuestionnairesContent = () => {
                       General Supporting Documents (Optional)
                     </h4>
                     <p className="text-xs text-gray-500 mb-3">
-                      Upload additional documents not specific to any question
+                      Upload additional documents (including Excel sheets) not specific to any question
                     </p>
 
                     {supportDocUploadError && (
@@ -4440,13 +4440,13 @@ const QuestionnairesContent = () => {
                         ) : (
                           <>
                             <Upload className="h-3 w-3 mr-1" />
-                            Upload File
+                            Upload Files
                           </>
                         )}
                       </label>
                       
                       <div className="text-xs text-gray-500">
-                        PDF, Images, DOC, DOCX, TXT
+                        PDF, Images, DOC, DOCX, TXT, XLS, XLSX, CSV
                       </div>
                     </div>
 
@@ -4560,14 +4560,14 @@ const QuestionnairesContent = () => {
                     <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
                       {uploadError && uploadError.includes('Authentication') 
-                        ? 'Login Required for Vendor Access'
-                        : 'Select a Vendor First'
+                        ? 'Login Required for Client Access'
+                        : 'Select a Client First'
                       }
                     </h3>
                     <p className="text-gray-500">
                       {uploadError && uploadError.includes('Authentication') 
-                        ? 'Please log in to access vendors and use vendor-specific features like assistance.'
-                        : 'Please select a vendor from the dropdown above to request assistance.'
+                        ? 'Please log in to access clients and use client-specific features like assistance.'
+                        : 'Please select a client from the dropdown above to request assistance.'
                       }
                     </p>
                     {uploadError && uploadError.includes('Authentication') && (
@@ -4576,7 +4576,7 @@ const QuestionnairesContent = () => {
                           onClick={() => window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)}
                           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
                         >
-                          Login to Access Vendors
+                          Login to Access Clients
                         </button>
                       </div>
                     )}
