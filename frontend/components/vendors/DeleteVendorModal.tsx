@@ -30,7 +30,7 @@ export function DeleteVendorModal({
       onClose();
       setConfirmText('');
     } catch (error) {
-      console.error('Error deleting vendor:', error);
+      console.error('Error deleting client:', error);
     } finally {
       setIsDeleting(false);
     }

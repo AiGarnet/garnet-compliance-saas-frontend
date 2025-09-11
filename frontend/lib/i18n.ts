@@ -2,7 +2,7 @@
 export const translations = {
   en: {
     dashboard: "Dashboard",
-    vendors: "Vendors",
+    vendors: "Clients",
     questionnaires: "Questionnaires",
     trustPortal: "Trust Portal",
     compliance: "Compliance",
@@ -19,14 +19,14 @@ export const translations = {
     
     // VendorList component strings
     vendorList: {
-      title: "Vendors",
-      loading: "Loading vendors...",
-      error: "Unable to load vendors. Retry?",
+      title: "Clients",
+      loading: "Loading clients...",
+      error: "Unable to load clients. Retry?",
       retry: "Retry",
       emptyState: {
-        noVendors: "No vendors in onboarding yet.",
-        invite: "Invite your first vendor →",
-        noMatches: "No vendors match your current filters.",
+        noVendors: "No clients in onboarding yet.",
+        invite: "Invite your first client →",
+        noMatches: "No clients match your current filters.",
         clearFilters: "Clear all filters"
       },
       table: {
@@ -36,11 +36,11 @@ export const translations = {
         viewDetails: "View Details"
       },
       search: {
-        placeholder: "Search vendors by name...",
-        label: "Search vendors by name"
+        placeholder: "Search clients by name...",
+        label: "Search clients by name"
       },
       filter: {
-        label: "Filter vendors by status"
+        label: "Filter clients by status"
       },
       status: {
         all: "All",
@@ -54,21 +54,21 @@ export const translations = {
     statusBadge: {
       approved: {
         text: "Approved",
-        description: "Vendor is approved"
+        description: "Client is approved"
       },
       inReview: {
         text: "In Review",
-        description: "Vendor is currently under review"
+        description: "Client is currently under review"
       },
       questionnairePending: {
         text: "Questionnaire Pending",
-        description: "Vendor has a pending questionnaire"
+        description: "Client has a pending questionnaire"
       }
     }
   },
   es: {
     dashboard: "Panel",
-    vendors: "Proveedores",
+    vendors: "Clientes",
     questionnaires: "Cuestionarios",
     trustPortal: "Portal de Confianza",
     compliance: "Cumplimiento",

@@ -23,7 +23,7 @@ export function EditVendorModal({ vendor, isOpen, onClose, onSave, isLoading = f
   useEffect(() => {
     if (vendor) {
       setFormData({
-        companyName: vendor.companyName || vendor.name || '',
+        companyName: vendor.name || '',
         contactEmail: vendor.contactEmail || '',
         status: vendor.status || VendorStatus.QUESTIONNAIRE_PENDING
       });
@@ -39,7 +39,7 @@ export function EditVendorModal({ vendor, isOpen, onClose, onSave, isLoading = f
       await onSave(formData);
       onClose();
     } catch (error) {
-      console.error('Error saving vendor:', error);
+      console.error('Error saving client:', error);
     } finally {
       setIsSaving(false);
     }

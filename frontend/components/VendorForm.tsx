@@ -46,7 +46,7 @@ const VendorForm: React.FC<VendorFormProps> = ({ onSubmit, initialData = {}, isE
         });
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred while saving the vendor');
+      setError(err.message || 'An error occurred while saving the client');
     } finally {
       setLoading(false);
     }

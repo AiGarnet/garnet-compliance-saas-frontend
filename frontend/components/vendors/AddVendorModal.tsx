@@ -39,7 +39,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
     e.preventDefault();
     
     if (!formData.companyName.trim()) {
-      setError('Vendor name is required');
+      setError('Client name is required');
       return;
     }
 
@@ -70,7 +70,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
         status: VendorStatus.QUESTIONNAIRE_PENDING,
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to create vendor');
+      setError(err.message || 'Failed to create client');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,7 +92,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center">
             <Building2 className="h-6 w-6 text-primary mr-3" />
-            <h2 className="text-xl font-semibold text-gray-900">Add New Vendor</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Add New Client</h2>
           </div>
           <button
             onClick={handleClose}
@@ -112,10 +112,10 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
             </div>
           )}
 
-          {/* Vendor Name */}
+          {/* Client Name */}
           <div>
             <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
-              Vendor Name *
+              Client Name *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -129,7 +129,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
                 value={formData.companyName}
                 onChange={handleInputChange}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder="Enter vendor name"
+                placeholder="Enter client name"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
                 value={formData.description}
                 onChange={handleInputChange}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                placeholder="Brief description of the vendor's services"
+                placeholder="Brief description of the client's services"
               />
             </div>
           </div>
@@ -283,7 +283,7 @@ export function AddVendorModal({ isOpen, onClose, onSubmit }: AddVendorModalProp
                   Creating...
                 </>
               ) : (
-                'Create Vendor'
+                'Create Client'
               )}
             </button>
           </div>

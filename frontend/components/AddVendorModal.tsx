@@ -25,7 +25,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onVend
       
       onClose();
     } catch (error) {
-      console.error('Error adding vendor:', error);
+      console.error('Error adding client:', error);
       throw error; // Let the form handle the error
     } finally {
       setProcessing(false);
@@ -55,7 +55,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onVend
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-headline">
-                  Add New Vendor
+                  Add New Client
                 </h3>
                 <div className="mt-2">
                   <VendorForm onSubmit={handleSubmit} />
