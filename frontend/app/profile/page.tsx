@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Crown, Star, Zap, Rocket, Settings, User, CreditCard, Bell, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useAuthGuard } from '@/lib/auth/useAuthGuard';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
-import { PlanUpgradeModal } from '@/components/profile/PlanUpgradeModal';
 
 interface SubscriptionInfo {
   planId: string;
@@ -18,12 +17,12 @@ interface SubscriptionInfo {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [isOnTrial, setIsOnTrial] = useState(false);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showCancelMessage, setShowCancelMessage] = useState(false);
 
@@ -172,6 +171,12 @@ export default function ProfilePage() {
     return subscriptionInfo?.planId !== 'enterprise';
   };
 
+  const handleUpgradeClick = () => {
+    // Redirect to pricing page with current plan context
+    const currentPlan = subscriptionInfo?.planId || 'starter';
+    router.push(`/pricing?from=profile&current=${currentPlan}`);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -291,7 +296,7 @@ export default function ProfilePage() {
                     
                     {canUpgrade() && (
                       <button
-                        onClick={() => setShowUpgradeModal(true)}
+                        onClick={handleUpgradeClick}
                         className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                       >
                         <Crown className="h-4 w-4" />
@@ -322,7 +327,10 @@ export default function ProfilePage() {
                   <span className="text-gray-700">Settings</span>
                 </button>
                 
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
+                <button 
+                  onClick={() => router.push('/billing')}
+                  className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
                   <CreditCard className="h-5 w-5 text-gray-600" />
                   <span className="text-gray-700">Billing</span>
                 </button>
@@ -337,17 +345,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Plan Upgrade Modal */}
-      {showUpgradeModal && (
-        <PlanUpgradeModal
-          currentPlan={subscriptionInfo?.planId || 'starter'}
-          onClose={() => setShowUpgradeModal(false)}
-          onUpgradeSuccess={() => {
-            setShowUpgradeModal(false);
-            fetchUserSubscriptionInfo();
-          }}
-        />
-      )}
     </div>
   );
 }

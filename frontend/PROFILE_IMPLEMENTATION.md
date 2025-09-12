@@ -21,16 +21,12 @@ Implemented a complete profile page with plan management functionality as reques
   - Success/cancel message handling after Stripe checkout
   - Quick actions sidebar (Settings, Billing, Notifications)
 
-### 3. Plan Upgrade Modal (`components/profile/PlanUpgradeModal.tsx`)
-- **Created**: Full-featured upgrade modal with:
-  - Growth, Scale, and Enterprise plan options
-  - Monthly/Annual billing toggle with savings indicator
-  - Real Stripe price IDs integration
-  - Feature comparison lists
-  - "Most Popular" plan highlighting
-  - Current plan indication
-  - Stripe checkout integration
-  - Enterprise plan contact redirection
+### 3. Integration with Existing Pricing Page (`app/pricing/page.tsx`)
+- **Updated**: Enhanced existing pricing page to handle profile redirects
+  - Added logic to detect when user comes from profile page
+  - Updated success URL to redirect back to profile after successful payment
+  - Maintains existing pricing page functionality and design
+  - Leverages all existing features (coupons, billing cycles, etc.)
 
 ## User Experience Flow
 
@@ -39,9 +35,10 @@ Implemented a complete profile page with plan management functionality as reques
    - Navigates to Profile via dropdown
    - Sees current "Free" plan status
    - Clicks "Upgrade" button
-   - Selects desired plan (Growth/Scale/Enterprise)
+   - Redirected to existing pricing page at `/pricing?from=profile&current=starter`
+   - Selects desired plan on pricing page
    - Completes Stripe checkout
-   - Returns to profile with success message
+   - Returns to profile with success message (`/profile?success=true&plan=growth`)
    - Plan information updates automatically
 
 2. **Trial User Journey**:
@@ -55,14 +52,12 @@ Implemented a complete profile page with plan management functionality as reques
 
 ## Technical Implementation
 
-### Stripe Integration
-- Uses existing `/api/billing/checkout` endpoint
-- Implements proper success/cancel URL handling
-- Real production Stripe price IDs:
-  - Growth Monthly: `price_1RkTN7GCn6F00HoYDpK3meuM`
-  - Growth Annual: `price_1RkTNZGCn6F00HoYk0lq4LvE`
-  - Scale Monthly: `price_1RkTOCGCn6F00HoYoEtLd3FO`
-  - Scale Annual: `price_1RkTOhGCn6F00HoYmMXNHSZp`
+### Integration with Existing Systems
+- **Pricing Page Integration**: Redirects to existing `/pricing` page with context
+- **Smart Success Redirects**: Returns to profile when upgrade initiated from profile
+- **Stripe Integration**: Uses existing `/api/billing/checkout` endpoint
+- **Billing Page Integration**: Quick action links to existing `/billing` page
+- **URL Parameters**: Passes current plan context via `?from=profile&current=planId`
 
 ### API Endpoints Used
 - `GET /api/billing/trial-status` - Check trial information
@@ -93,11 +88,14 @@ Implemented a complete profile page with plan management functionality as reques
 
 ### Created:
 - `app/profile/page.tsx` - Main profile page
-- `components/profile/PlanUpgradeModal.tsx` - Upgrade modal component
 - `PROFILE_IMPLEMENTATION.md` - This documentation
 
 ### Modified:
 - `components/Header.tsx` - Removed plan badge, updated profile link
+- `app/pricing/page.tsx` - Added profile redirect logic for success URLs
+
+### Removed:
+- `components/profile/PlanUpgradeModal.tsx` - Custom modal (replaced with existing pricing page)
 
 ## Testing
 The implementation follows existing patterns in the codebase and uses the same authentication, styling, and API patterns. All components are properly typed and follow React best practices.

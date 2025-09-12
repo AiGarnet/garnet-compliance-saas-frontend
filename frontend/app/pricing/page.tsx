@@ -271,10 +271,16 @@ const PricingPage = () => {
   };
 
   const attemptCheckout = async (tier: PricingTier, priceId: string, withCoupon: boolean = true) => {
+    // Check if user came from profile page
+    const fromProfile = searchParams?.get('from') === 'profile';
+    const successUrl = fromProfile 
+      ? `${window.location.origin}/profile?success=true&plan=${tier.id}`
+      : `${window.location.origin}/dashboard?success=true&plan=${tier.id}`;
+    
     const requestBody: any = {
       priceId,
       billingCycle,
-      successUrl: `${window.location.origin}/dashboard?success=true&plan=${tier.id}`,
+      successUrl,
       cancelUrl: `${window.location.origin}/pricing?canceled=true`,
     };
     
