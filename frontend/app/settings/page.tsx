@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
-  Bell, 
   Shield, 
   Eye, 
   EyeOff, 
@@ -30,9 +29,6 @@ interface UserSettings {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-  emailNotifications: boolean;
-  securityAlerts: boolean;
-  marketingEmails: boolean;
   twoFactorEnabled: boolean;
   language: string;
   timezone: string;
@@ -59,9 +55,6 @@ export default function SettingsPage() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    emailNotifications: true,
-    securityAlerts: true,
-    marketingEmails: false,
     twoFactorEnabled: false,
     language: 'en',
     timezone: 'UTC'
@@ -180,40 +173,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleNotificationUpdate = async () => {
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://garnet-compliance-saas-production.up.railway.app'}/api/user/notifications`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          emailNotifications: settings.emailNotifications,
-          securityAlerts: settings.securityAlerts,
-          marketingEmails: settings.marketingEmails
-        }),
-      });
-
-      if (response.ok) {
-        showMessage('Notification preferences updated!');
-      } else {
-        showMessage('Failed to update notification preferences', true);
-      }
-    } catch (error) {
-      console.error('Notification update error:', error);
-      showMessage('An error occurred while updating preferences', true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'preferences', label: 'Preferences', icon: Globe },
   ];
 
@@ -427,70 +390,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {activeTab === 'notifications' && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Notification Preferences</h2>
-                
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Email Notifications</h3>
-                      <p className="text-sm text-gray-600">Receive email updates about your account activity</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.emailNotifications}
-                        onChange={(e) => handleInputChange('emailNotifications', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Security Alerts</h3>
-                      <p className="text-sm text-gray-600">Get notified about important security events</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.securityAlerts}
-                        onChange={(e) => handleInputChange('securityAlerts', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Marketing Emails</h3>
-                      <p className="text-sm text-gray-600">Receive updates about new features and promotions</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.marketingEmails}
-                        onChange={(e) => handleInputChange('marketingEmails', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-
-                  <button
-                    onClick={handleNotificationUpdate}
-                    disabled={loading}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{loading ? 'Saving...' : 'Save Preferences'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             {activeTab === 'preferences' && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

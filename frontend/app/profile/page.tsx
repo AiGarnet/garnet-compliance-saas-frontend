@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Crown, Star, Zap, Rocket, Settings, User, CreditCard, Bell, CheckCircle, XCircle } from 'lucide-react';
+import { Crown, Star, Zap, Rocket, Settings, User, CreditCard, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useAuthGuard } from '@/lib/auth/useAuthGuard';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -338,10 +338,6 @@ export default function ProfilePage() {
                   <span className="text-gray-700">Billing</span>
                 </button>
                 
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
-                  <Bell className="h-5 w-5 text-gray-600" />
-                  <span className="text-gray-700">Notifications</span>
-                </button>
               </div>
             </div>
           </div>
