@@ -895,76 +895,31 @@ const GarnetLandingPage = () => {
                   Contact Us
                 </Link>
               </motion.div>
+
+              {/* Login and Sign Up buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center space-x-3"
+              >
+                <Link 
+                  href="/auth/login" 
+                  className="text-gray-700 font-medium text-sm lg:text-base px-3 py-2 hover:text-purple-600 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link 
+                  href="/auth/signup" 
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium text-sm lg:text-base px-4 py-2 rounded-full hover:shadow-lg transition-all hover:from-purple-700 hover:to-pink-700 focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
+                >
+                  Sign Up
+                </Link>
+              </motion.div>
               
-              {/* Dynamic Get Started Button */}
-              <AnimatePresence>
-                {showNavButton && (
-                  <motion.button 
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:shadow-lg transition-all text-sm lg:text-base font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                    whileHover={{ 
-                      scale: 1.05, 
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
-                      background: "linear-gradient(to right, #8b5cf6, #ec4899)",
-                      transition: { duration: 0.2, ease: "easeOut" }
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/auth/signup'}
-                    initial={{ opacity: 0, x: 30, scale: 0.95 }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0, 
-                      scale: 1,
-                      transition: { 
-                        duration: 0.7,
-                        ease: [0.25, 0.46, 0.45, 0.94], // Ultra smooth cubic-bezier
-                        opacity: { 
-                          duration: 0.5, 
-                          ease: [0.25, 0.46, 0.45, 0.94] 
-                        },
-                        x: { 
-                          type: "spring", 
-                          stiffness: 180, 
-                          damping: 22,
-                          mass: 0.8
-                        },
-                        scale: { 
-                          type: "spring", 
-                          stiffness: 200, 
-                          damping: 20, 
-                          delay: 0.15,
-                          mass: 0.6
-                        }
-                      }
-                    }}
-                    exit={{ 
-                      opacity: 0, 
-                      x: 30, 
-                      scale: 0.95,
-                      transition: { 
-                        duration: 0.5,
-                        ease: [0.55, 0.06, 0.68, 0.19], // Smooth exit curve
-                        opacity: { 
-                          duration: 0.4, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        },
-                        x: { 
-                          duration: 0.5, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        },
-                        scale: { 
-                          duration: 0.4, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        }
-                      }
-                    }}
-                  >
-                    Get Started
-                  </motion.button>
-                )}
-              </AnimatePresence>
             </div>
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-3">
+            <div className="md:hidden flex items-center space-x-2">
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -972,78 +927,33 @@ const GarnetLandingPage = () => {
               >
                 <Link 
                   href="/contact" 
-                  className="text-black font-semibold text-sm px-3 py-2"
+                  className="text-black font-semibold text-sm px-2 py-2"
                 >
                   Contact
                 </Link>
               </motion.div>
+
+              {/* Mobile Login and Sign Up */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                className="flex items-center space-x-2"
+              >
+                <Link 
+                  href="/auth/login" 
+                  className="text-gray-700 font-medium text-sm px-2 py-1 hover:text-purple-600 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link 
+                  href="/auth/signup" 
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium text-sm px-3 py-1.5 rounded-full hover:shadow-lg transition-all hover:from-purple-700 hover:to-pink-700"
+                >
+                  Sign Up
+                </Link>
+              </motion.div>
               
-              {/* Dynamic Get Started Button - Mobile */}
-              <AnimatePresence>
-                {showNavButton && (
-                  <motion.button 
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                    whileHover={{ 
-                      scale: 1.05,
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.25)",
-                      background: "linear-gradient(to right, #8b5cf6, #ec4899)",
-                      transition: { duration: 0.2, ease: "easeOut" }
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.location.href = '/auth/signup'}
-                    initial={{ opacity: 0, x: 30, scale: 0.95 }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0, 
-                      scale: 1,
-                      transition: { 
-                        duration: 0.7,
-                        ease: [0.25, 0.46, 0.45, 0.94], // Ultra smooth cubic-bezier
-                        opacity: { 
-                          duration: 0.5, 
-                          ease: [0.25, 0.46, 0.45, 0.94] 
-                        },
-                        x: { 
-                          type: "spring", 
-                          stiffness: 180, 
-                          damping: 22,
-                          mass: 0.8
-                        },
-                        scale: { 
-                          type: "spring", 
-                          stiffness: 200, 
-                          damping: 20, 
-                          delay: 0.15,
-                          mass: 0.6
-                        }
-                      }
-                    }}
-                    exit={{ 
-                      opacity: 0, 
-                      x: 30, 
-                      scale: 0.95,
-                      transition: { 
-                        duration: 0.5,
-                        ease: [0.55, 0.06, 0.68, 0.19], // Smooth exit curve
-                        opacity: { 
-                          duration: 0.4, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        },
-                        x: { 
-                          duration: 0.5, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        },
-                        scale: { 
-                          duration: 0.4, 
-                          ease: [0.4, 0.0, 0.2, 1]
-                        }
-                      }
-                    }}
-                  >
-                    Get Started
-                  </motion.button>
-                )}
-              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -1145,44 +1055,6 @@ const GarnetLandingPage = () => {
             </motion.p>
           </motion.div>
 
-          <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12 sm:mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <motion.button 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:shadow-xl transition-all flex items-center justify-center group shadow-lg focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
-              whileHover={{ 
-                scale: 1.05, 
-                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                background: "linear-gradient(to right, #8b5cf6, #ec4899)"
-              }}
-              whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/auth/signup'}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  duration: 0.8, 
-                  delay: 0.4,
-                  type: "spring",
-                  stiffness: 100
-                }}
-            >
-                Get Started
-                <motion.div
-                  className="ml-2"
-                  animate={{ x: [0, 4, 0] }}
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <ArrowRight className="h-4 sm:h-5 w-4 sm:w-5 group-hover:translate-x-1 transition-transform" />
-                </motion.div>
-            </motion.button>
-          </motion.div>
 
           {/* Hero Visual - Live Dashboard Stats */}
           <motion.div 
@@ -2402,59 +2274,6 @@ const GarnetLandingPage = () => {
         </div>
       </section>
 
-      {/* Call-to-Action Section */}
-      <section className="py-20 bg-gradient-to-r from-purple-600 to-pink-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to Transform Your Compliance Process?
-            </h2>
-            <p className="text-lg text-purple-200 max-w-3xl mx-auto mb-10 leading-relaxed">
-              Founders and sales teams across industries are gearing up to launch with Garnet. Join them and get early access to the platform.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button 
-                className="bg-white text-purple-600 px-6 sm:px-8 py-4 rounded-full text-lg font-semibold hover:shadow-xl transition-all flex items-center justify-center group focus:ring-4 focus:ring-white focus:ring-opacity-50"
-                whileHover={{ 
-                  scale: 1.05,
-                  boxShadow: "0 25px 50px -12px rgba(255, 255, 255, 0.8)",
-                  background: "#f8fafc"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/auth/signup'}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Get Started
-                <motion.div
-                  className="ml-2"
-                  animate={{ x: [0, 4, 0] }}
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </motion.div>
-              </motion.button>
-              {/* <motion.button 
-                className="border-2 border-white text-white px-6 sm:px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-purple-600 transition-all group"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Schedule Demo
-              </motion.button> */}
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
 
 
