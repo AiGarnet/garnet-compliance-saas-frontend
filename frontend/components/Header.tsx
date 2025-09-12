@@ -187,10 +187,6 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                 {/* Trial Status - Only for authenticated users */}
                 <TrialStatusNavbar />
                 
-                {/* Subscription Tier Display - Only for authenticated users */}
-                <SubscriptionTierDisplay compact={true} showUpgradeButton={false} />
-                
-                
                 {/* Profile Dropdown - Only for authenticated users */}
                 <div className="relative" ref={profileDropdownRef}>
                   <button
@@ -219,13 +215,13 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                         <p className="text-xs text-primary capitalize">{user?.role}</p>
                       </div>
                       
-                      <a 
-                        href="#" 
+                      <Link 
+                        href="/profile" 
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-primary/5 transition-colors"
                         role="menuitem"
                       >
                         {t.profile}
-                      </a>
+                      </Link>
                       <a 
                         href="#" 
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-primary/5 transition-colors"
