@@ -145,6 +145,9 @@ const QuestionnairesContent = () => {
   const [supportDocUploadError, setSupportDocUploadError] = useState<string | null>(null);
   const [uploadingQuestionId, setUploadingQuestionId] = useState<string | null>(null);
   
+  // Question regeneration states
+  const [regeneratingQuestionId, setRegeneratingQuestionId] = useState<string | null>(null);
+  
   // Manual question states
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [manualQuestionText, setManualQuestionText] = useState('');
@@ -1325,6 +1328,16 @@ const QuestionnairesContent = () => {
       setUploadError('Failed to generate AI responses. Please try again.');
     } finally {
       setIsGeneratingAnswers(false);
+    }
+  };
+
+  // Regenerate AI answer for a specific question with loading state
+  const regenerateQuestionAnswer = async (question: ExtractedQuestion) => {
+    setRegeneratingQuestionId(question.id);
+    try {
+      await generateSingleAIAnswer(question);
+    } finally {
+      setRegeneratingQuestionId(null);
     }
   };
 
@@ -4188,12 +4201,21 @@ const QuestionnairesContent = () => {
                                                         {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => generateSingleAIAnswer(question)}
-                                disabled={isGeneratingAnswers}
+                                onClick={() => regenerateQuestionAnswer(question)}
+                                disabled={regeneratingQuestionId === question.id || isGeneratingAnswers}
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
                               >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                Regenerate
+                                {regeneratingQuestionId === question.id ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Regenerating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="h-3 w-3 mr-1" />
+                                    Regenerate
+                                  </>
+                                )}
                               </button>
                               <button
                                 onClick={() => toggleEditMode(question.id)}
