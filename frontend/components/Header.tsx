@@ -222,13 +222,13 @@ export default function Header({ locale = 'en' }: HeaderProps) {
                       >
                         {t.profile}
                       </Link>
-                      <a 
-                        href="#" 
+                      <Link 
+                        href="/settings" 
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-primary/5 transition-colors"
                         role="menuitem"
                       >
                         Settings
-                      </a>
+                      </Link>
                       <button 
                         onClick={logout}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-primary/5 transition-colors flex items-center"

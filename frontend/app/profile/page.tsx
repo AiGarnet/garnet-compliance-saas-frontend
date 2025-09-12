@@ -322,7 +322,10 @@ export default function ProfilePage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
+                <button 
+                  onClick={() => router.push('/settings')}
+                  className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
                   <Settings className="h-5 w-5 text-gray-600" />
                   <span className="text-gray-700">Settings</span>
                 </button>
