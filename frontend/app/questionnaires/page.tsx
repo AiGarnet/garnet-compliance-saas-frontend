@@ -4188,7 +4188,7 @@ const QuestionnairesContent = () => {
                                                         {(question.status === 'completed' || question.status === 'done') && (
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => showEvidenceSelectionForSingleQuestion(question)}
+                                onClick={() => generateSingleAIAnswer(question)}
                                 disabled={isGeneratingAnswers}
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center text-sm"
                               >
