@@ -10,8 +10,6 @@ import {
   Building2, 
   Mail, 
   Lock,
-  Smartphone,
-  Globe,
   Trash2,
   AlertTriangle,
   CheckCircle,
@@ -29,9 +27,6 @@ interface UserSettings {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-  twoFactorEnabled: boolean;
-  language: string;
-  timezone: string;
 }
 
 export default function SettingsPage() {
@@ -54,10 +49,7 @@ export default function SettingsPage() {
     organization: user?.organization || '',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
-    twoFactorEnabled: false,
-    language: 'en',
-    timezone: 'UTC'
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -177,7 +169,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'preferences', label: 'Preferences', icon: Globe },
   ];
 
   return (
@@ -369,101 +360,10 @@ export default function SettingsPage() {
                   </button>
                 </form>
 
-                {/* Two-Factor Authentication */}
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Two-Factor Authentication</h3>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Smartphone className="h-5 w-5 text-gray-600" />
-                      <div>
-                        <p className="font-medium text-gray-900">SMS Authentication</p>
-                        <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
-                      </div>
-                    </div>
-                    <button
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      {settings.twoFactorEnabled ? 'Disable' : 'Enable'}
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
 
 
-            {activeTab === 'preferences' && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Preferences</h2>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Language
-                    </label>
-                    <select
-                      value={settings.language}
-                      onChange={(e) => handleInputChange('language', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Timezone
-                    </label>
-                    <select
-                      value={settings.timezone}
-                      onChange={(e) => handleInputChange('timezone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="UTC">UTC</option>
-                      <option value="America/New_York">Eastern Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
-                      <option value="Europe/London">London</option>
-                      <option value="Europe/Paris">Paris</option>
-                      <option value="Asia/Tokyo">Tokyo</option>
-                    </select>
-                  </div>
-
-                  <button
-                    onClick={() => showMessage('Preferences saved!')}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>Save Preferences</span>
-                  </button>
-                </div>
-
-                {/* Danger Zone */}
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <h3 className="text-lg font-medium text-red-600 mb-4 flex items-center space-x-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    <span>Danger Zone</span>
-                  </h3>
-                  
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="font-medium text-red-900 mb-2">Delete Account</h4>
-                    <p className="text-sm text-red-700 mb-4">
-                      Once you delete your account, there is no going back. Please be certain.
-                    </p>
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Delete Account</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
