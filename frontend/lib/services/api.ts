@@ -49,7 +49,18 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      
+      // Handle NestJS exception format and our custom error format
+      let errorMessage = `API error: ${response.status}`;
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error?.message) {
+        errorMessage = errorData.error.message;
+      } else if (errorData.error && typeof errorData.error === 'string') {
+        errorMessage = errorData.error;
+      }
+      
+      const error = new Error(errorMessage);
       // Preserve the response structure for detailed error handling
       (error as any).response = {
         status: response.status,
@@ -82,7 +93,18 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      
+      // Handle NestJS exception format and our custom error format
+      let errorMessage = `API error: ${response.status}`;
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error?.message) {
+        errorMessage = errorData.error.message;
+      } else if (errorData.error && typeof errorData.error === 'string') {
+        errorMessage = errorData.error;
+      }
+      
+      const error = new Error(errorMessage);
       // Preserve the response structure for detailed error handling
       (error as any).response = {
         status: response.status,
@@ -115,7 +137,18 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      
+      // Handle NestJS exception format and our custom error format
+      let errorMessage = `API error: ${response.status}`;
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error?.message) {
+        errorMessage = errorData.error.message;
+      } else if (errorData.error && typeof errorData.error === 'string') {
+        errorMessage = errorData.error;
+      }
+      
+      const error = new Error(errorMessage);
       // Preserve the response structure for detailed error handling
       (error as any).response = {
         status: response.status,
@@ -147,7 +180,18 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      
+      // Handle NestJS exception format and our custom error format
+      let errorMessage = `API error: ${response.status}`;
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error?.message) {
+        errorMessage = errorData.error.message;
+      } else if (errorData.error && typeof errorData.error === 'string') {
+        errorMessage = errorData.error;
+      }
+      
+      const error = new Error(errorMessage);
       // Preserve the response structure for detailed error handling
       (error as any).response = {
         status: response.status,
