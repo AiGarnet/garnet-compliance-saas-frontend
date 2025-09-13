@@ -1092,7 +1092,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('Error processing file:', error);
-      setUploadError('Failed to process the uploaded file. This could be due to file corruption, unsupported content, or network issues. Please ensure your file is valid and try again. For best results, use PDF format.');
+      setUploadError('Failed to process the uploaded file. This could be due to file corruption, unsupported content, or network issues. Please ensure your file is valid and try again. Files with null values, empty cells, and sparse data are fully supported. For best results, use PDF format.');
       
       // Update status to error
       setChecklists(prev => prev.map(c => 
@@ -1696,7 +1696,7 @@ const QuestionnairesContent = () => {
       
     } catch (error) {
       console.error('❌ Error uploading standalone supporting document:', error);
-      setSupportDocUploadError('Upload failed. This could be due to file size limits, network issues, or unsupported content in the document. Please check your file and try again. If the issue persists, try converting to PDF format.');
+      setSupportDocUploadError('Upload failed. This could be due to file size limits, network issues, or unsupported content in the document. Please check your file and try again. Files with null values, empty cells, and sparse data are fully supported. If the issue persists, try converting to PDF format.');
     } finally {
       setIsUploadingSupportDoc(false);
     }
