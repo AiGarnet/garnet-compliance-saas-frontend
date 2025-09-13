@@ -49,7 +49,13 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || errorData.message || `API error: ${response.status}`);
+      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      // Preserve the response structure for detailed error handling
+      (error as any).response = {
+        status: response.status,
+        data: errorData
+      };
+      throw error;
     }
 
     return response.json();
@@ -76,7 +82,13 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || errorData.message || `API error: ${response.status}`);
+      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      // Preserve the response structure for detailed error handling
+      (error as any).response = {
+        status: response.status,
+        data: errorData
+      };
+      throw error;
     }
 
     return response.json();
@@ -103,7 +115,13 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || errorData.message || `API error: ${response.status}`);
+      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      // Preserve the response structure for detailed error handling
+      (error as any).response = {
+        status: response.status,
+        data: errorData
+      };
+      throw error;
     }
 
     return response.json();
@@ -129,7 +147,13 @@ export const apiClient = {
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || errorData.message || `API error: ${response.status}`);
+      const error = new Error(errorData.error?.message || errorData.message || errorData.error || `API error: ${response.status}`);
+      // Preserve the response structure for detailed error handling
+      (error as any).response = {
+        status: response.status,
+        data: errorData
+      };
+      throw error;
     }
 
     return response.json();

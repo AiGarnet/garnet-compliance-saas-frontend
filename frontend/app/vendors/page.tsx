@@ -145,8 +145,24 @@ const VendorsContent = () => {
         throw new Error('Authentication required. Please log in and try again.');
       }
       
-      if (err.message?.includes('403')) {
-        throw new Error('You don\'t have permission to create vendors.');
+      // Check if error is due to vendor limit (403 with specific error code)
+      if (err.message?.includes('403') || err.response?.status === 403) {
+        // Try to parse the error response to get the specific error details
+        let errorMessage = 'You don\'t have permission to create vendors.';
+        
+        try {
+          // Check if it's a vendor limit error
+          if (err.response?.data?.error?.code === 'VENDOR_LIMIT_REACHED') {
+            const errorData = err.response.data.error;
+            errorMessage = `${errorData.message || 'You\'ve reached your vendor limit'}. Please upgrade your plan to add more vendors.`;
+          } else if (err.message?.includes('VENDOR_LIMIT_REACHED') || err.message?.includes('limit')) {
+            errorMessage = 'You\'ve reached your vendor limit on your current plan. Please upgrade to add more vendors.';
+          }
+        } catch (parseError) {
+          console.warn('Could not parse error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
       throw new Error(err.message || 'Failed to create vendor. Please try again.');
