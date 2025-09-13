@@ -75,10 +75,13 @@ export const ChecklistUpload: React.FC<ChecklistUploadProps> = ({
       'text/plain',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', // .xls files
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx files
+      'text/csv', // .csv files
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      const error = 'Please upload a PDF, TXT, DOC, or DOCX file.';
+      const error = 'Please upload a PDF, TXT, DOC, DOCX, XLS, XLSX, or CSV file.';
       setUploadState(prev => ({ ...prev, error, status: 'error' }));
       onError?.(error);
       return;
