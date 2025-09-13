@@ -41,7 +41,7 @@ const ALLOWED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB (increased to support larger multi-sheet Excel files)
 
 export function EvidenceUpload({ 
   vendorId, 
@@ -64,7 +64,7 @@ export function EvidenceUpload({
       return 'Invalid file type. Allowed: PDF, DOC, DOCX, JPG, JPEG, PNG, GIF, TXT, XLS, XLSX';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size exceeds 10MB limit';
+      return `File size (${Math.round(file.size / (1024 * 1024))}MB) exceeds 25MB limit. Multi-sheet Excel files are supported within this limit.`;
     }
     return null;
   };

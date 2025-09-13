@@ -87,10 +87,10 @@ export const ChecklistUpload: React.FC<ChecklistUploadProps> = ({
       return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (max 25MB for better multi-sheet Excel support)
+    const maxSize = 25 * 1024 * 1024; // 25MB (increased to support larger multi-sheet Excel files)
     if (file.size > maxSize) {
-      const error = 'File size must be less than 10MB.';
+      const error = `File size (${Math.round(file.size / (1024 * 1024))}MB) must be less than 25MB. Multi-sheet Excel files are supported, but please ensure your file is not excessively large.`;
       setUploadState(prev => ({ ...prev, error, status: 'error' }));
       onError?.(error);
       return;

@@ -1010,7 +1010,7 @@ const QuestionnairesContent = () => {
     for (const file of fileArray) {
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!allowedTypes.includes(fileExtension)) {
-        setUploadError(`File type "${fileExtension}" is not supported. Please upload documents in one of these formats: PDF (recommended), TXT, DOC, DOCX, XLS, XLSX, or CSV. PDFs provide the best content extraction for compliance checking.`);
+        setUploadError(`File type "${fileExtension}" is not supported. Please upload documents in one of these formats: PDF (recommended), TXT, DOC, DOCX, XLS, XLSX (including multi-sheet files), or CSV. PDFs provide the best content extraction for compliance checking.`);
         return;
       }
     }
@@ -1631,7 +1631,7 @@ const QuestionnairesContent = () => {
     for (const file of fileArray) {
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!allowedTypes.includes(fileExtension)) {
-        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX, CSV). PDFs provide the most accurate content analysis.`);
+        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX including multi-sheet files, CSV). PDFs provide the most accurate content analysis.`);
         return;
       }
     }
@@ -2019,7 +2019,7 @@ const QuestionnairesContent = () => {
     for (const file of fileArray) {
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!allowedTypes.includes(fileExtension)) {
-        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX, CSV). PDFs provide the most accurate content analysis for compliance validation.`);
+        setSupportDocUploadError(`File type "${fileExtension}" is not supported. Please upload files in one of these formats: PDF (recommended for text documents), images (JPG, PNG, GIF), document files (DOC, DOCX, TXT), or spreadsheets (XLS, XLSX including multi-sheet files, CSV). PDFs provide the most accurate content analysis for compliance validation.`);
         return;
       }
     }
